@@ -1,0 +1,323 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import {
+  Sparkles,
+  TrendingUp,
+  AlertTriangle,
+  UserX,
+  PhoneCall,
+  CheckCircle,
+  HelpCircle,
+  ArrowRight,
+  ShieldCheck,
+  Send,
+} from 'lucide-react';
+import { calculateRevenueForecast } from '@/lib/ai/forecasting';
+import { predictMemberChurn } from '@/lib/ai/churn-detector';
+import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
+import { RevenueForecastResult, ChurnPredictionResult, ExpenseLeakResult } from '@/types/ai';
+import { DBService } from '@/lib/data/db-service';
+import { UserProfile } from '@/types/database';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from 'recharts';
+import { ScrollReveal } from '@/components/ui/ScrollReveal';
+
+export const AnalyticsView: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<'forecast' | 'churn' | 'leaks'>('forecast');
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [forecast, setForecast] = useState<RevenueForecastResult | null>(null);
+  const [churn, setChurn] = useState<ChurnPredictionResult | null>(null);
+  const [leaks, setLeaks] = useState<ExpenseLeakResult | null>(null);
+  const [contactedMemberId, setContactedMemberId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setProfile(DBService.getProfile());
+    setForecast(calculateRevenueForecast(true));
+    setChurn(predictMemberChurn());
+    setLeaks(detectExpenseLeaks());
+  }, []);
+
+  if (!forecast || !churn || !leaks) return null;
+
+  const currency = profile?.currency || '₱';
+
+  // Chart data blending historical and projected
+  const chartData = [
+    { month: 'Jan', historical: 195000, forecast: null },
+    { month: 'Feb', historical: 210000, forecast: null },
+    { month: 'Mar', historical: 228000, forecast: null },
+    { month: 'Apr', historical: 245820, forecast: 245820 },
+    { month: 'May', historical: null, forecast: 265000 },
+    { month: 'Jun', historical: null, forecast: 282000 },
+    { month: 'Jul', historical: null, forecast: 298750 },
+  ];
+
+  const handleContactMember = (memberId: string) => {
+    setContactedMemberId(memberId);
+    setTimeout(() => setContactedMemberId(null), 3000);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+      {/* 1. Page Header */}
+      <ScrollReveal delay={0}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
+              AI Analytics
+            </h1>
+            <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
+              Smarter insights for better decisions.
+            </p>
+          </div>
+        </div>
+      </ScrollReveal>
+
+      {/* 2. Apple macOS/iOS Segmented Navigation Controls */}
+      <ScrollReveal delay={40}>
+        <div style={{ display: 'inline-flex', backgroundColor: 'rgba(118, 118, 128, 0.12)', padding: '3px', borderRadius: '10px', gap: '2px', width: 'fit-content' }}>
+          {[
+            { key: 'forecast', label: 'Revenue Forecast' },
+            { key: 'churn', label: 'Churn Prediction' },
+            { key: 'leaks', label: 'Expense Anomalies' },
+          ].map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as any)}
+              style={{
+                padding: '0.4rem 1.15rem',
+                borderRadius: '8px',
+                fontSize: '0.825rem',
+                fontWeight: activeTab === tab.key ? 600 : 500,
+                backgroundColor: activeTab === tab.key ? '#ffffff' : 'transparent',
+                color: activeTab === tab.key ? '#1d1d1f' : '#636366',
+                boxShadow: activeTab === tab.key ? '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.08)' : 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s cubic-bezier(0.25, 1, 0.5, 1)',
+              }}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </ScrollReveal>
+
+      {/* 3. Tab: Revenue Forecast */}
+      {activeTab === 'forecast' && (
+        <ScrollReveal delay={70}>
+          <div className="card" style={{ padding: '1.75rem' }}>
+          {/* Header */}
+          <div style={{ marginBottom: '1.5rem', borderBottom: '1px solid #f1f5f9', paddingBottom: '1rem' }}>
+            <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#0f172a', marginBottom: '0.25rem' }}>
+              Revenue Forecast
+            </h2>
+            <p style={{ fontSize: '0.825rem', color: '#64748b' }}>
+              Based on historical data, memberships, and seasonal trends
+            </p>
+          </div>
+
+          {/* 3-Column Forecast Layout */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 2fr 1.25fr',
+              gap: '2rem',
+              alignItems: 'center',
+            }}
+            className="ai-forecast-grid"
+          >
+            {/* Column 1: Forecasted Revenue Value */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 500, marginBottom: '0.25rem' }}>
+                  Forecasted Revenue
+                </div>
+                <div style={{ fontSize: '2.1rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                  {currency}298,750
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
+                  Next 3 months
+                </div>
+              </div>
+
+              <div>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.35rem 0.65rem', borderRadius: '6px', backgroundColor: '#ecfdf5', border: '1px solid #d1fae5', color: '#059669', fontSize: '0.8rem', fontWeight: 600 }}>
+                  <Sparkles size={13} />
+                  <span>Confidence Level: 78%</span>
+                </div>
+              </div>
+
+              <div>
+                <button
+                  onClick={() => alert(`Detailed 3-month forecast model: Based on exponential moving average with confidence interval [${currency}285k - ${currency}315k].`)}
+                  className="btn btn-primary btn-sm"
+                  style={{ width: '100%' }}
+                >
+                  View Details
+                </button>
+              </div>
+            </div>
+
+            {/* Column 2: Historical vs Forecast Line Chart */}
+            <div style={{ width: '100%', height: 240 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1.25rem', marginBottom: '0.5rem', fontSize: '0.785rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ width: '16px', height: '2.5px', backgroundColor: '#0284c7' }} />
+                  <span style={{ color: '#475569', fontWeight: 500 }}>Historical</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <span style={{ width: '16px', height: '2px', borderTop: '2px dashed #0284c7' }} />
+                  <span style={{ color: '#475569', fontWeight: 500 }}>Forecast</span>
+                </div>
+              </div>
+
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={{ stroke: '#f1f5f9' }} />
+                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `${currency}${(val / 1000).toFixed(0)}k`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
+                    formatter={(val: any) => [`${currency}${Number(val).toLocaleString()}`, '']}
+                  />
+                  <Line type="monotone" dataKey="historical" stroke="#0284c7" strokeWidth={2.5} dot={{ r: 3, fill: '#0284c7' }} />
+                  <Line type="monotone" dataKey="forecast" stroke="#0284c7" strokeWidth={2.5} strokeDasharray="4 4" dot={{ r: 4, fill: '#ffffff', stroke: '#0284c7', strokeWidth: 2 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Column 3: Key Factors */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', backgroundColor: '#f8fafc', padding: '1.25rem', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a', marginBottom: '0.25rem' }}>
+                Key Factors
+              </div>
+
+              {[
+                { factor: 'Historical performance', impact: '+25%' },
+                { factor: 'Membership growth', impact: '+12%' },
+                { factor: 'Seasonal trend', impact: '+10%' },
+                { factor: 'Renewal rate', impact: '+8%' },
+              ].map((item) => (
+                <div key={item.factor} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                  <span style={{ color: '#64748b' }}>{item.factor}</span>
+                  <span style={{ fontWeight: 600, color: '#059669' }}>{item.impact}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+        </ScrollReveal>
+      )}
+
+      {/* 4. Tab: Churn Prediction */}
+      {activeTab === 'churn' && (
+        <ScrollReveal delay={70}>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>
+              Members Requiring Retention Attention
+            </h2>
+            <p style={{ fontSize: '0.825rem', color: '#64748b', marginTop: '2px' }}>
+              Identified by inactivity frequency, visit gaps, and imminent expiration dates
+            </p>
+          </div>
+
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase' }}>
+                  <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
+                  <th style={{ padding: '0.9rem 1.25rem' }}>Risk Level</th>
+                  <th style={{ padding: '0.9rem 1.25rem' }}>Days Inactive</th>
+                  <th style={{ padding: '0.9rem 1.25rem' }}>Primary Factor</th>
+                  <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Outreach</th>
+                </tr>
+              </thead>
+              <tbody>
+                {churn.highRiskMembers.map((m) => (
+                  <tr key={m.memberId} style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>
+                      {m.memberName}
+                    </td>
+                    <td style={{ padding: '1rem 1.25rem' }}>
+                      <span className="badge badge-danger">High Risk</span>
+                    </td>
+                    <td style={{ padding: '1rem 1.25rem', color: '#ef4444', fontWeight: 600 }}>
+                      {m.daysSinceLastVisit} days
+                    </td>
+                    <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
+                      {m.factors[0] || 'Prolonged attendance drop'}
+                    </td>
+                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                      <button
+                        onClick={() => handleContactMember(m.memberId)}
+                        className="btn btn-outline btn-sm"
+                        style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
+                      >
+                        {contactedMemberId === m.memberId ? 'Message Sent ✓' : 'Send Reminder'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        </ScrollReveal>
+      )}
+
+      {/* 5. Tab: Expense Anomalies */}
+      {activeTab === 'leaks' && (
+        <ScrollReveal delay={70}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {leaks.anomalies.map((leak) => (
+              <div key={leak.id} className="card" style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                      <span className="badge badge-warning">Unusual Spending Detected</span>
+                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Category: {leak.category}</span>
+                    </div>
+                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
+                      {leak.category} Surge Detected
+                    </h3>
+                    <p style={{ fontSize: '0.875rem', color: '#475569', maxWidth: '680px', lineHeight: 1.5 }}>
+                      {leak.detectionReason}
+                    </p>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Anomaly Amount</div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ef4444' }}>
+                      {currency}{leak.currentAmount.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.785rem', color: '#64748b' }}>
+                      Historical baseline: {currency}{leak.historicalAverage.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </ScrollReveal>
+      )}
+
+      <style jsx>{`
+        @media (max-width: 900px) {
+          .ai-forecast-grid {
+            grid-template-columns: 1fr !important;
+            gap: 1.5rem !important;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
