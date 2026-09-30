@@ -14,6 +14,7 @@ import {
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile, UserRole } from '@/types/database';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { showError, showInfo } from '@/lib/ui/swal';
 
 export const SettingsView: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>(DBService.getProfile());
@@ -56,7 +57,7 @@ export const SettingsView: React.FC = () => {
   const handleSavePassword = (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 6) {
-      alert('Password must be at least 6 characters');
+      showError('Password Too Short', 'Password must be at least 6 characters');
       return;
     }
     setPasswordSuccess(true);
@@ -193,7 +194,7 @@ export const SettingsView: React.FC = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => alert('Photo upload dialog: file selector enabled.')}
+                    onClick={() => showInfo('Photo Upload', 'Photo upload dialog: file selector enabled.')}
                     style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600, marginTop: '4px', cursor: 'pointer' }}
                   >
                     Change photo

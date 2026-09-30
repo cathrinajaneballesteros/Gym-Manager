@@ -94,7 +94,7 @@ export const DashboardOverview: React.FC = () => {
             title="Total Revenue"
             value={`${currency}${kpis.totalRevenue.toLocaleString()}`}
             icon={TrendingUp}
-            trend={{ value: '12.5%', positive: true, label: 'from last month' }}
+            trend={kpis.totalRevenue > 0 ? { value: '12.5%', positive: true, label: 'from last month' } : undefined}
             variant="emerald"
           />
 
@@ -102,7 +102,7 @@ export const DashboardOverview: React.FC = () => {
             title="Total Expenses"
             value={`${currency}${kpis.totalExpenses.toLocaleString()}`}
             icon={Receipt}
-            trend={{ value: '4.2%', positive: false, label: 'from last month' }}
+            trend={kpis.totalExpenses > 0 ? { value: '4.2%', positive: false, label: 'from last month' } : undefined}
             variant="rose"
           />
 
@@ -110,7 +110,7 @@ export const DashboardOverview: React.FC = () => {
             title="Net Profit"
             value={`${currency}${kpis.netProfit.toLocaleString()}`}
             icon={CreditCard}
-            trend={{ value: '18.8%', positive: true, label: 'from last month' }}
+            trend={kpis.netProfit !== 0 ? { value: '18.8%', positive: kpis.netProfit > 0, label: 'from last month' } : undefined}
             variant="blue"
           />
 
@@ -118,7 +118,7 @@ export const DashboardOverview: React.FC = () => {
             title="Active Members"
             value={kpis.activeMembers}
             icon={Users}
-            trend={{ value: '8.3%', positive: true, label: 'from last month' }}
+            trend={kpis.activeMembers > 0 ? { value: '8.3%', positive: true, label: 'from last month' } : undefined}
             variant="purple"
           />
         </div>
@@ -200,7 +200,9 @@ export const DashboardOverview: React.FC = () => {
                 </h3>
               </div>
               <p style={{ fontSize: '0.85rem', color: '#424245', lineHeight: 1.55 }}>
-                Revenue is projected to increase by <strong>12% next month</strong> based on current subscription momentum and renewal trends.
+                {members.length > 0
+                  ? `Revenue is projected to increase based on current subscription momentum and renewal trends.`
+                  : `Add gym members and record transactions to begin receiving AI revenue projections and churn warnings.`}
               </p>
             </div>
 
@@ -253,7 +255,11 @@ export const DashboardOverview: React.FC = () => {
                 </h3>
               </div>
               <p style={{ fontSize: '0.85rem', color: '#424245', lineHeight: 1.55 }}>
-                <strong>{expiringMembers.length || 28} memberships</strong> expire in the next 7 days. Early outreach recommended to retain at-risk members.
+                {expiringMembers.length > 0 ? (
+                  <><strong>{expiringMembers.length} memberships</strong> expire in the next 7 days. Early outreach recommended to retain at-risk members.</>
+                ) : (
+                  <><strong>No expiring memberships</strong> in the next 7 days. All member accounts are currently active or up to date.</>
+                )}
               </p>
             </div>
 

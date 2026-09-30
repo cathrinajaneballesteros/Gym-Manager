@@ -19,12 +19,29 @@ import {
 } from './mock-data';
 
 const STORAGE_KEYS = {
-  PROFILE: 'sgfm_profile',
-  MEMBERS: 'sgfm_members',
-  PLANS: 'sgfm_plans',
-  PAYMENTS: 'sgfm_payments',
-  EXPENSES: 'sgfm_expenses',
+  PROFILE: 'sgfm_profile_v2',
+  MEMBERS: 'sgfm_members_v2',
+  PLANS: 'sgfm_plans_v2',
+  PAYMENTS: 'sgfm_payments_v2',
+  EXPENSES: 'sgfm_expenses_v2',
 };
+
+// Clear legacy sample data from previous local browser sessions
+if (typeof window !== 'undefined') {
+  try {
+    if (!localStorage.getItem('sgfm_zero_init_v2')) {
+      localStorage.removeItem('sgfm_members');
+      localStorage.removeItem('sgfm_payments');
+      localStorage.removeItem('sgfm_expenses');
+      localStorage.removeItem('sgfm_members_v2');
+      localStorage.removeItem('sgfm_payments_v2');
+      localStorage.removeItem('sgfm_expenses_v2');
+      localStorage.setItem('sgfm_zero_init_v2', 'true');
+    }
+  } catch (err) {
+    // Ignore storage errors in private browsing
+  }
+}
 
 // Safe client-side storage retrieval
 function getStoredItem<T>(key: string, fallback: T): T {
@@ -275,37 +292,28 @@ export class DBService {
       0
     );
 
-    // Apply multiplier based on timeframe for realistic totals
     let multiplier = 1;
-    let label = 'This Month (September 2026)';
+    let label = 'This Month';
     if (timeframe === 'last-month') {
-      multiplier = 0.98;
-      label = 'Last Month (August 2026)';
+      label = 'Last Month';
     } else if (timeframe === 'last-3-months') {
-      multiplier = 2.95;
-      label = 'Last 3 Months (Jul - Sep 2026)';
+      label = 'Last 3 Months';
     } else if (timeframe === 'last-6-months') {
-      multiplier = 5.8;
-      label = 'Last 6 Months (Apr - Sep 2026)';
+      label = 'Last 6 Months';
     } else if (timeframe === 'this-year') {
-      multiplier = 8.5;
-      label = 'Year to Date 2026';
+      label = 'Year to Date';
     }
 
-    // Base current month revenue benchmark is ₱145,000 as stated in proposal
-    const baselineMonthlyRevenue = 145000;
-    const currentMonthRevenue = Math.max(baselineMonthlyRevenue, totalRecordedPaymentAmount);
-    const currentMonthExpenses = Math.max(130200, totalRecordedExpensesAmount);
-
-    const totalRevenue = Math.round(currentMonthRevenue * multiplier);
-    const totalExpenses = Math.round(currentMonthExpenses * multiplier);
+    const totalRevenue = Math.round(totalRecordedPaymentAmount * multiplier);
+    const totalExpenses = Math.round(totalRecordedExpensesAmount * multiplier);
     const netProfit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
 
-    const activeMembers = members.filter((m) => m.status === 'active').length + 165; // Base community scale of 180
-    const expiringMemberships = members.filter((m) => m.status === 'expiring').length + 8;
-    const expiredMemberships = members.filter((m) => m.status === 'expired').length + 7;
-    const renewalRate = 88.8; // Proposal case: 160 expected renewals out of 180 = ~88.8%
+    const activeMembers = members.filter((m) => m.status === 'active').length;
+    const expiringMemberships = members.filter((m) => m.status === 'expiring').length;
+    const expiredMemberships = members.filter((m) => m.status === 'expired').length;
+    const totalMembers = activeMembers + expiringMemberships + expiredMemberships;
+    const renewalRate = totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 1000) / 10 : 0;
 
     return {
       totalRevenue,
@@ -322,6 +330,31 @@ export class DBService {
 
   // 8. Monthly Trends for Charts
   static getMonthlyTrends(): MonthlyTrendData[] {
-    return HISTORICAL_MONTHLY_DATA;
+    const payments = this.getPayments();
+    const expenses = this.getExpenses();
+    const members = this.getMembers();
+
+    const months = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
+    const monthKeys = ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'];
+
+    return months.map((month, idx) => {
+      const key = monthKeys[idx];
+      const revenue = payments
+        .filter((p) => p.payment_status === 'completed' && (p.payment_date || '').startsWith(key))
+        .reduce((sum, p) => sum + Number(p.amount), 0);
+      const expenseTotal = expenses
+        .filter((e) => (e.expense_date || '').startsWith(key))
+        .reduce((sum, e) => sum + Number(e.amount), 0);
+      const memberCount = members.filter((m) => (m.start_date || '') <= `${key}-31`).length;
+
+      return {
+        month,
+        monthKey: key,
+        revenue,
+        expenses: expenseTotal,
+        profit: revenue - expenseTotal,
+        memberCount,
+      };
+    });
   }
 }

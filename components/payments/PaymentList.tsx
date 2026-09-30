@@ -17,6 +17,7 @@ import { DBService } from '@/lib/data/db-service';
 import { Payment, UserProfile, Member } from '@/types/database';
 import { PaymentModal } from './PaymentModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { showSuccess } from '@/lib/ui/swal';
 
 export const PaymentList: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -327,7 +328,12 @@ export const PaymentList: React.FC = () => {
                       {/* Actions */}
                       <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                         <button
-                          onClick={() => alert(`Receipt #${p.reference_number || p.id} for ${currency}${Number(p.amount).toLocaleString()} verified.`)}
+                          onClick={() =>
+                            showSuccess(
+                              'Receipt Verified',
+                              `Receipt #${p.reference_number || p.id} for ${currency}${Number(p.amount).toLocaleString()} is verified.`
+                            )
+                          }
                           style={{
                             padding: '0.35rem 0.65rem',
                             borderRadius: '6px',

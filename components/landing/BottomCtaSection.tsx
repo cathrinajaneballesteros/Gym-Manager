@@ -100,7 +100,7 @@ export const BottomCtaSection: React.FC = () => {
                     boxShadow: '0 6px 24px rgba(5, 150, 105, 0.4)',
                   }}
                 >
-                  <span>Launch Free 14-Day Pilot</span>
+                  <span>Get Started Free</span>
                   <ArrowRight size={16} />
                 </Link>
 

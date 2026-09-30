@@ -20,7 +20,7 @@ export const AppleNavbar: React.FC = () => {
     { name: 'Overview', href: '#overview' },
     { name: 'Intelligence', href: '#intelligence' },
     { name: 'Architecture', href: '#architecture' },
-    { name: 'Pricing', href: '#pricing' },
+    { name: 'Metrics', href: '#metrics' },
   ];
 
   return (

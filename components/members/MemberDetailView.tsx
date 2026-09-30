@@ -20,6 +20,7 @@ import { DBService } from '@/lib/data/db-service';
 import { Member, Payment, MembershipPlan } from '@/types/database';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { MemberModal } from './MemberModal';
+import { showConfirm } from '@/lib/ui/swal';
 
 interface MemberDetailViewProps {
   memberId: string;
@@ -64,8 +65,14 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
     }
   };
 
-  const handleDelete = () => {
-    if (confirm(`Are you sure you want to remove ${member.first_name} ${member.last_name}?`)) {
+  const handleDelete = async () => {
+    const confirmed = await showConfirm(
+      'Remove Member?',
+      `Are you sure you want to remove ${member.first_name} ${member.last_name}? This action cannot be undone.`,
+      'Yes, remove',
+      '#ef4444'
+    );
+    if (confirmed) {
       DBService.deleteMember(member.id);
       router.push('/members');
     }

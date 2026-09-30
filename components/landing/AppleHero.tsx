@@ -136,7 +136,7 @@ export const AppleHero: React.FC = () => {
             }}
           >
             <Link href="/login" className="apple-btn-emerald">
-              <span>Start Free 14-Day Pilot</span>
+              <span>Get Started Free</span>
               <ArrowRight size={16} />
             </Link>
 
@@ -147,7 +147,7 @@ export const AppleHero: React.FC = () => {
           </div>
 
           <div style={{ fontSize: '0.8rem', color: '#86868b', marginBottom: '4rem' }}>
-            No credit card required • Instant setup with sample club data
+            Free to use • Instant access with sample club data
           </div>
         </ScrollReveal>
 

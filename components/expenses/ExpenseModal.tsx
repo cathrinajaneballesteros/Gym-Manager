@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Expense } from '@/types/database';
+import { showError } from '@/lib/ui/swal';
 
 const expenseSchema = z.object({
   category: z.enum([
@@ -81,7 +82,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
       reset();
       onClose();
     } catch (err: any) {
-      alert(err.message || 'Failed to save expense');
+      showError('Save Failed', err.message || 'Failed to save expense');
     }
   };
 

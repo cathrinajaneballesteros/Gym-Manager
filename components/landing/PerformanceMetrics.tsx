@@ -29,6 +29,7 @@ export const PerformanceMetrics: React.FC = () => {
 
   return (
     <section
+      id="metrics"
       style={{
         padding: '120px 0',
         backgroundColor: '#ffffff',

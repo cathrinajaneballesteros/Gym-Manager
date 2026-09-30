@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Member, MembershipPlan } from '@/types/database';
+import { showError } from '@/lib/ui/swal';
 
 const memberSchema = z.object({
   first_name: z.string().min(2, 'First name must be at least 2 characters'),
@@ -91,7 +92,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
       reset();
       onClose();
     } catch (err: any) {
-      alert(err.message || 'Failed to save member record');
+      showError('Save Failed', err.message || 'Failed to save member record');
     }
   };
 

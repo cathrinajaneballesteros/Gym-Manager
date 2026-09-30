@@ -6,7 +6,6 @@ import { AppleHero } from '@/components/landing/AppleHero';
 import { InteractiveProductShowcase } from '@/components/landing/InteractiveProductShowcase';
 import { BentoFeatures } from '@/components/landing/BentoFeatures';
 import { PerformanceMetrics } from '@/components/landing/PerformanceMetrics';
-import { PricingSection } from '@/components/landing/PricingSection';
 import { BottomCtaSection } from '@/components/landing/BottomCtaSection';
 import { AppleFooter } from '@/components/landing/AppleFooter';
 
@@ -40,10 +39,7 @@ export default function HomePage() {
         {/* 5. Understated Typography Stats & Numbers */}
         <PerformanceMetrics />
 
-        {/* 6. Clean Minimalist Pricing with Annual Discount Toggle */}
-        <PricingSection />
-
-        {/* 7. Expansive Cinematic Bottom Glass Panel */}
+        {/* 6. Expansive Cinematic Bottom Glass Panel */}
         <BottomCtaSection />
       </main>
 

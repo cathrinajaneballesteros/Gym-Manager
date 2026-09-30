@@ -19,6 +19,7 @@ import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
 import { RevenueForecastResult, ChurnPredictionResult, ExpenseLeakResult } from '@/types/ai';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
+import { showAlert, showToast } from '@/lib/ui/swal';
 import {
   ResponsiveContainer,
   LineChart,
@@ -40,7 +41,7 @@ export const AnalyticsView: React.FC = () => {
 
   useEffect(() => {
     setProfile(DBService.getProfile());
-    setForecast(calculateRevenueForecast(true));
+    setForecast(calculateRevenueForecast(false));
     setChurn(predictMemberChurn());
     setLeaks(detectExpenseLeaks());
   }, []);
@@ -50,19 +51,102 @@ export const AnalyticsView: React.FC = () => {
   const currency = profile?.currency || '₱';
 
   // Chart data blending historical and projected
-  const chartData = [
-    { month: 'Jan', historical: 195000, forecast: null },
-    { month: 'Feb', historical: 210000, forecast: null },
-    { month: 'Mar', historical: 228000, forecast: null },
-    { month: 'Apr', historical: 245820, forecast: 245820 },
-    { month: 'May', historical: null, forecast: 265000 },
-    { month: 'Jun', historical: null, forecast: 282000 },
-    { month: 'Jul', historical: null, forecast: 298750 },
-  ];
+  const chartData =
+    forecast.trendSeries && forecast.trendSeries.length > 0
+      ? forecast.trendSeries.map((pt) => ({
+          month: pt.period,
+          historical: pt.isForecast ? null : pt.projectedRevenue,
+          forecast: pt.isForecast ? pt.projectedRevenue : null,
+        }))
+      : [
+          { month: 'Apr', historical: 0, forecast: null },
+          { month: 'May', historical: 0, forecast: null },
+          { month: 'Jun', historical: 0, forecast: null },
+          { month: 'Jul', historical: 0, forecast: 0 },
+          { month: 'Aug', historical: null, forecast: 0 },
+          { month: 'Sep', historical: null, forecast: 0 },
+        ];
 
   const handleContactMember = (memberId: string) => {
     setContactedMemberId(memberId);
+    showToast('Reminder notification sent to member');
     setTimeout(() => setContactedMemberId(null), 3000);
+  };
+
+  const handleViewForecastDetails = () => {
+    if (!forecast.hasSufficientData) {
+      showAlert({
+        icon: 'info',
+        title: 'AI Revenue Forecast Model',
+        html: `
+          <div style="text-align: left; font-size: 0.9rem; color: #475569; line-height: 1.6;">
+            <div style="margin-bottom: 0.85rem; padding: 0.5rem 0.75rem; background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; color: #92400e; font-weight: 600; font-size: 0.85rem;">
+              ⚠️ Status: Awaiting Historical Records
+            </div>
+            <p style="margin-bottom: 0.75rem; color: #1e293b;">
+              The AI forecasting engine utilizes linear regression and moving average modeling calculated from real member payments and renewal cycles.
+            </p>
+            <p style="margin-bottom: 0.75rem;">
+              Since this system is running with zero initial data, no payment transactions have been logged yet to train the projection model.
+            </p>
+            <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #334155;">
+              💡 <strong>Next Step:</strong> Register gym members in the <em>Members</em> tab and record their subscription payments. Once payments are recorded, forward projections and confidence intervals will calculate automatically.
+            </div>
+          </div>
+        `,
+        confirmButtonText: 'Understood',
+        confirmButtonColor: '#059669',
+      });
+      return;
+    }
+
+    const forecastPoints = forecast.trendSeries.filter((p) => p.isForecast);
+    const minBound =
+      forecastPoints.length > 0
+        ? Math.min(...forecastPoints.map((p) => p.lowerConfidence))
+        : Math.round(forecast.forecastedNextMonthRevenue * 0.9);
+    const maxBound =
+      forecastPoints.length > 0
+        ? Math.max(...forecastPoints.map((p) => p.upperConfidence))
+        : Math.round(forecast.forecastedNextMonthRevenue * 1.1);
+
+    const formatVal = (val: number) => {
+      if (val >= 1000) return `${currency}${(val / 1000).toFixed(0)}k`;
+      return `${currency}${val.toLocaleString()}`;
+    };
+
+    showAlert({
+      icon: 'info',
+      title: 'AI Revenue Forecast Model',
+      html: `
+        <div style="text-align: left; font-size: 0.9rem; color: #475569; line-height: 1.6;">
+          <div style="margin-bottom: 0.85rem; padding: 0.5rem 0.75rem; background-color: #ecfdf5; border: 1px solid #d1fae5; border-radius: 8px; color: #065f46; font-weight: 600; font-size: 0.85rem;">
+            ✓ Active Model • ${forecast.confidenceScore}% Confidence Level
+          </div>
+          <p style="margin-bottom: 0.6rem; color: #1e293b;">
+            <strong>3-Month Projection:</strong> Based on linear regression trend across ${forecast.dataPointsCount} recorded period(s).
+          </p>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.825rem;">
+            <div style="background: #f8fafc; padding: 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+              <span style="color: #64748b; display: block;">Projected Next Month</span>
+              <strong style="color: #059669; font-size: 1rem;">${currency}${forecast.forecastedNextMonthRevenue.toLocaleString()}</strong>
+            </div>
+            <div style="background: #f8fafc; padding: 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0;">
+              <span style="color: #64748b; display: block;">Confidence Range</span>
+              <strong style="color: #0284c7; font-size: 1rem;">${formatVal(minBound)} – ${formatVal(maxBound)}</strong>
+            </div>
+          </div>
+          <p style="font-size: 0.825rem; color: #64748b; margin-bottom: 0.5rem;">
+            Expected renewals: <strong>${forecast.expectedRenewals}</strong> • Estimated new signups: <strong>${forecast.predictedNewMembers}</strong>
+          </p>
+          <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.65rem 0.85rem; font-size: 0.825rem; color: #334155;">
+            ${forecast.explanation}
+          </div>
+        </div>
+      `,
+      confirmButtonText: 'Done',
+      confirmButtonColor: '#059669',
+    });
   };
 
   return (
@@ -141,7 +225,7 @@ export const AnalyticsView: React.FC = () => {
                   Forecasted Revenue
                 </div>
                 <div style={{ fontSize: '2.1rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-                  {currency}298,750
+                  {currency}{forecast.forecastedNextMonthRevenue.toLocaleString()}
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
                   Next 3 months
@@ -149,15 +233,15 @@ export const AnalyticsView: React.FC = () => {
               </div>
 
               <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.35rem 0.65rem', borderRadius: '6px', backgroundColor: '#ecfdf5', border: '1px solid #d1fae5', color: '#059669', fontSize: '0.8rem', fontWeight: 600 }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.35rem 0.65rem', borderRadius: '6px', backgroundColor: forecast.hasSufficientData ? '#ecfdf5' : '#fef3c7', border: forecast.hasSufficientData ? '1px solid #d1fae5' : '1px solid #fde68a', color: forecast.hasSufficientData ? '#059669' : '#b45309', fontSize: '0.8rem', fontWeight: 600 }}>
                   <Sparkles size={13} />
-                  <span>Confidence Level: 78%</span>
+                  <span>{forecast.hasSufficientData ? `Confidence Level: ${forecast.confidenceScore}%` : 'Awaiting Data'}</span>
                 </div>
               </div>
 
               <div>
                 <button
-                  onClick={() => alert(`Detailed 3-month forecast model: Based on exponential moving average with confidence interval [${currency}285k - ${currency}315k].`)}
+                  onClick={handleViewForecastDetails}
                   className="btn btn-primary btn-sm"
                   style={{ width: '100%' }}
                 >
@@ -200,17 +284,26 @@ export const AnalyticsView: React.FC = () => {
                 Key Factors
               </div>
 
-              {[
-                { factor: 'Historical performance', impact: '+25%' },
-                { factor: 'Membership growth', impact: '+12%' },
-                { factor: 'Seasonal trend', impact: '+10%' },
-                { factor: 'Renewal rate', impact: '+8%' },
-              ].map((item) => (
-                <div key={item.factor} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
-                  <span style={{ color: '#64748b' }}>{item.factor}</span>
-                  <span style={{ fontWeight: 600, color: '#059669' }}>{item.impact}</span>
+              {!forecast.hasSufficientData ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', color: '#64748b', fontSize: '0.8rem', padding: '0.25rem 0' }}>
+                  <p style={{ fontWeight: 600, color: '#475569' }}>Awaiting initial activity</p>
+                  <p style={{ color: '#94a3b8', fontSize: '0.75rem', lineHeight: 1.4 }}>
+                    Model weights and growth factors will calibrate once members and payments are recorded.
+                  </p>
                 </div>
-              ))}
+              ) : (
+                [
+                  { factor: 'Renewal retention', impact: `${Math.round(forecast.confidenceScore * 0.9)}%` },
+                  { factor: 'Growth trajectory', impact: `${forecast.projectedGrowthPercent >= 0 ? '+' : ''}${forecast.projectedGrowthPercent}%` },
+                  { factor: 'Predicted new signups', impact: `+${forecast.predictedNewMembers}` },
+                  { factor: 'Expected renewals', impact: `${forecast.expectedRenewals}` },
+                ].map((item) => (
+                  <div key={item.factor} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <span style={{ color: '#64748b' }}>{item.factor}</span>
+                    <span style={{ fontWeight: 600, color: '#059669' }}>{item.impact}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -242,31 +335,39 @@ export const AnalyticsView: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {churn.highRiskMembers.map((m) => (
-                  <tr key={m.memberId} style={{ borderBottom: '1px solid #f8fafc' }}>
-                    <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>
-                      {m.memberName}
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem' }}>
-                      <span className="badge badge-danger">High Risk</span>
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem', color: '#ef4444', fontWeight: 600 }}>
-                      {m.daysSinceLastVisit} days
-                    </td>
-                    <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
-                      {m.factors[0] || 'Prolonged attendance drop'}
-                    </td>
-                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                      <button
-                        onClick={() => handleContactMember(m.memberId)}
-                        className="btn btn-outline btn-sm"
-                        style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
-                      >
-                        {contactedMemberId === m.memberId ? 'Message Sent ✓' : 'Send Reminder'}
-                      </button>
+                {churn.highRiskMembers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#94a3b8' }}>
+                      No members at risk. All active memberships are in good standing or no members are registered yet.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  churn.highRiskMembers.map((m) => (
+                    <tr key={m.memberId} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>
+                        {m.memberName}
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <span className="badge badge-danger">High Risk</span>
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', color: '#ef4444', fontWeight: 600 }}>
+                        {m.daysSinceLastVisit} days
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
+                        {m.factors[0] || 'Prolonged attendance drop'}
+                      </td>
+                      <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                        <button
+                          onClick={() => handleContactMember(m.memberId)}
+                          className="btn btn-outline btn-sm"
+                          style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
+                        >
+                          {contactedMemberId === m.memberId ? 'Message Sent ✓' : 'Send Reminder'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -278,34 +379,45 @@ export const AnalyticsView: React.FC = () => {
       {activeTab === 'leaks' && (
         <ScrollReveal delay={70}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {leaks.anomalies.map((leak) => (
-              <div key={leak.id} className="card" style={{ padding: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                      <span className="badge badge-warning">Unusual Spending Detected</span>
-                      <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Category: {leak.category}</span>
+            {leaks.anomalies.length === 0 ? (
+              <div className="card" style={{ padding: '3.5rem 1.5rem', textAlign: 'center', color: '#94a3b8' }}>
+                <p style={{ fontWeight: 600, color: '#334155', fontSize: '1rem', marginBottom: '0.35rem' }}>
+                  No Expense Anomalies Detected
+                </p>
+                <p style={{ fontSize: '0.85rem', color: '#64748b', maxWidth: '480px', margin: '0 auto' }}>
+                  All operational expenses are within baseline thresholds or no expense records have been logged yet.
+                </p>
+              </div>
+            ) : (
+              leaks.anomalies.map((leak) => (
+                <div key={leak.id} className="card" style={{ padding: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                        <span className="badge badge-warning">Unusual Spending Detected</span>
+                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Category: {leak.category}</span>
+                      </div>
+                      <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
+                        {leak.category} Surge Detected
+                      </h3>
+                      <p style={{ fontSize: '0.875rem', color: '#475569', maxWidth: '680px', lineHeight: 1.5 }}>
+                        {leak.detectionReason}
+                      </p>
                     </div>
-                    <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
-                      {leak.category} Surge Detected
-                    </h3>
-                    <p style={{ fontSize: '0.875rem', color: '#475569', maxWidth: '680px', lineHeight: 1.5 }}>
-                      {leak.detectionReason}
-                    </p>
-                  </div>
 
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Anomaly Amount</div>
-                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ef4444' }}>
-                      {currency}{leak.currentAmount.toLocaleString()}
-                    </div>
-                    <div style={{ fontSize: '0.785rem', color: '#64748b' }}>
-                      Historical baseline: {currency}{leak.historicalAverage.toLocaleString()}
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Anomaly Amount</div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ef4444' }}>
+                        {currency}{leak.currentAmount.toLocaleString()}
+                      </div>
+                      <div style={{ fontSize: '0.785rem', color: '#64748b' }}>
+                        Historical baseline: {currency}{leak.historicalAverage.toLocaleString()}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </ScrollReveal>
       )}

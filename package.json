@@ -21,6 +21,7 @@
     "react-dom": "19.2.8",
     "react-hook-form": "^7.89.0",
     "recharts": "^3.10.1",
+    "sweetalert2": "^11.26.25",
     "three": "^0.186.1",
     "xlsx": "^0.18.5",
     "zod": "^4.6.5"

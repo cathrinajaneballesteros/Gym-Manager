@@ -22,7 +22,7 @@ export const AppleFooter: React.FC = () => {
             1. Predictive accuracy metrics are based on backtested historical linear regressions of 12-month fitness club billing cycles across Philippine fitness hubs. Actual cash flow performance may vary depending on local membership renewal policies.
           </p>
           <p>
-            2. Pilot accounts include full access to AI forecasting models and multi-payment reconciliation modules. Zero obligations to purchase at conclusion of 14-day evaluation window.
+            2. Smart Gym is completely free to use. All forecasting models, automated payment reconciliations, and member analytics are available with zero subscription fees or locked tiers.
           </p>
         </div>
 

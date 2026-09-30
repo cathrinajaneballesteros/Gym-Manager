@@ -20,6 +20,7 @@ import {
   Area,
 } from 'recharts';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { showError } from '@/lib/ui/swal';
 
 export const ReportsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'revenue' | 'expenses' | 'profit-loss' | 'monthly' | 'annual'>('revenue');
@@ -58,7 +59,7 @@ export const ReportsView: React.FC = () => {
       });
     } catch (err) {
       console.error('PDF export error:', err);
-      alert('Error generating PDF report. Please try again.');
+      showError('PDF Export Failed', 'Error generating PDF report. Please try again.');
     } finally {
       setIsExporting(false);
     }
@@ -79,7 +80,7 @@ export const ReportsView: React.FC = () => {
       });
     } catch (err) {
       console.error('Excel export error:', err);
-      alert('Error generating Excel report. Please try again.');
+      showError('Excel Export Failed', 'Error generating Excel report. Please try again.');
     } finally {
       setIsExporting(false);
     }
@@ -162,10 +163,12 @@ export const ReportsView: React.FC = () => {
             <div style={{ fontSize: '2rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
               {currency}{kpis.totalRevenue.toLocaleString()}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#059669', fontWeight: 600, marginBottom: '1rem' }}>
-              <ArrowUpRight size={14} />
-              <span>12.5% from last month</span>
-            </div>
+            {kpis.totalRevenue > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#059669', fontWeight: 600, marginBottom: '1rem' }}>
+                <ArrowUpRight size={14} />
+                <span>12.5% from last month</span>
+              </div>
+            )}
 
             <div style={{ width: '100%', height: 100, marginTop: 'auto' }}>
               <ResponsiveContainer width="100%" height="100%">
@@ -190,10 +193,12 @@ export const ReportsView: React.FC = () => {
             <div style={{ fontSize: '2rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
               {currency}{kpis.totalExpenses.toLocaleString()}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#ef4444', fontWeight: 600, marginBottom: '1rem' }}>
-              <ArrowDownRight size={14} />
-              <span>4.2% from last month</span>
-            </div>
+            {kpis.totalExpenses > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#ef4444', fontWeight: 600, marginBottom: '1rem' }}>
+                <ArrowDownRight size={14} />
+                <span>4.2% from last month</span>
+              </div>
+            )}
 
             <div style={{ width: '100%', height: 100, marginTop: 'auto' }}>
               <ResponsiveContainer width="100%" height="100%">

@@ -7,6 +7,7 @@ import * as z from 'zod';
 import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Payment, Member, MembershipPlan } from '@/types/database';
+import { showError } from '@/lib/ui/swal';
 
 const paymentSchema = z.object({
   member_id: z.string().min(1, 'Please select a member'),
@@ -107,7 +108,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       reset();
       onClose();
     } catch (err: any) {
-      alert(err.message || 'Failed to record payment');
+      showError('Payment Failed', err.message || 'Failed to record payment');
     }
   };
 

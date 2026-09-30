@@ -32,32 +32,7 @@ BEGIN
     (v_plan_student, v_admin_id, 'Student Monthly Discount', 1100.00, 1, 'Valid student ID required. Gym hours 6AM - 5PM', true)
   ON CONFLICT (id) DO NOTHING;
 
-  -- 3. Sample Members
-  INSERT INTO public.members (id, admin_id, first_name, last_name, email, phone, emergency_contact, membership_plan_id, start_date, end_date, status, last_visit_date, notes)
-  VALUES
-    (v_member_1, v_admin_id, 'Aaron', 'Cabato', 'aaron.cabato@example.com', '+63 920 111 2233', 'Maria Cabato (Mother) 09201112234', v_plan_regular, CURRENT_DATE - INTERVAL '60 days', CURRENT_DATE + INTERVAL '30 days', 'active', CURRENT_DATE - INTERVAL '1 day', 'Loyal member, attends mornings'),
-    (v_member_2, v_admin_id, 'Gerardo', 'David', 'gerardo.david@example.com', '+63 918 333 4455', 'Elena David (Spouse) 09183334456', v_plan_vip, CURRENT_DATE - INTERVAL '180 days', CURRENT_DATE + INTERVAL '185 days', 'active', CURRENT_DATE - INTERVAL '3 days', 'VIP member, powerlifting enthusiast'),
-    (v_member_3, v_admin_id, 'Justine', 'Villano', 'justine.v@example.com', '+63 915 555 6677', 'Robert Villano 09155556678', v_plan_basic, CURRENT_DATE - INTERVAL '25 days', CURRENT_DATE + INTERVAL '5 days', 'expiring', CURRENT_DATE - INTERVAL '20 days', 'High risk of churn: has not visited in 20 days'),
-    (v_member_4, v_admin_id, 'Mark', 'Bautista', 'mark.b@example.com', '+63 916 777 8899', 'Sarah Bautista 09167778800', v_plan_student, CURRENT_DATE - INTERVAL '40 days', CURRENT_DATE - INTERVAL '10 days', 'expired', CURRENT_DATE - INTERVAL '35 days', 'Expired subscription - pending follow-up call'),
-    (v_member_5, v_admin_id, 'Kathryn', 'Bernardo', 'kathryn.b@example.com', '+63 919 888 9900', 'Min Bernardo 09198889901', v_plan_basic, CURRENT_DATE - INTERVAL '10 days', CURRENT_DATE + INTERVAL '20 days', 'active', CURRENT_DATE, 'Enrolled in cardio conditioning')
-  ON CONFLICT (id) DO NOTHING;
-
-  -- 4. Sample Payments
-  INSERT INTO public.payments (admin_id, member_id, membership_plan_id, amount, payment_date, payment_method, payment_status, reference_number, notes)
-  VALUES
-    (v_admin_id, v_member_1, v_plan_regular, 4200.00, CURRENT_DATE - INTERVAL '60 days', 'GCash', 'completed', 'GC-892104-X', 'Quarterly upfront payment'),
-    (v_admin_id, v_member_2, v_plan_vip, 15000.00, CURRENT_DATE - INTERVAL '180 days', 'Credit Card', 'completed', 'TXN-902148', 'Annual VIP fee'),
-    (v_admin_id, v_member_3, v_plan_basic, 1500.00, CURRENT_DATE - INTERVAL '25 days', 'Cash', 'completed', 'REC-00129', 'Monthly walk-in fee'),
-    (v_admin_id, v_member_5, v_plan_basic, 1500.00, CURRENT_DATE - INTERVAL '10 days', 'GCash', 'completed', 'GC-994120-A', 'Monthly subscription');
-
-  -- 5. Sample Expenses
-  INSERT INTO public.expenses (admin_id, category, title, amount, expense_date, payment_method, description)
-  VALUES
-    (v_admin_id, 'Rent', 'Gym Commercial Space Lease', 45000.00, CURRENT_DATE - INTERVAL '5 days', 'Bank Transfer', 'Monthly floor space lease for 350 sqm gym facility'),
-    (v_admin_id, 'Salaries', 'Staff & Floor Coaches Payroll', 35000.00, CURRENT_DATE - INTERVAL '12 days', 'Bank Transfer', 'Bi-monthly salary for 2 floor trainers and 1 front desk receptionist'),
-    (v_admin_id, 'Utilities', 'Commercial Meralco Electricity Bill', 15000.00, CURRENT_DATE - INTERVAL '3 days', 'GCash', 'Air conditioning 16 hrs/day + water dispenser heating (Spike detected: Avg ₱8,000)'),
-    (v_admin_id, 'Maintenance', 'Treadmill Belt Replacement & Lubrication', 6500.00, CURRENT_DATE - INTERVAL '15 days', 'Cash', 'Bi-monthly scheduled technician maintenance for 4 commercial treadmills'),
-    (v_admin_id, 'Supplies', 'Disinfectant Spray, Paper Towels & Chalk', 3200.00, CURRENT_DATE - INTERVAL '20 days', 'Cash', 'Sanitary gym cleaning supplies and lifting chalk refills'),
-    (v_admin_id, 'Marketing', 'Facebook & Instagram Local Awareness Ad Campaign', 4000.00, CURRENT_DATE - INTERVAL '22 days', 'Credit Card', 'Targeted campaign for fitness enthusiasts within 5km radius');
+  -- 3. Starting on Zero (No sample members, payments, or expenses seeded)
 
 END $$;
+

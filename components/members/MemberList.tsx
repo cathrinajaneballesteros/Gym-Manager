@@ -20,6 +20,7 @@ import { Member, MembershipPlan } from '@/types/database';
 import { MemberModal } from './MemberModal';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { showConfirm, showToast } from '@/lib/ui/swal';
 
 export const MemberList: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
@@ -74,11 +75,18 @@ export const MemberList: React.FC = () => {
   const totalPages = Math.ceil(filteredMembers.length / pageSize) || 1;
   const paginatedMembers = filteredMembers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const handleDeleteMember = (id: string, name: string) => {
-    if (confirm(`Are you sure you want to remove member ${name}?`)) {
+  const handleDeleteMember = async (id: string, name: string) => {
+    const confirmed = await showConfirm(
+      'Remove Member?',
+      `Are you sure you want to remove member ${name}? This action cannot be undone.`,
+      'Yes, remove',
+      '#ef4444'
+    );
+    if (confirmed) {
       DBService.deleteMember(id);
       refreshData();
       setActiveMenuId(null);
+      showToast(`${name} removed`);
     }
   };
 

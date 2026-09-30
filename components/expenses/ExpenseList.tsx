@@ -18,6 +18,7 @@ import { Expense, UserProfile } from '@/types/database';
 import { CategoryExpenseChart } from '@/components/charts/CategoryExpenseChart';
 import { ExpenseModal } from './ExpenseModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { showConfirm, showToast } from '@/lib/ui/swal';
 
 export const ExpenseList: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -75,10 +76,17 @@ export const ExpenseList: React.FC = () => {
   const totalPages = Math.ceil(filteredExpenses.length / pageSize) || 1;
   const paginated = filteredExpenses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const handleDelete = (id: string, title: string) => {
-    if (confirm(`Are you sure you want to delete expense record "${title}"?`)) {
+  const handleDelete = async (id: string, title: string) => {
+    const confirmed = await showConfirm(
+      'Delete Expense?',
+      `Are you sure you want to delete expense record "${title}"? This action cannot be undone.`,
+      'Yes, delete',
+      '#ef4444'
+    );
+    if (confirmed) {
       DBService.deleteExpense(id);
       refreshData();
+      showToast(`Expense "${title}" deleted`);
     }
   };
 

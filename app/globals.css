@@ -1,3 +1,4 @@
+@import 'sweetalert2/dist/sweetalert2.min.css';
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600;1,700&display=swap');
 
 /* ==========================================================================
@@ -575,6 +576,67 @@ textarea::placeholder {
 
 .apple-btn-emerald:active {
   transform: scale(0.97);
+}
+
+/* ==========================================================================
+   SWEETALERT2 STYLING SYSTEM
+   ========================================================================== */
+.sgfm-swal-popup {
+  border-radius: 20px !important;
+  padding: 1.75rem !important;
+  font-family: inherit !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.15) !important;
+}
+
+.sgfm-swal-title {
+  font-size: 1.25rem !important;
+  font-weight: 700 !important;
+  color: #1d1d1f !important;
+  letter-spacing: -0.02em !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.sgfm-swal-content {
+  font-size: 0.9rem !important;
+  color: #424245 !important;
+  line-height: 1.55 !important;
+}
+
+.sgfm-swal-confirm-btn {
+  background-color: #059669 !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+  padding: 0.6rem 1.4rem !important;
+  border-radius: 10px !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  margin: 0 0.35rem !important;
+}
+
+.sgfm-swal-confirm-btn:hover {
+  background-color: #047857 !important;
+  transform: translateY(-1px) !important;
+}
+
+.sgfm-swal-cancel-btn {
+  background-color: #f1f5f9 !important;
+  color: #475569 !important;
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+  padding: 0.6rem 1.4rem !important;
+  border-radius: 10px !important;
+  border: 1px solid #e2e8f0 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+  margin: 0 0.35rem !important;
+}
+
+.sgfm-swal-cancel-btn:hover {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
 }
 
 
