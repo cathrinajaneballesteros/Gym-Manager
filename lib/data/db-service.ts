@@ -298,31 +298,38 @@ export class DBService {
     const payments = this.getPayments();
     const expenses = this.getExpenses();
 
-    // In a mature gym, 180 members generate ~₱145k monthly run rate
-    // We compute exact sums from recorded items and add baseline monthly run rate for historical consistency
-    const totalRecordedPaymentAmount = payments
-      .filter((p) => p.payment_status === 'completed')
-      .reduce((sum, p) => sum + Number(p.amount), 0);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0 to 11
 
-    const totalRecordedExpensesAmount = expenses.reduce(
-      (sum, e) => sum + Number(e.amount),
-      0
-    );
+    const thisMonthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+    const lastMonthDate = new Date(currentYear, currentMonth - 1, 1);
+    const lastMonthKey = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
-    let multiplier = 1;
+    let filteredPayments = payments.filter((p) => p.payment_status === 'completed');
+    let filteredExpenses = expenses;
     let label = 'This Month';
+
     if (timeframe === 'last-month') {
       label = 'Last Month';
+      filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(lastMonthKey));
+      filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(lastMonthKey));
+    } else if (timeframe === 'this-month') {
+      label = 'This Month';
+      filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(thisMonthKey) || !p.payment_date);
+      filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(thisMonthKey) || !e.expense_date);
     } else if (timeframe === 'last-3-months') {
       label = 'Last 3 Months';
     } else if (timeframe === 'last-6-months') {
       label = 'Last 6 Months';
     } else if (timeframe === 'this-year') {
       label = 'Year to Date';
+      filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(`${currentYear}-`));
+      filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(`${currentYear}-`));
     }
 
-    const totalRevenue = Math.round(totalRecordedPaymentAmount * multiplier);
-    const totalExpenses = Math.round(totalRecordedExpensesAmount * multiplier);
+    const totalRevenue = filteredPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+    const totalExpenses = filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
     const netProfit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
 

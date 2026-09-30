@@ -25,6 +25,7 @@ import { showError } from '@/lib/ui/swal';
 export const ReportsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'revenue' | 'expenses' | 'profit-loss' | 'monthly' | 'annual'>('revenue');
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
+  const [lastMonthKpis, setLastMonthKpis] = useState<DashboardKPIs | null>(null);
   const [trends, setTrends] = useState<MonthlyTrendData[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -34,6 +35,7 @@ export const ReportsView: React.FC = () => {
 
   useEffect(() => {
     setKpis(DBService.getDashboardKPIs('this-month'));
+    setLastMonthKpis(DBService.getDashboardKPIs('last-month'));
     setTrends(DBService.getMonthlyTrends());
     setExpenses(DBService.getExpenses());
     setMembers(DBService.getMembers());
@@ -45,6 +47,32 @@ export const ReportsView: React.FC = () => {
 
   const currency = profile?.currency || '₱';
   const gymName = profile?.gym_name || 'IronPeak Fitness & Gym';
+
+  const lastRev = lastMonthKpis?.totalRevenue || 0;
+  const lastExp = lastMonthKpis?.totalExpenses || 0;
+  const lastProfit = lastMonthKpis?.netProfit || 0;
+
+  const getChangeStats = (current: number, previous: number, invertColors = false) => {
+    if (previous === 0) {
+      if (current === 0) {
+        return { label: '0.0%', color: '#64748b' };
+      }
+      return { label: '+100.0%', color: invertColors ? '#ef4444' : '#059669' };
+    }
+    const diff = ((current - previous) / previous) * 100;
+    const isPositive = diff >= 0;
+    const color = invertColors
+      ? (isPositive ? '#ef4444' : '#059669')
+      : (isPositive ? '#059669' : '#ef4444');
+    return {
+      label: `${isPositive ? '+' : ''}${diff.toFixed(1)}%`,
+      color,
+    };
+  };
+
+  const revChange = getChangeStats(kpis.totalRevenue, lastRev);
+  const expChange = getChangeStats(kpis.totalExpenses, lastExp, true);
+  const profitChange = getChangeStats(kpis.netProfit, lastProfit);
 
   const handleExportPDF = () => {
     setIsExporting(true);
@@ -163,10 +191,10 @@ export const ReportsView: React.FC = () => {
             <div style={{ fontSize: '2rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
               {currency}{kpis.totalRevenue.toLocaleString()}
             </div>
-            {kpis.totalRevenue > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#059669', fontWeight: 600, marginBottom: '1rem' }}>
+            {lastRev > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: revChange.color, fontWeight: 600, marginBottom: '1rem' }}>
                 <ArrowUpRight size={14} />
-                <span>12.5% from last month</span>
+                <span>{revChange.label} from last month</span>
               </div>
             )}
 
@@ -193,10 +221,10 @@ export const ReportsView: React.FC = () => {
             <div style={{ fontSize: '2rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
               {currency}{kpis.totalExpenses.toLocaleString()}
             </div>
-            {kpis.totalExpenses > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#ef4444', fontWeight: 600, marginBottom: '1rem' }}>
+            {lastExp > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: expChange.color, fontWeight: 600, marginBottom: '1rem' }}>
                 <ArrowDownRight size={14} />
-                <span>4.2% from last month</span>
+                <span>{expChange.label} from last month</span>
               </div>
             )}
 
@@ -286,20 +314,20 @@ export const ReportsView: React.FC = () => {
               <tr style={{ borderBottom: '1px solid #f8fafc' }}>
                 <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>Revenue</td>
                 <td style={{ padding: '1rem 1.25rem', color: '#334155' }}>{currency}{kpis.totalRevenue.toLocaleString()}</td>
-                <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}218,420</td>
-                <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: '#059669', fontWeight: 600 }}>+12.5%</td>
+                <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastRev.toLocaleString()}</td>
+                <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: revChange.color, fontWeight: 600 }}>{revChange.label}</td>
               </tr>
               <tr style={{ borderBottom: '1px solid #f8fafc' }}>
                 <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>Expenses</td>
                 <td style={{ padding: '1rem 1.25rem', color: '#334155' }}>{currency}{kpis.totalExpenses.toLocaleString()}</td>
-                <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}94,300</td>
-                <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>+4.2%</td>
+                <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastExp.toLocaleString()}</td>
+                <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: expChange.color, fontWeight: 600 }}>{expChange.label}</td>
               </tr>
               <tr>
                 <td style={{ padding: '1rem 1.5rem', fontWeight: 700, color: '#0f172a' }}>Net Profit</td>
                 <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#059669' }}>{currency}{kpis.netProfit.toLocaleString()}</td>
-                <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}124,120</td>
-                <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: '#059669', fontWeight: 700 }}>+18.7%</td>
+                <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastProfit.toLocaleString()}</td>
+                <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: profitChange.color, fontWeight: 700 }}>{profitChange.label}</td>
               </tr>
             </tbody>
           </table>

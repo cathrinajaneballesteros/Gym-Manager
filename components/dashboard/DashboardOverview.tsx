@@ -25,6 +25,7 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 export const DashboardOverview: React.FC = () => {
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
+  const [lastMonthKpis, setLastMonthKpis] = useState<DashboardKPIs | null>(null);
   const [trends, setTrends] = useState<MonthlyTrendData[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -37,6 +38,7 @@ export const DashboardOverview: React.FC = () => {
 
   const refreshData = () => {
     setKpis(DBService.getDashboardKPIs('this-month'));
+    setLastMonthKpis(DBService.getDashboardKPIs('last-month'));
     setTrends(DBService.getMonthlyTrends());
     setMembers(DBService.getMembers());
     setPayments(DBService.getPayments());
@@ -62,6 +64,38 @@ export const DashboardOverview: React.FC = () => {
   const adminFirstName = DBService.getFirstName(profile?.full_name);
   const expiringMembers = members.filter((m) => m.status === 'expiring');
   const recentPayments = payments.slice(0, 2);
+
+  const revenueTrend = lastMonthKpis && lastMonthKpis.totalRevenue > 0
+    ? {
+        value: `${Math.abs(Math.round(((kpis.totalRevenue - lastMonthKpis.totalRevenue) / lastMonthKpis.totalRevenue) * 100))}%`,
+        positive: kpis.totalRevenue >= lastMonthKpis.totalRevenue,
+        label: 'from last month',
+      }
+    : undefined;
+
+  const expenseTrend = lastMonthKpis && lastMonthKpis.totalExpenses > 0
+    ? {
+        value: `${Math.abs(Math.round(((kpis.totalExpenses - lastMonthKpis.totalExpenses) / lastMonthKpis.totalExpenses) * 100))}%`,
+        positive: kpis.totalExpenses <= lastMonthKpis.totalExpenses,
+        label: 'from last month',
+      }
+    : undefined;
+
+  const profitTrend = lastMonthKpis && lastMonthKpis.netProfit !== 0
+    ? {
+        value: `${Math.abs(Math.round(((kpis.netProfit - lastMonthKpis.netProfit) / Math.abs(lastMonthKpis.netProfit)) * 100))}%`,
+        positive: kpis.netProfit >= lastMonthKpis.netProfit,
+        label: 'from last month',
+      }
+    : undefined;
+
+  const memberTrend = lastMonthKpis && lastMonthKpis.activeMembers > 0
+    ? {
+        value: `${Math.abs(Math.round(((kpis.activeMembers - lastMonthKpis.activeMembers) / lastMonthKpis.activeMembers) * 100))}%`,
+        positive: kpis.activeMembers >= lastMonthKpis.activeMembers,
+        label: 'from last month',
+      }
+    : undefined;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
@@ -104,7 +138,7 @@ export const DashboardOverview: React.FC = () => {
             title="Total Revenue"
             value={`${currency}${kpis.totalRevenue.toLocaleString()}`}
             icon={TrendingUp}
-            trend={kpis.totalRevenue > 0 ? { value: '12.5%', positive: true, label: 'from last month' } : undefined}
+            trend={revenueTrend}
             variant="emerald"
           />
 
@@ -112,7 +146,7 @@ export const DashboardOverview: React.FC = () => {
             title="Total Expenses"
             value={`${currency}${kpis.totalExpenses.toLocaleString()}`}
             icon={Receipt}
-            trend={kpis.totalExpenses > 0 ? { value: '4.2%', positive: false, label: 'from last month' } : undefined}
+            trend={expenseTrend}
             variant="rose"
           />
 
@@ -120,7 +154,7 @@ export const DashboardOverview: React.FC = () => {
             title="Net Profit"
             value={`${currency}${kpis.netProfit.toLocaleString()}`}
             icon={CreditCard}
-            trend={kpis.netProfit !== 0 ? { value: '18.8%', positive: kpis.netProfit > 0, label: 'from last month' } : undefined}
+            trend={profitTrend}
             variant="blue"
           />
 
@@ -128,7 +162,7 @@ export const DashboardOverview: React.FC = () => {
             title="Active Members"
             value={kpis.activeMembers}
             icon={Users}
-            trend={kpis.activeMembers > 0 ? { value: '8.3%', positive: true, label: 'from last month' } : undefined}
+            trend={memberTrend}
             variant="purple"
           />
         </div>

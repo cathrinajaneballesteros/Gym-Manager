@@ -11,6 +11,7 @@ import {
   Trash2,
   Edit,
   ArrowDownRight,
+  ArrowUpRight,
   TrendingDown,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
@@ -63,7 +64,7 @@ export const ExpenseList: React.FC = () => {
   expenses.forEach((e) => {
     catSums[e.category] = (catSums[e.category] || 0) + Number(e.amount);
   });
-  let topCategoryName = 'Salaries';
+  let topCategoryName = '—';
   let topCategoryAmount = 0;
   Object.entries(catSums).forEach(([name, amt]) => {
     if (amt > topCategoryAmount) {
@@ -71,7 +72,8 @@ export const ExpenseList: React.FC = () => {
       topCategoryName = name;
     }
   });
-  const topCategoryPct = totalExpenses > 0 ? Math.round((topCategoryAmount / totalExpenses) * 100) : 32;
+  const topCategoryPct = totalExpenses > 0 ? Math.round((topCategoryAmount / totalExpenses) * 100) : 0;
+  const lastMonthTotalExpenses = DBService.getDashboardKPIs('last-month').totalExpenses;
 
   const totalPages = Math.ceil(filteredExpenses.length / pageSize) || 1;
   const paginated = filteredExpenses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -137,10 +139,16 @@ export const ExpenseList: React.FC = () => {
             <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
               {currency}{totalExpenses.toLocaleString()}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#ef4444', fontWeight: 600 }}>
-              <ArrowDownRight size={14} />
-              <span>4.2% from last month</span>
-            </div>
+            {lastMonthTotalExpenses > 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: totalExpenses <= lastMonthTotalExpenses ? '#059669' : '#ef4444', fontWeight: 600 }}>
+                {totalExpenses <= lastMonthTotalExpenses ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
+                <span>{Math.abs(Math.round(((totalExpenses - lastMonthTotalExpenses) / lastMonthTotalExpenses) * 100))}% from last month</span>
+              </div>
+            ) : (
+              <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
+                No prior month records
+              </div>
+            )}
           </div>
 
           {/* This Month */}
@@ -164,8 +172,8 @@ export const ExpenseList: React.FC = () => {
             <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
               {topCategoryName}
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
-              {topCategoryPct}% of total outlays
+            <div style={{ fontSize: '0.8rem', color: totalExpenses > 0 ? '#059669' : '#94a3b8', fontWeight: totalExpenses > 0 ? 600 : 400 }}>
+              {totalExpenses > 0 ? `${topCategoryPct}% of total outlays` : 'No expenses recorded'}
             </div>
           </div>
         </div>
