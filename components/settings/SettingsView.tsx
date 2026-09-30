@@ -183,11 +183,11 @@ export const SettingsView: React.FC = () => {
                     fontWeight: 700,
                   }}
                 >
-                  AJ
+                  {DBService.getInitials(fullName || profile.full_name)}
                 </div>
                 <div>
                   <div style={{ fontWeight: 600, color: '#0f172a', fontSize: '0.95rem' }}>
-                    {fullName || 'Alex Johnson'}
+                    {fullName || profile.full_name || 'Admin'}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
                     Admin

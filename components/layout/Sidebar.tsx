@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -13,6 +13,8 @@ import {
   Settings,
   LogOut,
 } from 'lucide-react';
+import { DBService } from '@/lib/data/db-service';
+import { UserProfile } from '@/types/database';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -22,6 +24,23 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const pathname = usePathname();
   const router = useRouter();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    setProfile(DBService.getProfile());
+    const handleProfileUpdate = () => {
+      setProfile(DBService.getProfile());
+    };
+    window.addEventListener('sgfm_profile_updated', handleProfileUpdate);
+    window.addEventListener('storage', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('sgfm_profile_updated', handleProfileUpdate);
+      window.removeEventListener('storage', handleProfileUpdate);
+    };
+  }, []);
+
+  const adminName = profile?.full_name || 'Admin';
+  const initials = DBService.getInitials(profile?.full_name);
 
   const navItems = [
     { section: 'OVERVIEW', items: [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }] },
@@ -256,11 +275,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               flexShrink: 0,
             }}
           >
-            AJ
+            {initials}
           </div>
           <div style={{ overflow: 'hidden' }}>
             <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#f5f5f7', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>
-              Alex Johnson
+              {adminName}
             </div>
             <div style={{ fontSize: '0.685rem', color: '#8e8e93', whiteSpace: 'nowrap' }}>
               Administrator

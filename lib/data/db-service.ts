@@ -70,10 +70,27 @@ export class DBService {
     return getStoredItem<UserProfile>(STORAGE_KEYS.PROFILE, INITIAL_PROFILE);
   }
 
+  static getFirstName(fullName?: string): string {
+    if (!fullName || !fullName.trim()) return 'Admin';
+    const first = fullName.trim().split(/\s+/)[0];
+    return first || 'Admin';
+  }
+
+  static getInitials(fullName?: string): string {
+    if (!fullName || !fullName.trim()) return 'AD';
+    const parts = fullName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'AD';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
   static updateProfile(updates: Partial<UserProfile>): UserProfile {
     const current = this.getProfile();
     const updated = { ...current, ...updates, updated_at: new Date().toISOString() };
     setStoredItem(STORAGE_KEYS.PROFILE, updated);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sgfm_profile_updated', { detail: updated }));
+    }
     return updated;
   }
 

@@ -45,11 +45,21 @@ export const DashboardOverview: React.FC = () => {
 
   useEffect(() => {
     refreshData();
+    const handleProfileUpdate = () => {
+      setProfile(DBService.getProfile());
+    };
+    window.addEventListener('sgfm_profile_updated', handleProfileUpdate);
+    window.addEventListener('storage', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('sgfm_profile_updated', handleProfileUpdate);
+      window.removeEventListener('storage', handleProfileUpdate);
+    };
   }, []);
 
   if (!kpis) return null;
 
   const currency = profile?.currency || '₱';
+  const adminFirstName = DBService.getFirstName(profile?.full_name);
   const expiringMembers = members.filter((m) => m.status === 'expiring');
   const recentPayments = payments.slice(0, 2);
 
@@ -60,7 +70,7 @@ export const DashboardOverview: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
-              Good morning, Alex!
+              Good morning, {adminFirstName}!
             </h1>
             <p style={{ fontSize: '0.875rem', color: '#86868b' }}>
               Here&apos;s what&apos;s happening with your gym&apos;s finances today.

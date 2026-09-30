@@ -1,8 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Menu, Search, Calendar, Bell, ChevronDown } from 'lucide-react';
+import { DBService } from '@/lib/data/db-service';
+import { UserProfile } from '@/types/database';
 
 interface HeaderProps {
   onToggleMobileMenu?: () => void;
@@ -10,6 +12,22 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
   const [hasUnread, setHasUnread] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+
+  useEffect(() => {
+    setProfile(DBService.getProfile());
+    const handleProfileUpdate = () => {
+      setProfile(DBService.getProfile());
+    };
+    window.addEventListener('sgfm_profile_updated', handleProfileUpdate);
+    window.addEventListener('storage', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('sgfm_profile_updated', handleProfileUpdate);
+      window.removeEventListener('storage', handleProfileUpdate);
+    };
+  }, []);
+
+  const initials = DBService.getInitials(profile?.full_name);
 
   return (
     <header
@@ -159,7 +177,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
               boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
             }}
           >
-            AJ
+            {initials}
           </div>
         </Link>
       </div>
