@@ -124,20 +124,27 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
             Member *
           </label>
-          <select
-            {...register('member_id')}
-            onChange={(e) => {
-              register('member_id').onChange(e);
-              handleMemberChange(e.target.value);
-            }}
-            style={{ width: '100%' }}
-          >
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.first_name} {m.last_name} ({m.email})
-              </option>
-            ))}
-          </select>
+          {members.length === 0 ? (
+            <div style={{ padding: '0.65rem 0.85rem', backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', color: '#92400e', fontSize: '0.825rem', lineHeight: 1.4 }}>
+              ⚠️ No members registered yet. Please add a member in the <strong>Members</strong> tab before recording a payment.
+            </div>
+          ) : (
+            <select
+              {...register('member_id')}
+              onChange={(e) => {
+                register('member_id').onChange(e);
+                handleMemberChange(e.target.value);
+              }}
+              style={{ width: '100%' }}
+            >
+              <option value="">Select a member...</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.first_name} {m.last_name} ({m.email})
+                </option>
+              ))}
+            </select>
+          )}
           {errors.member_id && (
             <span style={{ fontSize: '0.725rem', color: 'var(--danger)', marginTop: '0.2rem', display: 'block' }}>
               {errors.member_id.message}
@@ -253,7 +260,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+          <button type="submit" className="btn btn-primary" disabled={isSubmitting || members.length === 0}>
             {isSubmitting ? 'Recording...' : 'Complete Payment'}
           </button>
         </div>
