@@ -10,6 +10,16 @@ import { BottomCtaSection } from '@/components/landing/BottomCtaSection';
 import { AppleFooter } from '@/components/landing/AppleFooter';
 
 export default function HomePage() {
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      if (code) {
+        window.location.href = `/auth/callback?code=${encodeURIComponent(code)}&next=/dashboard`;
+      }
+    }
+  }, []);
+
   return (
     <div
       style={{
