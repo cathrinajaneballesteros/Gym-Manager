@@ -7,8 +7,12 @@ import { Menu, X, ArrowRight } from 'lucide-react';
 export const AppleNavbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsLoggedIn(sessionStorage.getItem('sgfm_authenticated') === 'true');
+    }
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
@@ -115,7 +119,7 @@ export const AppleNavbar: React.FC = () => {
         {/* Right CTA Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <Link
-            href="/login"
+            href="/login?mode=signin"
             style={{
               fontSize: '0.85rem',
               fontWeight: 500,
@@ -132,7 +136,7 @@ export const AppleNavbar: React.FC = () => {
           </Link>
 
           <Link
-            href="/login"
+            href={isLoggedIn ? '/dashboard' : '/login?mode=signup'}
             className="apple-btn-primary"
             style={{
               fontSize: '0.825rem',
@@ -204,7 +208,7 @@ export const AppleNavbar: React.FC = () => {
           ))}
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
             <Link
-              href="/login"
+              href="/login?mode=signin"
               onClick={() => setMobileOpen(false)}
               className="apple-btn-secondary"
               style={{ flex: 1, fontSize: '0.85rem', padding: '0.65rem' }}
@@ -212,12 +216,12 @@ export const AppleNavbar: React.FC = () => {
               Sign In
             </Link>
             <Link
-              href="/login"
+              href={isLoggedIn ? '/dashboard' : '/login?mode=signup'}
               onClick={() => setMobileOpen(false)}
               className="apple-btn-primary"
               style={{ flex: 1, fontSize: '0.85rem', padding: '0.65rem' }}
             >
-              Get Started
+              Launch App
             </Link>
           </div>
         </div>

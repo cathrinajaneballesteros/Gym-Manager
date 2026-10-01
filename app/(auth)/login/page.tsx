@@ -9,7 +9,7 @@ import { DBService } from '@/lib/data/db-service';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [mode, setMode] = useState<'signin' | 'signup'>('signup');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -21,6 +21,24 @@ export default function LoginPage() {
   const [successMessage, setSuccessMessage] = useState('');
 
   const supabase = createClient();
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlMode = params.get('mode');
+      const isAuth = sessionStorage.getItem('sgfm_authenticated') === 'true';
+
+      if (urlMode === 'signin') {
+        setMode('signin');
+      } else if (urlMode === 'signup') {
+        setMode('signup');
+      } else if (isAuth) {
+        setMode('signin');
+      } else {
+        setMode('signup');
+      }
+    }
+  }, []);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();

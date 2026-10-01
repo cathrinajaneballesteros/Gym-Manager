@@ -6,6 +6,13 @@ import { ArrowRight, ShieldCheck, Zap } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 export const BottomCtaSection: React.FC = () => {
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsLoggedIn(sessionStorage.getItem('sgfm_authenticated') === 'true');
+    }
+  }, []);
   return (
     <section
       style={{
@@ -92,7 +99,7 @@ export const BottomCtaSection: React.FC = () => {
                 }}
               >
                 <Link
-                  href="/login"
+                  href={isLoggedIn ? '/dashboard' : '/login?mode=signup'}
                   className="apple-btn-emerald"
                   style={{
                     padding: '0.85rem 2.25rem',

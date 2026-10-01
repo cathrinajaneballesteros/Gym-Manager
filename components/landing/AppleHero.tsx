@@ -18,6 +18,13 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 export const AppleHero: React.FC = () => {
   const [activeView, setActiveView] = useState<'revenue' | 'expenses'>('revenue');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setIsLoggedIn(sessionStorage.getItem('sgfm_authenticated') === 'true');
+    }
+  }, []);
 
   return (
     <section
@@ -136,7 +143,7 @@ export const AppleHero: React.FC = () => {
             }}
           >
             <Link
-              href="/login"
+              href={isLoggedIn ? '/dashboard' : '/login?mode=signup'}
               className="apple-btn-primary"
               style={{
                 fontSize: '0.95rem',
