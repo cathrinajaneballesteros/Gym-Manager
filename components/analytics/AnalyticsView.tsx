@@ -19,7 +19,7 @@ import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
 import { RevenueForecastResult, ChurnPredictionResult, ExpenseLeakResult } from '@/types/ai';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
-import { showAlert, showToast } from '@/lib/ui/swal';
+import { showAlert, showToast, showError } from '@/lib/ui/swal';
 import {
   ResponsiveContainer,
   LineChart,
@@ -38,6 +38,7 @@ export const AnalyticsView: React.FC = () => {
   const [churn, setChurn] = useState<ChurnPredictionResult | null>(null);
   const [leaks, setLeaks] = useState<ExpenseLeakResult | null>(null);
   const [contactedMemberId, setContactedMemberId] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   useEffect(() => {
     setProfile(DBService.getProfile());
@@ -45,6 +46,106 @@ export const AnalyticsView: React.FC = () => {
     setChurn(predictMemberChurn());
     setLeaks(detectExpenseLeaks());
   }, []);
+
+  const handleGenerateAiBrief = async () => {
+    setIsAiLoading(true);
+    try {
+      const kpis = DBService.getDashboardKPIs('this-month');
+      const expenses = DBService.getExpenses();
+      const topCat = expenses.length > 0 ? expenses[0].category : 'Rent';
+
+      const res = await fetch('/api/ai/narrative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gymName: profile?.gym_name || 'IronPeak Fitness & Gym',
+          currency,
+          totalRevenue: kpis.totalRevenue,
+          totalExpenses: kpis.totalExpenses,
+          netProfit: kpis.netProfit,
+          profitMargin: kpis.profitMargin,
+          activeMembers: kpis.activeMembers,
+          churnRiskCount: churn?.highRiskCount || 0,
+          topExpenseCategory: topCat,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to generate AI executive brief');
+      }
+
+      const formattedHtml = data.report
+        .replace(/### (.*?)\n/g, '<h4 style="font-weight:700; color:#0f172a; margin-top:1rem; margin-bottom:0.4rem; font-size:1rem;">$1</h4>')
+        .replace(/#### (.*?)\n/g, '<h5 style="font-weight:600; color:#334155; margin-top:0.75rem; margin-bottom:0.25rem; font-size:0.9rem;">$1</h5>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\* (.*?)\n/g, '<li style="margin-bottom:0.35rem; color:#475569;">$1</li>')
+        .replace(/\n\n/g, '<br/>');
+
+      showAlert({
+        icon: 'success',
+        title: 'Executive AI Brief (Gemini)',
+        html: `
+          <div style="text-align: left; font-size: 0.875rem; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding: 0.5rem 0.25rem;">
+            ${formattedHtml}
+          </div>
+        `,
+        confirmButtonText: 'Done',
+        confirmButtonColor: '#6366f1',
+      });
+    } catch (err: any) {
+      showError('AI Generation Notice', err.message || 'Unable to generate brief at this time.');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  const handleAiDraftMessage = async (member: any) => {
+    try {
+      showToast('Generating personalized message with Gemini...');
+      const res = await fetch('/api/ai/narrative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'retention-message',
+          memberName: member.memberName,
+          daysInactive: member.daysSinceLastVisit,
+          daysUntilExpiry: member.daysUntilExpiration,
+          gymName: profile?.gym_name || 'IronPeak Fitness',
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error);
+
+      showAlert({
+        icon: 'info',
+        title: `Retention Outreach • ${member.memberName}`,
+        html: `
+          <div style="text-align: left; font-size: 0.875rem; line-height: 1.5; color: #334155;">
+            <p style="margin-bottom: 0.5rem; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">
+              ✨ AI Personalized Message (SMS / WhatsApp)
+            </p>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; font-style: italic; color: #0f172a; margin-bottom: 1rem;">
+              "${data.message}"
+            </div>
+            <p style="font-size: 0.8rem; color: #64748b;">
+              Click copy to send this message to the member.
+            </p>
+          </div>
+        `,
+        confirmButtonText: 'Copy to Clipboard',
+        confirmButtonColor: '#059669',
+      }).then((result) => {
+        if (result.isConfirmed) {
+          navigator.clipboard.writeText(data.message);
+          showToast('Copied to clipboard!');
+          setContactedMemberId(member.memberId);
+        }
+      });
+    } catch (err: any) {
+      handleContactMember(member.memberId);
+    }
+  };
 
   if (!forecast || !churn || !leaks) return null;
 
@@ -162,6 +263,29 @@ export const AnalyticsView: React.FC = () => {
               Smarter insights for better decisions.
             </p>
           </div>
+
+          <button
+            onClick={handleGenerateAiBrief}
+            disabled={isAiLoading}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              backgroundColor: '#0f172a',
+              color: '#ffffff',
+              padding: '0.55rem 1.25rem',
+              borderRadius: '980px',
+              fontSize: '0.825rem',
+              fontWeight: 600,
+              border: 'none',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.12)',
+              cursor: isAiLoading ? 'wait' : 'pointer',
+              transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            <Sparkles size={15} style={{ color: '#a855f7' }} />
+            <span>{isAiLoading ? 'Analyzing via Gemini AI...' : 'Executive AI Brief (Gemini)'}</span>
+          </button>
         </div>
       </ScrollReveal>
 
@@ -357,13 +481,24 @@ export const AnalyticsView: React.FC = () => {
                         {m.factors[0] || 'Prolonged attendance drop'}
                       </td>
                       <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                        <button
-                          onClick={() => handleContactMember(m.memberId)}
-                          className="btn btn-outline btn-sm"
-                          style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
-                        >
-                          {contactedMemberId === m.memberId ? 'Message Sent ✓' : 'Send Reminder'}
-                        </button>
+                        <div style={{ display: 'inline-flex', gap: '0.4rem', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => handleAiDraftMessage(m)}
+                            className="btn btn-outline btn-sm"
+                            style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                            title="Generate personalized AI message"
+                          >
+                            <Sparkles size={12} style={{ color: '#a855f7' }} />
+                            <span>AI Draft</span>
+                          </button>
+                          <button
+                            onClick={() => handleContactMember(m.memberId)}
+                            className="btn btn-secondary btn-sm"
+                            style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
+                          >
+                            {contactedMemberId === m.memberId ? 'Sent ✓' : 'Direct Ping'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
