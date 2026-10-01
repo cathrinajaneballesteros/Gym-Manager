@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, ArrowRight, Eye, EyeOff, ArrowLeft, Building2, User, CheckCircle2 } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff, ArrowLeft, Building2, User } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { DBService } from '@/lib/data/db-service';
+import { showAlert } from '@/lib/ui/swal';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -18,7 +19,6 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
 
   const supabase = createClient();
 
@@ -44,7 +44,6 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setSuccessMessage('');
 
     if (!email || !password) {
       setError('Please provide both email and password.');
@@ -147,10 +146,23 @@ export default function LoginPage() {
             return;
           }
 
-          // If email confirmation is required by Supabase settings
-          setSuccessMessage(
-            'Account created successfully! If email confirmation is enabled in your Supabase project, check your inbox to confirm before signing in.'
-          );
+          // Prompt user to verify their Gmail via SweetAlert2
+          showAlert({
+            icon: 'info',
+            title: 'Check Your Gmail',
+            html: `
+              <div style="text-align: left; font-size: 0.9rem; line-height: 1.6; color: #334155;">
+                <p style="margin-bottom: 0.75rem;">
+                  A confirmation link has been sent to <strong>${email.trim()}</strong>.
+                </p>
+                <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.85rem; font-size: 0.85rem; color: #166534;">
+                  📬 Please open your Gmail to confirm your account before signing in.
+                </div>
+              </div>
+            `,
+            confirmButtonText: 'Go to Sign In',
+            confirmButtonColor: '#059669',
+          });
           setMode('signin');
         }
       }
@@ -310,7 +322,6 @@ export default function LoginPage() {
             onClick={() => {
               setMode('signin');
               setError('');
-              setSuccessMessage('');
             }}
             style={{
               flex: 1,
@@ -333,7 +344,6 @@ export default function LoginPage() {
             onClick={() => {
               setMode('signup');
               setError('');
-              setSuccessMessage('');
             }}
             style={{
               flex: 1,
@@ -367,27 +377,6 @@ export default function LoginPage() {
             }}
           >
             {error}
-          </div>
-        )}
-
-        {/* Success Message */}
-        {successMessage && (
-          <div
-            style={{
-              padding: '0.75rem 0.9rem',
-              backgroundColor: '#ecfdf5',
-              border: '1px solid #d1fae5',
-              borderRadius: '10px',
-              color: '#065f46',
-              fontSize: '0.825rem',
-              marginBottom: '1.25rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-            }}
-          >
-            <CheckCircle2 size={16} />
-            <span>{successMessage}</span>
           </div>
         )}
 
