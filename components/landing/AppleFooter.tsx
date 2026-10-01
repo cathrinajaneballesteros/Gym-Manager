@@ -61,7 +61,7 @@ export const AppleFooter: React.FC = () => {
             <div style={{ fontWeight: 600, color: '#1d1d1f', marginBottom: '0.85rem' }}>Account</div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: 0 }}>
               <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Sign In</Link></li>
-              <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Demo Administrator</Link></li>
+              <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Create Account</Link></li>
               <li><Link href="/forgot-password" style={{ color: 'inherit', textDecoration: 'none' }}>Password Recovery</Link></li>
               <li><Link href="/dashboard" style={{ color: 'inherit', textDecoration: 'none' }}>Open Workspace</Link></li>
             </ul>

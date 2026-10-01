@@ -95,32 +95,13 @@ export const BottomCtaSection: React.FC = () => {
                   href="/login"
                   className="apple-btn-emerald"
                   style={{
-                    padding: '0.85rem 2rem',
+                    padding: '0.85rem 2.25rem',
                     fontSize: '0.95rem',
                     boxShadow: '0 6px 24px rgba(5, 150, 105, 0.4)',
                   }}
                 >
-                  <span>Get Started Free</span>
+                  <span>Launch App</span>
                   <ArrowRight size={16} />
-                </Link>
-
-                <Link
-                  href="/login"
-                  style={{
-                    color: '#ffffff',
-                    fontSize: '0.9rem',
-                    fontWeight: 500,
-                    textDecoration: 'none',
-                    padding: '0.85rem 1.5rem',
-                    borderRadius: '9999px',
-                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.12)',
-                    transition: 'all 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.12)')}
-                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)')}
-                >
-                  Live Interactive Demo
                 </Link>
               </div>
 

@@ -135,19 +135,24 @@ export const AppleHero: React.FC = () => {
               marginBottom: '1.25rem',
             }}
           >
-            <Link href="/login" className="apple-btn-emerald">
-              <span>Get Started Free</span>
+            <Link
+              href="/login"
+              className="apple-btn-primary"
+              style={{
+                fontSize: '0.95rem',
+                padding: '0.85rem 2.25rem',
+                borderRadius: '9999px',
+                fontWeight: 600,
+                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
+              }}
+            >
+              <span>Launch App</span>
               <ArrowRight size={16} />
-            </Link>
-
-            <Link href="/login" className="apple-btn-secondary">
-              <span>Explore Interactive Demo</span>
-              <ChevronRight size={16} color="#86868b" />
             </Link>
           </div>
 
           <div style={{ fontSize: '0.8rem', color: '#86868b', marginBottom: '4rem' }}>
-            Free to use • Instant access with sample club data
+            Production Ready • Encrypted & Synchronized with Supabase
           </div>
         </ScrollReveal>
 
