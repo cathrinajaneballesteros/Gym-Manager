@@ -9,13 +9,21 @@ export default function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/settings` : undefined,
+      });
+    } catch (err) {
+      console.warn('Password reset notice:', err);
+    } finally {
       setSubmitted(true);
       setLoading(false);
-    }, 600);
+    }
   };
 
   return (
@@ -88,7 +96,7 @@ export default function ForgotPasswordPage() {
                 />
                 <input
                   type="email"
-                  placeholder="admin@smartgym.com"
+                  placeholder="admin@yourgym.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   style={{ width: '100%', paddingLeft: '2.5rem' }}

@@ -42,6 +42,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const adminName = profile?.full_name || 'Admin';
   const initials = DBService.getInitials(profile?.full_name);
 
+  const handleLogout = async () => {
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } catch (e) {
+      // Ignore
+    }
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('sgfm_authenticated');
+    }
+    router.push('/login');
+  };
+
   const navItems = [
     { section: 'OVERVIEW', items: [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }] },
     {
@@ -61,13 +75,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     },
     { section: 'SYSTEM', items: [{ name: 'Settings', href: '/settings', icon: Settings }] },
   ];
-
-  const handleLogout = () => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('sgfm_authenticated');
-    }
-    router.push('/login');
-  };
 
   return (
     <aside

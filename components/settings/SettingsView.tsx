@@ -34,14 +34,31 @@ export const SettingsView: React.FC = () => {
   useEffect(() => {
     const current = DBService.getProfile();
     setProfile(current);
-    setFullName(current.full_name);
-    setEmail('admin@sgfm.com');
-    setPhone(current.phone || '+63 912 345 6789');
-    setGymName(current.gym_name);
+    setFullName(current.full_name || '');
+    setEmail(current.email || '');
+    setPhone(current.phone || '');
+    setGymName(current.gym_name || '');
     setCurrency(current.currency || '₱');
+
+    // Retrieve active authenticated Supabase user email
+    try {
+      import('@/lib/supabase/client').then(({ createClient }) => {
+        const supabase = createClient();
+        supabase.auth.getUser().then(({ data: { user } }) => {
+          if (user?.email) {
+            setEmail(user.email);
+            if (!current.email) {
+              DBService.updateProfile({ email: user.email });
+            }
+          }
+        });
+      });
+    } catch (e) {
+      // Fallback
+    }
   }, []);
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     const updated = DBService.updateProfile({
       full_name: fullName,
@@ -50,20 +67,51 @@ export const SettingsView: React.FC = () => {
       phone,
     });
     setProfile(updated);
+
+    // Also sync to Supabase if session exists
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('profiles').upsert({
+          id: user.id,
+          email: user.email || email,
+          full_name: fullName,
+          gym_name: gymName,
+          currency,
+          phone,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (err) {
+      console.warn('Supabase profile sync note:', err);
+    }
+
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 3000);
   };
 
-  const handleSavePassword = (e: React.FormEvent) => {
+  const handleSavePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 6) {
       showError('Password Too Short', 'Password must be at least 6 characters');
       return;
     }
-    setPasswordSuccess(true);
-    setOldPassword('');
-    setNewPassword('');
-    setTimeout(() => setPasswordSuccess(false), 3000);
+
+    try {
+      const { createClient } = await import('@/lib/supabase/client');
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+
+      setPasswordSuccess(true);
+      setOldPassword('');
+      setNewPassword('');
+      setTimeout(() => setPasswordSuccess(false), 3000);
+    } catch (err: any) {
+      showError('Password Update Error', err.message || 'Unable to update password');
+    }
   };
 
   return (

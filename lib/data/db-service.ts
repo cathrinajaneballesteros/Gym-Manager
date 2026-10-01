@@ -19,24 +19,26 @@ import {
 } from './mock-data';
 
 const STORAGE_KEYS = {
-  PROFILE: 'sgfm_profile_v2',
-  MEMBERS: 'sgfm_members_v2',
-  PLANS: 'sgfm_plans_v2',
-  PAYMENTS: 'sgfm_payments_v2',
-  EXPENSES: 'sgfm_expenses_v2',
+  PROFILE: 'sgfm_profile_clean',
+  MEMBERS: 'sgfm_members_clean',
+  PLANS: 'sgfm_plans_clean',
+  PAYMENTS: 'sgfm_payments_clean',
+  EXPENSES: 'sgfm_expenses_clean',
 };
 
-// Clear legacy sample data from previous local browser sessions
+// Clear legacy sample data and previous demo sessions for a completely clean slate
 if (typeof window !== 'undefined') {
   try {
-    if (!localStorage.getItem('sgfm_zero_init_v2')) {
-      localStorage.removeItem('sgfm_members');
-      localStorage.removeItem('sgfm_payments');
-      localStorage.removeItem('sgfm_expenses');
-      localStorage.removeItem('sgfm_members_v2');
-      localStorage.removeItem('sgfm_payments_v2');
-      localStorage.removeItem('sgfm_expenses_v2');
-      localStorage.setItem('sgfm_zero_init_v2', 'true');
+    if (!localStorage.getItem('sgfm_fresh_slate_v3')) {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && (k.startsWith('sgfm_') || k.startsWith('sb-'))) {
+          keysToRemove.push(k);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+      localStorage.setItem('sgfm_fresh_slate_v3', 'true');
     }
   } catch (err) {
     // Ignore storage errors in private browsing

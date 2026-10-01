@@ -3,39 +3,161 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Lock, Mail, ArrowRight, Eye, EyeOff, ArrowLeft, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Eye, EyeOff, ArrowLeft, Building2, User, CheckCircle2 } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import { DBService } from '@/lib/data/db-service';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@sgfm.com');
-  const [password, setPassword] = useState('admin2026!');
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [gymName, setGymName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  const supabase = createClient();
+
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setSuccessMessage('');
 
-    setTimeout(() => {
-      if (!email || !password) {
-        setError('Please enter both email and password.');
-        setLoading(false);
-        return;
-      }
+    if (!email || !password) {
+      setError('Please provide both email and password.');
+      setLoading(false);
+      return;
+    }
 
-      if (typeof window !== 'undefined') {
-        sessionStorage.setItem('sgfm_authenticated', 'true');
+    try {
+      if (mode === 'signin') {
+        const { data, error: signInError } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
+        });
+
+        if (signInError) {
+          throw new Error(signInError.message);
+        }
+
+        if (data.user) {
+          // Sync profile if available
+          try {
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', data.user.id)
+              .single();
+
+            if (prof) {
+              DBService.updateProfile({
+                id: prof.id,
+                email: prof.email,
+                full_name: prof.full_name || 'Gym Administrator',
+                gym_name: prof.gym_name || 'My Fitness Gym',
+                currency: prof.currency || '₱',
+                phone: prof.phone || '',
+              });
+            } else {
+              DBService.updateProfile({
+                id: data.user.id,
+                email: data.user.email || '',
+                full_name: 'Gym Administrator',
+                gym_name: 'My Fitness Gym',
+              });
+            }
+          } catch (pErr) {
+            console.warn('Profile fetch note:', pErr);
+          }
+
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('sgfm_authenticated', 'true');
+          }
+          router.push('/dashboard');
+        }
+      } else {
+        // Mode: Sign Up (Create fresh admin account)
+        const { data, error: signUpError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: {
+            data: {
+              full_name: fullName.trim() || 'Gym Administrator',
+              gym_name: gymName.trim() || 'My Fitness Gym',
+            },
+          },
+        });
+
+        if (signUpError) {
+          throw new Error(signUpError.message);
+        }
+
+        if (data.user) {
+          // Create or link profile in Supabase table
+          try {
+            await supabase.from('profiles').upsert({
+              id: data.user.id,
+              email: data.user.email || email.trim(),
+              full_name: fullName.trim() || 'Gym Administrator',
+              gym_name: gymName.trim() || 'My Fitness Gym',
+              currency: '₱',
+              role: 'admin',
+            });
+
+            DBService.updateProfile({
+              id: data.user.id,
+              email: data.user.email || email.trim(),
+              full_name: fullName.trim() || 'Gym Administrator',
+              gym_name: gymName.trim() || 'My Fitness Gym',
+              currency: '₱',
+            });
+          } catch (pErr) {
+            console.warn('Profile setup note:', pErr);
+          }
+
+          // If session is already created (auto-confirm enabled in Supabase)
+          if (data.session) {
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('sgfm_authenticated', 'true');
+            }
+            router.push('/dashboard');
+            return;
+          }
+
+          // If email confirmation is required by Supabase settings
+          setSuccessMessage(
+            'Account created successfully! If email confirmation is enabled in your Supabase project, check your inbox to confirm before signing in.'
+          );
+          setMode('signin');
+        }
       }
-      router.push('/dashboard');
-    }, 400);
+    } catch (err: any) {
+      setError(err.message || 'Authentication failed. Please verify your credentials.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleQuickDemo = () => {
-    setEmail('admin@sgfm.com');
-    setPassword('admin2026!');
+  const handleGoogleSignIn = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const { error: oAuthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : undefined,
+        },
+      });
+      if (oAuthError) throw oAuthError;
+    } catch (err: any) {
+      setError(err.message || 'Google authentication failed.');
+      setLoading(false);
+    }
   };
 
   return (
@@ -63,7 +185,8 @@ export default function LoginPage() {
           transform: 'translate(-50%, -50%)',
           width: '700px',
           height: '500px',
-          background: 'radial-gradient(ellipse at 50% 30%, rgba(5, 150, 105, 0.09) 0%, rgba(0, 113, 227, 0.04) 40%, rgba(245, 245, 247, 0) 70%)',
+          background:
+            'radial-gradient(ellipse at 50% 30%, rgba(5, 150, 105, 0.09) 0%, rgba(0, 113, 227, 0.04) 40%, rgba(245, 245, 247, 0) 70%)',
           filter: 'blur(50px)',
           pointerEvents: 'none',
           zIndex: 0,
@@ -103,13 +226,13 @@ export default function LoginPage() {
         </Link>
       </div>
 
-      {/* Centered Apple Glass Card */}
+      {/* Centered Card */}
       <div
         className="apple-glass-card"
         style={{
           width: '100%',
           maxWidth: '430px',
-          backgroundColor: 'rgba(255, 255, 255, 0.82)',
+          backgroundColor: 'rgba(255, 255, 255, 0.85)',
           backdropFilter: 'blur(30px)',
           WebkitBackdropFilter: 'blur(30px)',
           border: '1px solid rgba(0, 0, 0, 0.08)',
@@ -121,7 +244,7 @@ export default function LoginPage() {
         }}
       >
         {/* Brand Icon & Heading */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <img
             src="/logo.png"
             alt="Smart Gym Logo"
@@ -140,17 +263,79 @@ export default function LoginPage() {
               fontSize: '1.65rem',
               fontWeight: 700,
               color: '#1d1d1f',
-              letterSpacing: '-0.025em',
-              marginBottom: '0.4rem',
+              letterSpacing: '-0.03em',
+              marginBottom: '0.25rem',
             }}
           >
-            Sign in to Smart Gym
+            {mode === 'signin' ? 'Gym Manager Portal' : 'Create Gym Account'}
           </h1>
           <p style={{ fontSize: '0.875rem', color: '#86868b' }}>
-            Cloud Financial Management for Fitness Centers
+            {mode === 'signin'
+              ? 'Sign in to access your gym operations ledger'
+              : 'Register your administrator credentials'}
           </p>
         </div>
 
+        {/* Tab Switcher: Sign In vs Sign Up */}
+        <div
+          style={{
+            display: 'flex',
+            backgroundColor: 'rgba(118, 118, 128, 0.12)',
+            padding: '3px',
+            borderRadius: '10px',
+            marginBottom: '1.5rem',
+            gap: '2px',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => {
+              setMode('signin');
+              setError('');
+              setSuccessMessage('');
+            }}
+            style={{
+              flex: 1,
+              padding: '0.45rem',
+              borderRadius: '8px',
+              fontSize: '0.825rem',
+              fontWeight: mode === 'signin' ? 600 : 500,
+              backgroundColor: mode === 'signin' ? '#ffffff' : 'transparent',
+              color: mode === 'signin' ? '#1d1d1f' : '#636366',
+              boxShadow: mode === 'signin' ? '0 1px 3px rgba(0, 0, 0, 0.12)' : 'none',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setMode('signup');
+              setError('');
+              setSuccessMessage('');
+            }}
+            style={{
+              flex: 1,
+              padding: '0.45rem',
+              borderRadius: '8px',
+              fontSize: '0.825rem',
+              fontWeight: mode === 'signup' ? 600 : 500,
+              backgroundColor: mode === 'signup' ? '#ffffff' : 'transparent',
+              color: mode === 'signup' ? '#1d1d1f' : '#636366',
+              boxShadow: mode === 'signup' ? '0 1px 3px rgba(0, 0, 0, 0.12)' : 'none',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+          >
+            Create Account
+          </button>
+        </div>
+
+        {/* Error Message */}
         {error && (
           <div
             style={{
@@ -167,7 +352,127 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
+        {/* Success Message */}
+        {successMessage && (
+          <div
+            style={{
+              padding: '0.75rem 0.9rem',
+              backgroundColor: '#ecfdf5',
+              border: '1px solid #d1fae5',
+              borderRadius: '10px',
+              color: '#065f46',
+              fontSize: '0.825rem',
+              marginBottom: '1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+            }}
+          >
+            <CheckCircle2 size={16} />
+            <span>{successMessage}</span>
+          </div>
+        )}
+
+        <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+          {/* Sign Up Fields: Full Name & Gym Name */}
+          {mode === 'signup' && (
+            <>
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    color: '#424245',
+                    marginBottom: '0.45rem',
+                  }}
+                >
+                  Your Name
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                      color: '#86868b',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <User size={16} />
+                  </div>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="e.g. John Doe"
+                    required
+                    style={{
+                      width: '100%',
+                      paddingLeft: '2.4rem',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid rgba(0, 0, 0, 0.12)',
+                      borderRadius: '11px',
+                      color: '#1d1d1f',
+                      fontSize: '0.875rem',
+                      height: '42px',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    display: 'block',
+                    fontSize: '0.825rem',
+                    fontWeight: 600,
+                    color: '#424245',
+                    marginBottom: '0.45rem',
+                  }}
+                >
+                  Gym / Fitness Center Name
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      left: '12px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      pointerEvents: 'none',
+                      color: '#86868b',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <Building2 size={16} />
+                  </div>
+                  <input
+                    type="text"
+                    value={gymName}
+                    onChange={(e) => setGymName(e.target.value)}
+                    placeholder="e.g. IronPeak Fitness Club"
+                    required
+                    style={{
+                      width: '100%',
+                      paddingLeft: '2.4rem',
+                      backgroundColor: '#ffffff',
+                      border: '1px solid rgba(0, 0, 0, 0.12)',
+                      borderRadius: '11px',
+                      color: '#1d1d1f',
+                      fontSize: '0.875rem',
+                      height: '42px',
+                    }}
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
           {/* Email Input */}
           <div>
             <label
@@ -200,7 +505,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@sgfm.com"
+                placeholder="admin@yourgym.com"
                 required
                 style={{
                   width: '100%',
@@ -229,17 +534,19 @@ export default function LoginPage() {
               <label style={{ fontSize: '0.825rem', fontWeight: 600, color: '#424245' }}>
                 Password
               </label>
-              <Link
-                href="/forgot-password"
-                style={{
-                  fontSize: '0.8rem',
-                  color: '#059669',
-                  fontWeight: 500,
-                  textDecoration: 'none',
-                }}
-              >
-                Forgot password?
-              </Link>
+              {mode === 'signin' && (
+                <Link
+                  href="/forgot-password"
+                  style={{
+                    fontSize: '0.8rem',
+                    color: '#059669',
+                    fontWeight: 500,
+                    textDecoration: 'none',
+                  }}
+                >
+                  Forgot password?
+                </Link>
+              )}
             </div>
             <div style={{ position: 'relative' }}>
               <div
@@ -297,33 +604,35 @@ export default function LoginPage() {
           </div>
 
           {/* Remember Me */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
-            <input
-              type="checkbox"
-              id="rememberMe"
-              checked={rememberMe}
-              onChange={(e) => setRememberMe(e.target.checked)}
-              style={{
-                width: '16px',
-                height: '16px',
-                accentColor: '#059669',
-                cursor: 'pointer',
-              }}
-            />
-            <label
-              htmlFor="rememberMe"
-              style={{
-                fontSize: '0.825rem',
-                color: '#636366',
-                cursor: 'pointer',
-                userSelect: 'none',
-              }}
-            >
-              Remember this device for 30 days
-            </label>
-          </div>
+          {mode === 'signin' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                style={{
+                  width: '16px',
+                  height: '16px',
+                  accentColor: '#059669',
+                  cursor: 'pointer',
+                }}
+              />
+              <label
+                htmlFor="rememberMe"
+                style={{
+                  fontSize: '0.825rem',
+                  color: '#636366',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                }}
+              >
+                Remember this device
+              </label>
+            </div>
+          )}
 
-          {/* Sign In Submit Button */}
+          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
@@ -334,9 +643,18 @@ export default function LoginPage() {
               borderRadius: '11px',
               fontSize: '0.9rem',
               marginTop: '0.35rem',
+              cursor: loading ? 'wait' : 'pointer',
             }}
           >
-            <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
+            <span>
+              {loading
+                ? mode === 'signin'
+                  ? 'Verifying...'
+                  : 'Creating Account...'
+                : mode === 'signin'
+                ? 'Sign In'
+                : 'Create Gym Account'}
+            </span>
             {!loading && <ArrowRight size={16} />}
           </button>
         </form>
@@ -351,12 +669,8 @@ export default function LoginPage() {
         {/* Google Continue Button */}
         <button
           type="button"
-          onClick={() => {
-            if (typeof window !== 'undefined') {
-              sessionStorage.setItem('sgfm_authenticated', 'true');
-            }
-            router.push('/dashboard');
-          }}
+          onClick={handleGoogleSignIn}
+          disabled={loading}
           className="apple-btn-secondary"
           style={{
             width: '100%',
@@ -364,6 +678,7 @@ export default function LoginPage() {
             borderRadius: '11px',
             fontSize: '0.85rem',
             fontWeight: 500,
+            cursor: loading ? 'wait' : 'pointer',
           }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24">
@@ -386,33 +701,6 @@ export default function LoginPage() {
           </svg>
           <span>Continue with Google</span>
         </button>
-
-        {/* Demo Credentials Quick Pill */}
-        <div
-          onClick={handleQuickDemo}
-          style={{
-            marginTop: '1.25rem',
-            padding: '0.65rem 0.9rem',
-            backgroundColor: '#ecfdf5',
-            border: '1px solid #d1fae5',
-            borderRadius: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            cursor: 'pointer',
-            transition: 'background-color 0.15s ease',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-            <Sparkles size={14} color="#059669" />
-            <span style={{ fontSize: '0.785rem', color: '#065f46', fontWeight: 600 }}>
-              Demo Admin Account
-            </span>
-          </div>
-          <span style={{ fontSize: '0.75rem', color: '#047857', fontWeight: 500 }}>
-            admin@sgfm.com
-          </span>
-        </div>
       </div>
 
       {/* Footer Info */}
@@ -426,7 +714,7 @@ export default function LoginPage() {
           zIndex: 1,
         }}
       >
-        <span>© 2026 Smart Gym Finance Manager Inc. All rights reserved.</span>
+        <span>© 2026 Smart Gym Finance Manager. All rights reserved.</span>
       </div>
     </div>
   );
