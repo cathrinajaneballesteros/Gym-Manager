@@ -92,11 +92,12 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Fix: wire an "Email receipt" action in `PaymentList` / `PaymentModal` to this route.
   - Risk: low / Needs DB access: no
 
-- [ ] **[B11] Undated payments counted every month**
+- [x] **[B11] Undated payments counted every month**
   - File: `lib/data/db-service.ts` (line 321)
   - Problem: the `this-month` filter includes `|| !p.payment_date`, inflating revenue with blank-date rows.
   - Fix: drop the `|| !p.payment_date` fallback.
   - Risk: low / Needs DB access: no
+  - Done: removed the `|| !p.payment_date` / `|| !e.expense_date` fallbacks from the `this-month` branch, so blank-date rows are no longer attributed to the current month.
 
 - [ ] **[B12] AI brief picks wrong "top expense category"**
   - File: `components/analytics/AnalyticsView.tsx` (line 55)

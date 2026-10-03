@@ -318,8 +318,8 @@ export class DBService {
       filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(lastMonthKey));
     } else if (timeframe === 'this-month') {
       label = 'This Month';
-      filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(thisMonthKey) || !p.payment_date);
-      filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(thisMonthKey) || !e.expense_date);
+      filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(thisMonthKey));
+      filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(thisMonthKey));
     } else if (timeframe === 'last-3-months') {
       label = 'Last 3 Months';
     } else if (timeframe === 'last-6-months') {
