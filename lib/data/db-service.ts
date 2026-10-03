@@ -70,6 +70,20 @@ function setStoredItem<T>(key: string, value: T): void {
   }
 }
 
+// Derive the most recent N month buckets, ending with the current month.
+function getRecentMonthBuckets(count: number): { month: string; monthKey: string }[] {
+  const now = new Date();
+  const buckets: { month: string; monthKey: string }[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    buckets.push({
+      month: d.toLocaleString('en-US', { month: 'short' }),
+      monthKey: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+    });
+  }
+  return buckets;
+}
+
 export class DBService {
   // 1. Profile / Settings
   static getProfile(): UserProfile {
@@ -441,10 +455,16 @@ export class DBService {
       label = 'This Month';
       filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(thisMonthKey));
       filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(thisMonthKey));
-    } else if (timeframe === 'last-3-months') {
-      label = 'Last 3 Months';
-    } else if (timeframe === 'last-6-months') {
-      label = 'Last 6 Months';
+    } else if (timeframe === 'last-3-months' || timeframe === 'last-6-months') {
+      const count = timeframe === 'last-3-months' ? 3 : 6;
+      label = timeframe === 'last-3-months' ? 'Last 3 Months' : 'Last 6 Months';
+      const monthKeys = getRecentMonthBuckets(count).map((b) => b.monthKey);
+      filteredPayments = filteredPayments.filter((p) =>
+        monthKeys.some((k) => (p.payment_date || '').startsWith(k))
+      );
+      filteredExpenses = filteredExpenses.filter((e) =>
+        monthKeys.some((k) => (e.expense_date || '').startsWith(k))
+      );
     } else if (timeframe === 'this-year') {
       label = 'Year to Date';
       filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(`${currentYear}-`));
@@ -481,11 +501,10 @@ export class DBService {
     const expenses = this.getExpenses();
     const members = this.getMembers();
 
-    const months = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
-    const monthKeys = ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'];
+    const buckets = getRecentMonthBuckets(6);
 
-    return months.map((month, idx) => {
-      const key = monthKeys[idx];
+    return buckets.map(({ month, monthKey }) => {
+      const key = monthKey;
       const revenue = payments
         .filter((p) => p.payment_status === 'completed' && (p.payment_date || '').startsWith(key))
         .reduce((sum, p) => sum + Number(p.amount), 0);
@@ -496,7 +515,7 @@ export class DBService {
 
       return {
         month,
-        monthKey: key,
+        monthKey,
         revenue,
         expenses: expenseTotal,
         profit: revenue - expenseTotal,

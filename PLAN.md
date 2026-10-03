@@ -30,11 +30,12 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
 ## Issues
 
 ### Bugs
-- [ ] **[B1] Monthly trends hardcoded to Apr–Sep 2026**
+- [x] **[B1] Monthly trends hardcoded to Apr–Sep 2026**
   - File: `lib/data/db-service.ts` (line ~363)
   - Problem: `months`/`monthKeys` are literal `['Apr'…'Sep']` / `['2026-04'…'2026-09']`, so charts/reports/forecast ignore all other months.
   - Fix: derive the last N month keys from `new Date()` dynamically.
   - Risk: high / Needs DB access: no
+  - Done: `getMonthlyTrends()` now builds the last 6 months via the new `getRecentMonthBuckets()` helper (ending with the current month); literal Apr–Sep 2026 arrays removed.
 
 - [x] **[B2] Churn engine uses a fixed "today"**
   - File: `lib/ai/churn-detector.ts` (line 11)
@@ -43,11 +44,12 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Risk: high / Needs DB access: no
   - Done: line 11 now derives today from `new Date().toISOString().split('T')[0]` (UTC midnight), matching `db-service.ts`; removes the stale 2026-09-27 baseline.
 
-- [ ] **[B3] "Last 3/6 months" KPIs don't filter**
+- [x] **[B3] "Last 3/6 months" KPIs don't filter**
   - File: `lib/data/db-service.ts` (line ~323)
   - Problem: `last-3-months`/`last-6-months` only change the label; totals remain all-time but are presented as period figures.
   - Fix: filter payments/expenses by an actual date window.
   - Risk: medium / Needs DB access: no
+  - Done: both timeframes now filter payments/expenses to the trailing 3/6 month keys from `getRecentMonthBuckets()` instead of relabeling all-time totals.
 
 - [x] **[B4] `highRiskMembers` contains every member**
   - File: `lib/ai/churn-detector.ts` (line 133)
