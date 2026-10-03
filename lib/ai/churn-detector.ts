@@ -8,7 +8,8 @@ import { DBService } from '@/lib/data/db-service';
  */
 export function predictMemberChurn(requireMinMembers: number = 3): ChurnPredictionResult {
   const members = DBService.getMembers();
-  const today = new Date('2026-09-27'); // Baseline date or current
+  const todayStr = new Date().toISOString().split('T')[0];
+  const today = new Date(todayStr); // UTC midnight of the current date
 
   if (members.length < requireMinMembers) {
     return {

@@ -1,13 +1,19 @@
 # PLAN.md
 
+> **How to use this file — keep it updated!**
+> - `[ ]` = not done, `[x]` = done. Tick a box **only when the item is fully delivered and verified**; untick it (`[x]` → `[ ]`) if it regresses or is reopened.
+> - When a **project requirement** moves between *Not started / Partial / Done*, update its checkbox **and** the matching line in `## Current Status`.
+> - When an **issue** ([B]/[S]/[P]/[Q]/[U]) or a **feature request** ([F]) is completed, tick its box and append a short `Done:` note describing what changed.
+> - `[DB-free]` marks work that needs **no** Supabase DB access.
+
 ## Project Requirements (from sheet)
-1. Payment reminders via SMS and email
-2. Receipt checker (manual)
-3. Expense historical data
-4. User auditing
-5. AI analytics that help owners save money
-6. Test with at least 5 gym owners
-7. Calendar method
+- [ ] 1. Payment reminders via SMS and email
+- [ ] 2. Receipt checker (manual)
+- [ ] 3. Expense historical data
+- [ ] 4. User auditing
+- [ ] 5. AI analytics that help owners save money
+- [ ] 6. Test with at least 5 gym owners
+- [ ] 7. Calendar method
 
 ## Current Status
 1. Payment reminders (SMS + email) — **Partial**: Resend email service exists but is never called from the UI; no SMS, no scheduling/reminders.
@@ -30,11 +36,12 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Fix: derive the last N month keys from `new Date()` dynamically.
   - Risk: high / Needs DB access: no
 
-- [ ] **[B2] Churn engine uses a fixed "today"**
+- [x] **[B2] Churn engine uses a fixed "today"**
   - File: `lib/ai/churn-detector.ts` (line 11)
   - Problem: `const today = new Date('2026-09-27')` makes days-inactive / days-until-expiry drift wrong over time.
   - Fix: use `new Date()` (normalized to midnight).
   - Risk: high / Needs DB access: no
+  - Done: line 11 now derives today from `new Date().toISOString().split('T')[0]` (UTC midnight), matching `db-service.ts`; removes the stale 2026-09-27 baseline.
 
 - [ ] **[B3] "Last 3/6 months" KPIs don't filter**
   - File: `lib/data/db-service.ts` (line ~323)
@@ -226,6 +233,13 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Problem: no calendar or attendance route exists despite the `attendance_logs` table and `AttendanceLog` type being defined.
   - Fix: add a Calendar page backed by `attendance_logs`.
   - Risk: medium / Needs DB access: yes
+
+### Feature Requests (Requested)
+- [ ] **[F1] Clickable dashboard with drill-down overview**
+  - File: `components/ui/MetricCard.tsx`; `components/dashboard/DashboardOverview.tsx` (KPI cards L137–167, charts L182–209)
+  - Problem: dashboard cards, charts, and rows are static — no `onClick`/`href`, so clicking a metric does nothing.
+  - Fix: add `onClick`/`href` to `MetricCard` + chart cards, and open a full detail view (modal or `/dashboard/...` route) of the clicked item (e.g. Revenue → payment ledger, Expenses → category breakdown, Net Profit → P&L, Members → member list).
+  - Risk: low / Needs DB access: no
 
 ## Recommended Order
 1. **[DB-free]** Fix the financial core: dynamic month windows ([B1]), real timeframe filters ([B3]), and undated-payment over-count ([B11]) — restores trustworthy numbers.
