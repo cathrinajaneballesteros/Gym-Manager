@@ -10,7 +10,7 @@
 - [ ] 1. Payment reminders via SMS and email
 - [ ] 2. Receipt checker (manual)
 - [ ] 3. Expense historical data
-- [ ] 4. User auditing
+- [x] 4. User auditing
 - [ ] 5. AI analytics that help owners save money
 - [ ] 6. Test with at least 5 gym owners
 - [ ] 7. Calendar method
@@ -19,7 +19,7 @@
 1. Payment reminders (SMS + email) — **Partial**: Resend email service exists but is never called from the UI; no SMS, no scheduling/reminders.
 2. Receipt checker (manual) — **Partial**: "Receipt" button only shows a fake `Receipt Verified` alert; `/api/email/receipt` exists but is dead code.
 3. Expense historical data — **Partial**: expenses live only in `localStorage`; monthly aggregation is hardcoded to Apr–Sep 2026.
-4. User auditing — **Not started**: no audit log; `attendance_logs` table + `AttendanceLog` type defined but never used.
+4. User auditing — **Done**: localStorage-backed action audit trail (`DBService.recordAudit` / `getAuditLogs`) records member/payment/expense mutations plus login/logout/signup, surfaced on a new `/audit` page with filters, summaries, and live refresh. Note: `attendance_logs` / `AttendanceLog` is unrelated to auditing and belongs to requirement 7.
 5. AI analytics to save money — **Partial**: Gemini narrative + heuristic churn/leak detection, but leak baselines are hardcoded.
 6. Test with 5 gym owners — **Unknown**: not determinable from code (no fixtures/feedback artifacts).
 7. Calendar method — **Not started**: no calendar/check-in UI; header date pill is hardcoded.
