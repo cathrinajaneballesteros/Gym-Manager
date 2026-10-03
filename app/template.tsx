@@ -8,6 +8,17 @@ export default function Template({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const supabase = createClient();
 
+    const recordLoginOnce = (email?: string) => {
+      if (typeof window === 'undefined') return;
+      if (sessionStorage.getItem('sgfm_login_logged') === 'true') return;
+      sessionStorage.setItem('sgfm_login_logged', 'true');
+      DBService.recordAudit({
+        action: 'auth.login',
+        entity_type: 'auth',
+        entity_label: email || DBService.getProfile().email || 'Unknown user',
+      });
+    };
+
     // Check active session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -21,6 +32,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
           gym_name: meta.gym_name || profile.gym_name || 'My Fitness Gym',
           currency: profile.currency || '₱',
         });
+        recordLoginOnce(session.user.email);
       }
     });
 
@@ -38,9 +50,13 @@ export default function Template({ children }: { children: React.ReactNode }) {
             gym_name: meta.gym_name || profile.gym_name || 'My Fitness Gym',
             currency: profile.currency || '₱',
           });
+          if (event === 'SIGNED_IN') {
+            recordLoginOnce(session.user.email);
+          }
         }
       } else if (event === 'SIGNED_OUT') {
         sessionStorage.removeItem('sgfm_authenticated');
+        sessionStorage.removeItem('sgfm_login_logged');
       }
     });
 

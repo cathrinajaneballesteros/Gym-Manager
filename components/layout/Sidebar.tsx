@@ -43,6 +43,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const initials = DBService.getInitials(profile?.full_name);
 
   const handleLogout = async () => {
+    DBService.recordAudit({
+      action: 'auth.logout',
+      entity_type: 'auth',
+      entity_label: profile?.email || 'Unknown user',
+    });
     try {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
@@ -52,6 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     }
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('sgfm_authenticated');
+      sessionStorage.removeItem('sgfm_login_logged');
     }
     router.push('/login');
   };
