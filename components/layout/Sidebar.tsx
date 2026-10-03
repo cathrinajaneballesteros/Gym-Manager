@@ -11,6 +11,7 @@ import {
   FileBarChart2,
   Sparkles,
   Settings,
+  ScrollText,
   LogOut,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
@@ -79,7 +80,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         { name: 'AI Analytics', href: '/analytics', icon: Sparkles },
       ],
     },
-    { section: 'SYSTEM', items: [{ name: 'Settings', href: '/settings', icon: Settings }] },
+    {
+      section: 'SYSTEM',
+      items: [
+        { name: 'Audit Log', href: '/audit', icon: ScrollText },
+        { name: 'Settings', href: '/settings', icon: Settings },
+      ],
+    },
   ];
 
   return (
