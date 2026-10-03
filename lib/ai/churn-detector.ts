@@ -75,7 +75,7 @@ export function predictMemberChurn(requireMinMembers: number = 3): ChurnPredicti
     }
 
     // Factor C: Plan commitment
-    if (m.membership_plan_id === 'plan_annual') {
+    if ((m.plan?.duration_months ?? 0) >= 12) {
       riskScore -= 15;
       factors.push('High commitment tier (Annual VIP pass)');
     }
@@ -131,7 +131,7 @@ export function predictMemberChurn(requireMinMembers: number = 3): ChurnPredicti
     highRiskCount: highCount,
     mediumRiskCount: mediumCount,
     lowRiskCount: lowCount,
-    highRiskMembers: analyzedMembers,
+    highRiskMembers: analyzedMembers.filter((m) => m.riskLevel === 'High'),
     hasSufficientData: true,
     explanation:
       'Risk scores are generated using non-intrusive heuristics comparing attendance frequency, expiration deadlines, and historical renewal patterns. Predictions are statistical estimates to assist gym staff in retention outreach.',

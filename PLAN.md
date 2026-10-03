@@ -49,17 +49,19 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Fix: filter payments/expenses by an actual date window.
   - Risk: medium / Needs DB access: no
 
-- [ ] **[B4] `highRiskMembers` contains every member**
+- [x] **[B4] `highRiskMembers` contains every member**
   - File: `lib/ai/churn-detector.ts` (line 133)
   - Problem: the field is set to `analyzedMembers` (all rows) though the UI treats it as high-risk only.
   - Fix: filter `riskLevel === 'High'` or rename the field.
   - Risk: medium / Needs DB access: no
+  - Done: return now filters `analyzedMembers.filter((m) => m.riskLevel === 'High')`, so the list matches `highRiskCount` and the UI's "High Risk" badge.
 
-- [ ] **[B5] Dead churn branch on `'plan_annual'`**
+- [x] **[B5] Dead churn branch on `'plan_annual'`**
   - File: `lib/ai/churn-detector.ts` (line 77)
   - Problem: checks `membership_plan_id === 'plan_annual'`, but IDs are generated as `plan_${Date.now()}`, so it never matches.
   - Fix: compare by plan duration/name or remove the branch.
   - Risk: low / Needs DB access: no
+  - Done: Factor C now tests `(m.plan?.duration_months ?? 0) >= 12` using the plan attached by `getMembers()`, so annual members actually receive the −15 commitment adjustment.
 
 - [ ] **[B6] Fresh-slate hook wipes Supabase session keys**
   - File: `lib/data/db-service.ts` (line 36)
