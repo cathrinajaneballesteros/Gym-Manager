@@ -33,7 +33,7 @@ if (typeof window !== 'undefined') {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && (k.startsWith('sgfm_') || k.startsWith('sb-'))) {
+        if (k && k.startsWith('sgfm_')) {
           keysToRemove.push(k);
         }
       }

@@ -63,11 +63,12 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Risk: low / Needs DB access: no
   - Done: Factor C now tests `(m.plan?.duration_months ?? 0) >= 12` using the plan attached by `getMembers()`, so annual members actually receive the −15 commitment adjustment.
 
-- [ ] **[B6] Fresh-slate hook wipes Supabase session keys**
+- [x] **[B6] Fresh-slate hook wipes Supabase session keys**
   - File: `lib/data/db-service.ts` (line 36)
   - Problem: import-time code deletes every `sb-` localStorage key, which includes the Supabase auth token.
   - Fix: only clear `sgfm_` keys (or drop this migration block entirely).
   - Risk: high / Needs DB access: no
+  - Done: the fresh-slate scan now removes only `sgfm_` keys, leaving `sb-` Supabase auth session keys intact.
 
 - [x] **[B7] Payment status filter can never match**
   - File: `components/payments/PaymentList.tsx` (line 187)
