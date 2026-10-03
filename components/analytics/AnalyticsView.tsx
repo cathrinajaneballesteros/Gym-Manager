@@ -52,7 +52,12 @@ export const AnalyticsView: React.FC = () => {
     try {
       const kpis = DBService.getDashboardKPIs('this-month');
       const expenses = DBService.getExpenses();
-      const topCat = expenses.length > 0 ? expenses[0].category : 'Rent';
+      const totalsByCategory = expenses.reduce<Record<string, number>>((acc, e) => {
+        acc[e.category] = (acc[e.category] || 0) + Number(e.amount);
+        return acc;
+      }, {});
+      const topCat =
+        Object.entries(totalsByCategory).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Rent';
 
       const res = await fetch('/api/ai/narrative', {
         method: 'POST',

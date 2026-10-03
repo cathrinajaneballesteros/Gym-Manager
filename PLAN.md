@@ -101,11 +101,12 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Risk: low / Needs DB access: no
   - Done: removed the `|| !p.payment_date` / `|| !e.expense_date` fallbacks from the `this-month` branch, so blank-date rows are no longer attributed to the current month.
 
-- [ ] **[B12] AI brief picks wrong "top expense category"**
+- [x] **[B12] AI brief picks wrong "top expense category"**
   - File: `components/analytics/AnalyticsView.tsx` (line 55)
   - Problem: `topCat = expenses[0].category` (first row) instead of the highest-value category.
   - Fix: aggregate by category and take the max.
   - Risk: low / Needs DB access: no
+  - Done: expenses are now summed per category and the max-value category is passed as `topExpenseCategory`; falls back to `Rent` when there are no expenses.
 
 ### Security
 - [ ] **[S1] No middleware → routes unprotected, sessions not refreshed**
