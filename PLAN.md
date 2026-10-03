@@ -60,11 +60,12 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Fix: only clear `sgfm_` keys (or drop this migration block entirely).
   - Risk: high / Needs DB access: no
 
-- [ ] **[B7] Payment status filter can never match**
+- [x] **[B7] Payment status filter can never match**
   - File: `components/payments/PaymentList.tsx` (line 187)
   - Problem: dropdown offers `failed`, but `PaymentStatus` is `completed | pending | refunded`.
   - Fix: change option to `refunded` (and label accordingly).
   - Risk: low / Needs DB access: no
+  - Done: line 187 option → `refunded`/`Refunded`; line 319 badge fallback `'Failed'` → `'Refunded'`. (Line 54 `useState` type tightening deferred.)
 
 - [ ] **[B8] Deleting a member orphans their payments**
   - File: `lib/data/db-service.ts` (line 209)
