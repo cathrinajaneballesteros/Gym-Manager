@@ -20,6 +20,7 @@ import { RevenueForecastResult, ChurnPredictionResult, ExpenseLeakResult } from 
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
 import { showAlert, showToast, showError } from '@/lib/ui/swal';
+import { escapeHtml } from '@/lib/ui/escape';
 import {
   ResponsiveContainer,
   LineChart,
@@ -80,7 +81,7 @@ export const AnalyticsView: React.FC = () => {
         throw new Error(data.error || 'Failed to generate AI executive brief');
       }
 
-      const formattedHtml = data.report
+      const formattedHtml = escapeHtml(data.report)
         .replace(/### (.*?)\n/g, '<h4 style="font-weight:700; color:#0f172a; margin-top:1rem; margin-bottom:0.4rem; font-size:1rem;">$1</h4>')
         .replace(/#### (.*?)\n/g, '<h5 style="font-weight:600; color:#334155; margin-top:0.75rem; margin-bottom:0.25rem; font-size:0.9rem;">$1</h5>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
@@ -131,7 +132,7 @@ export const AnalyticsView: React.FC = () => {
               ✨ AI Personalized Message (SMS / WhatsApp)
             </p>
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; font-style: italic; color: #0f172a; margin-bottom: 1rem;">
-              "${data.message}"
+              "${escapeHtml(data.message)}"
             </div>
             <p style="font-size: 0.8rem; color: #64748b;">
               Click copy to send this message to the member.

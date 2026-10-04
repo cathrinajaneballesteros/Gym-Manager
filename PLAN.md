@@ -30,55 +30,6 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
 ## Issues
 
 ### Bugs
-- [x] **[B1] Monthly trends hardcoded to Apr–Sep 2026**
-  - File: `lib/data/db-service.ts` (line ~363)
-  - Problem: `months`/`monthKeys` are literal `['Apr'…'Sep']` / `['2026-04'…'2026-09']`, so charts/reports/forecast ignore all other months.
-  - Fix: derive the last N month keys from `new Date()` dynamically.
-  - Risk: high / Needs DB access: no
-  - Done: `getMonthlyTrends()` now builds the last 6 months via the new `getRecentMonthBuckets()` helper (ending with the current month); literal Apr–Sep 2026 arrays removed.
-
-- [x] **[B2] Churn engine uses a fixed "today"**
-  - File: `lib/ai/churn-detector.ts` (line 11)
-  - Problem: `const today = new Date('2026-09-27')` makes days-inactive / days-until-expiry drift wrong over time.
-  - Fix: use `new Date()` (normalized to midnight).
-  - Risk: high / Needs DB access: no
-  - Done: line 11 now derives today from `new Date().toISOString().split('T')[0]` (UTC midnight), matching `db-service.ts`; removes the stale 2026-09-27 baseline.
-
-- [x] **[B3] "Last 3/6 months" KPIs don't filter**
-  - File: `lib/data/db-service.ts` (line ~323)
-  - Problem: `last-3-months`/`last-6-months` only change the label; totals remain all-time but are presented as period figures.
-  - Fix: filter payments/expenses by an actual date window.
-  - Risk: medium / Needs DB access: no
-  - Done: both timeframes now filter payments/expenses to the trailing 3/6 month keys from `getRecentMonthBuckets()` instead of relabeling all-time totals.
-
-- [x] **[B4] `highRiskMembers` contains every member**
-  - File: `lib/ai/churn-detector.ts` (line 133)
-  - Problem: the field is set to `analyzedMembers` (all rows) though the UI treats it as high-risk only.
-  - Fix: filter `riskLevel === 'High'` or rename the field.
-  - Risk: medium / Needs DB access: no
-  - Done: return now filters `analyzedMembers.filter((m) => m.riskLevel === 'High')`, so the list matches `highRiskCount` and the UI's "High Risk" badge.
-
-- [x] **[B5] Dead churn branch on `'plan_annual'`**
-  - File: `lib/ai/churn-detector.ts` (line 77)
-  - Problem: checks `membership_plan_id === 'plan_annual'`, but IDs are generated as `plan_${Date.now()}`, so it never matches.
-  - Fix: compare by plan duration/name or remove the branch.
-  - Risk: low / Needs DB access: no
-  - Done: Factor C now tests `(m.plan?.duration_months ?? 0) >= 12` using the plan attached by `getMembers()`, so annual members actually receive the −15 commitment adjustment.
-
-- [x] **[B6] Fresh-slate hook wipes Supabase session keys**
-  - File: `lib/data/db-service.ts` (line 36)
-  - Problem: import-time code deletes every `sb-` localStorage key, which includes the Supabase auth token.
-  - Fix: only clear `sgfm_` keys (or drop this migration block entirely).
-  - Risk: high / Needs DB access: no
-  - Done: the fresh-slate scan now removes only `sgfm_` keys, leaving `sb-` Supabase auth session keys intact.
-
-- [x] **[B7] Payment status filter can never match**
-  - File: `components/payments/PaymentList.tsx` (line 187)
-  - Problem: dropdown offers `failed`, but `PaymentStatus` is `completed | pending | refunded`.
-  - Fix: change option to `refunded` (and label accordingly).
-  - Risk: low / Needs DB access: no
-  - Done: line 187 option → `refunded`/`Refunded`; line 319 badge fallback `'Failed'` → `'Refunded'`. (Line 54 `useState` type tightening deferred.)
-
 - [ ] **[B8] Deleting a member orphans their payments**
   - File: `lib/data/db-service.ts` (line 209)
   - Problem: `deleteMember` doesn't remove related payments, which still count toward revenue.
@@ -96,20 +47,6 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Problem: no component ever calls it, so receipts cannot actually be emailed to members.
   - Fix: wire an "Email receipt" action in `PaymentList` / `PaymentModal` to this route.
   - Risk: low / Needs DB access: no
-
-- [x] **[B11] Undated payments counted every month**
-  - File: `lib/data/db-service.ts` (line 321)
-  - Problem: the `this-month` filter includes `|| !p.payment_date`, inflating revenue with blank-date rows.
-  - Fix: drop the `|| !p.payment_date` fallback.
-  - Risk: low / Needs DB access: no
-  - Done: removed the `|| !p.payment_date` / `|| !e.expense_date` fallbacks from the `this-month` branch, so blank-date rows are no longer attributed to the current month.
-
-- [x] **[B12] AI brief picks wrong "top expense category"**
-  - File: `components/analytics/AnalyticsView.tsx` (line 55)
-  - Problem: `topCat = expenses[0].category` (first row) instead of the highest-value category.
-  - Fix: aggregate by category and take the max.
-  - Risk: low / Needs DB access: no
-  - Done: expenses are now summed per category and the max-value category is passed as `topExpenseCategory`; falls back to `Rent` when there are no expenses.
 
 ### Security
 - [ ] **[S1] No middleware → routes unprotected, sessions not refreshed**
@@ -130,11 +67,12 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Fix: send it in the `x-goog-api-key` request header instead.
   - Risk: medium / Needs DB access: no
 
-- [ ] **[S4] Unescaped user input injected into HTML**
+- [x] **[S4] Unescaped user input injected into HTML**
   - File: `components/analytics/AnalyticsView.tsx` (line 129), `lib/email/resend-service.ts` (line 72), `app/(auth)/login/page.tsx` (line 156)
   - Problem: member names / AI messages are interpolated raw into SweetAlert and email HTML.
   - Fix: HTML-escape interpolated values before rendering.
   - Risk: medium / Needs DB access: no
+  - Done: added `escapeHtml()` (`lib/ui/escape.ts`) and applied it to the AI brief / retention-message HTML (`AnalyticsView`), the Resend receipt HTML, and the login confirmation block.
 
 - [ ] **[S5] Password change ignores the current password**
   - File: `components/settings/SettingsView.tsx` (line 95)
@@ -186,17 +124,19 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Fix: extract a shared `DataTable` / pagination component.
   - Risk: low / Needs DB access: no
 
-- [ ] **[Q4] Hardcoded dates presented as live UI**
+- [x] **[Q4] Hardcoded dates presented as live UI**
   - File: `components/layout/Header.tsx` (line 116), `components/payments/PaymentList.tsx` (line 206)
   - Problem: fixed "Apr 1 – Apr 30, 2026" pills look interactive but never change.
   - Fix: render the real current period or make them non-interactive labels.
   - Risk: low / Needs DB access: no
+  - Done: replaced the static pills with `getCurrentMonthRangeLabel()` (`lib/ui/date.ts`) in `Header`, `ReportsView`, `ExpenseList`, and `PaymentList`.
 
-- [ ] **[Q5] Docs/config drift**
+- [x] **[Q5] Docs/config drift**
   - File: `README.md`, `.env.example`, `types/database.ts`
   - Problem: README references a non-existent `supabase/migrations/…` path; `SUPABASE_SERVICE_ROLE_KEY` is unused; `AttendanceLog` type is unused.
   - Fix: correct the README and remove unused config/types (or actually use them).
   - Risk: low / Needs DB access: no
+  - Done: README now points at `supabase/schema.sql` and drops the Tailwind mention. Kept `SUPABASE_SERVICE_ROLE_KEY` (reserved for future server-side use) and the `AttendanceLog` type (needed for requirement 7).
 
 - [ ] **[Q6] Leak detector uses hardcoded ₱ baselines**
   - File: `lib/ai/leak-detector.ts` (lines 6–15)
@@ -249,8 +189,7 @@ The UI is polished and consistent (Apple-style inline styles, SweetAlert2, Recha
   - Risk: low / Needs DB access: no
 
 ## Recommended Order
-1. **[DB-free]** Fix the financial core: dynamic month windows ([B1]), real timeframe filters ([B3]), and undated-payment over-count ([B11]) — restores trustworthy numbers.
-2. **[DB-free]** Fix churn predictions: current-date baseline ([B2]), `highRiskMembers` filter ([B4]), and the dead plan branch ([B5]).
-3. **[DB-free]** Add `middleware.ts` for Supabase session refresh + route protection ([S1]) — biggest security win, no schema changes.
-4. **[DB-free]** Close the data-integrity leaks: stop wiping `sb-` keys ([B6]) and cascade member → payments on delete ([B8]).
-5. **[DB-free]** Harden `app/api/*`: require auth + rate limit ([S2]) and move the Gemini key to a header ([S3]).
+1. **[DB-free]** Add `middleware.ts` for Supabase session refresh + route protection ([S1]) — biggest security win, no schema changes.
+2. **[DB-free]** Decide member-deletion behavior ([B8]) so payments keep attribution (soft-delete or name snapshot) instead of cascade-deleting.
+3. **[DB-free]** Harden `app/api/*`: require auth + rate limit ([S2]) and move the Gemini key to a header ([S3]).
+4. **[DB-free]** Remaining product/infra work: password reset ([B9]), receipt email ([B10]), leak baselines ([Q6]), tests ([Q7]), calendar/attendance ([U5]), clickable dashboard ([F1]).

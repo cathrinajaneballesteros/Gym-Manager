@@ -21,6 +21,7 @@ import {
 } from 'recharts';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showError } from '@/lib/ui/swal';
+import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
 
 export const ReportsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'revenue' | 'expenses' | 'profit-loss' | 'monthly' | 'annual'>('revenue');
@@ -144,7 +145,7 @@ export const ReportsView: React.FC = () => {
             }}
           >
             <Calendar size={14} color="#64748b" />
-            <span>Apr 1, 2026 - Apr 30, 2026</span>
+            <span>{getCurrentMonthRangeLabel()}</span>
           </div>
         </div>
       </ScrollReveal>

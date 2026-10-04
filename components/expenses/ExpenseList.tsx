@@ -20,6 +20,7 @@ import { CategoryExpenseChart } from '@/components/charts/CategoryExpenseChart';
 import { ExpenseModal } from './ExpenseModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showToast } from '@/lib/ui/swal';
+import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
 
 export const ExpenseList: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -300,7 +301,7 @@ export const ExpenseList: React.FC = () => {
             }}
           >
             <Calendar size={14} color="#64748b" />
-            <span>Apr 1, 2026 - Apr 30, 2026</span>
+            <span>{getCurrentMonthRangeLabel()}</span>
           </div>
         </div>
       </div>
