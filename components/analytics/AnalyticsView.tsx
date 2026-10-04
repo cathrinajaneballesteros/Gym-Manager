@@ -125,7 +125,7 @@ export const AnalyticsView: React.FC = () => {
 
       showAlert({
         icon: 'info',
-        title: `Retention Outreach • ${member.memberName}`,
+        title: `Retention Outreach • ${escapeHtml(member.memberName)}`,
         html: `
           <div style="text-align: left; font-size: 0.875rem; line-height: 1.5; color: #334155;">
             <p style="margin-bottom: 0.5rem; font-size: 0.75rem; text-transform: uppercase; color: #64748b; font-weight: 600;">

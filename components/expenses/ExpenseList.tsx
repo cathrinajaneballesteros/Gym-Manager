@@ -21,6 +21,7 @@ import { ExpenseModal } from './ExpenseModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showToast } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
+import { escapeHtml } from '@/lib/ui/escape';
 
 export const ExpenseList: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -89,7 +90,7 @@ export const ExpenseList: React.FC = () => {
     if (confirmed) {
       DBService.deleteExpense(id);
       refreshData();
-      showToast(`Expense "${title}" deleted`);
+      showToast(`Expense "${escapeHtml(title)}" deleted`);
     }
   };
 
