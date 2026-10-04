@@ -16,7 +16,6 @@ import {
   INITIAL_MEMBERS,
   INITIAL_PAYMENTS,
   INITIAL_EXPENSES,
-  HISTORICAL_MONTHLY_DATA,
 } from './mock-data';
 
 const STORAGE_KEYS = {
