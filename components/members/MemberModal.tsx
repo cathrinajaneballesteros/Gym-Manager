@@ -48,6 +48,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
     register,
     handleSubmit,
     setValue,
+    getValues,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<MemberFormData>({
@@ -99,7 +100,8 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   const handlePlanChange = (planId: string) => {
     const selectedPlan = plans.find((p) => p.id === planId);
     if (selectedPlan) {
-      const d = new Date();
+      const startDate = getValues('start_date') || new Date().toISOString().split('T')[0];
+      const d = new Date(startDate);
       d.setMonth(d.getMonth() + selectedPlan.duration_months);
       setValue('end_date', d.toISOString().split('T')[0]);
     }

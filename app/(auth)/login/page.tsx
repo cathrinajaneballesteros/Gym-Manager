@@ -7,6 +7,7 @@ import { Lock, Mail, ArrowRight, Eye, EyeOff, ArrowLeft, Building2, User } from 
 import { createClient } from '@/lib/supabase/client';
 import { DBService } from '@/lib/data/db-service';
 import { showAlert } from '@/lib/ui/swal';
+import { escapeHtml } from '@/lib/ui/escape';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -159,7 +160,7 @@ export default function LoginPage() {
             html: `
               <div style="text-align: left; font-size: 0.9rem; line-height: 1.6; color: #334155;">
                 <p style="margin-bottom: 0.75rem;">
-                  A confirmation link has been sent to <strong>${email.trim()}</strong>.
+                  A confirmation link has been sent to <strong>${escapeHtml(email.trim())}</strong>.
                 </p>
                 <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.85rem; font-size: 0.85rem; color: #166534;">
                   📬 Please open your Gmail to confirm your account before signing in.

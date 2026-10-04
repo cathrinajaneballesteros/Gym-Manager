@@ -23,7 +23,7 @@ An intelligent, cloud-based financial management platform and modern web applica
 
 - **Framework**: [Next.js](https://nextjs.org/) (App Router, Turbopack)
 - **Frontend**: [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: Vanilla CSS Modules & Design System (`app/globals.css`), Tailwind CSS
+- **Styling**: Vanilla CSS with a custom design system (`app/globals.css`)
 - **Database & Auth**: [Supabase](https://supabase.com/) & PostgreSQL
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Data Exporting**: `xlsx`, `jspdf`, `jspdf-autotable`
@@ -66,9 +66,9 @@ NEXT_PUBLIC_DEFAULT_CURRENCY=₱
 
 ### 4. Database Setup
 
-Execute the migration script in Supabase SQL Editor:
+Execute the schema script in the Supabase SQL Editor:
 ```
-supabase/migrations/20260927_init_sgfm.sql
+supabase/schema.sql
 ```
 
 ### 5. Running the Application

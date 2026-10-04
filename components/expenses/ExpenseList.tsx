@@ -20,6 +20,8 @@ import { CategoryExpenseChart } from '@/components/charts/CategoryExpenseChart';
 import { ExpenseModal } from './ExpenseModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showToast } from '@/lib/ui/swal';
+import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
+import { escapeHtml } from '@/lib/ui/escape';
 
 export const ExpenseList: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -74,6 +76,7 @@ export const ExpenseList: React.FC = () => {
   });
   const topCategoryPct = totalExpenses > 0 ? Math.round((topCategoryAmount / totalExpenses) * 100) : 0;
   const lastMonthTotalExpenses = DBService.getDashboardKPIs('last-month').totalExpenses;
+  const thisMonthTotalExpenses = DBService.getDashboardKPIs('this-month').totalExpenses;
 
   const totalPages = Math.ceil(filteredExpenses.length / pageSize) || 1;
   const paginated = filteredExpenses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -88,7 +91,7 @@ export const ExpenseList: React.FC = () => {
     if (confirmed) {
       DBService.deleteExpense(id);
       refreshData();
-      showToast(`Expense "${title}" deleted`);
+      showToast(`Expense "${escapeHtml(title)}" deleted`);
     }
   };
 
@@ -157,7 +160,7 @@ export const ExpenseList: React.FC = () => {
               This Month
             </div>
             <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
-              {currency}{totalExpenses.toLocaleString()}
+              {currency}{thisMonthTotalExpenses.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
               Current billing cycle
@@ -282,7 +285,9 @@ export const ExpenseList: React.FC = () => {
             <option value="Bank Transfer">Bank Transfer</option>
             <option value="Cash">Cash</option>
             <option value="GCash">GCash</option>
-            <option value="Card">Card</option>
+            <option value="Credit Card">Credit Card</option>
+            <option value="Check">Check</option>
+            <option value="Other">Other</option>
           </select>
 
           <div
@@ -300,7 +305,7 @@ export const ExpenseList: React.FC = () => {
             }}
           >
             <Calendar size={14} color="#64748b" />
-            <span>Apr 1, 2026 - Apr 30, 2026</span>
+            <span>{getCurrentMonthRangeLabel()}</span>
           </div>
         </div>
       </div>

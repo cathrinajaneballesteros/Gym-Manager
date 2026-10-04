@@ -21,6 +21,7 @@ import { MemberModal } from './MemberModal';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showToast } from '@/lib/ui/swal';
+import { escapeHtml } from '@/lib/ui/escape';
 
 export const MemberList: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
@@ -86,7 +87,7 @@ export const MemberList: React.FC = () => {
       DBService.deleteMember(id);
       refreshData();
       setActiveMenuId(null);
-      showToast(`${name} removed`);
+      showToast(`${escapeHtml(name)} removed`);
     }
   };
 

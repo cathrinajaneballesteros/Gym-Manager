@@ -18,6 +18,7 @@ import { Payment, UserProfile, Member } from '@/types/database';
 import { PaymentModal } from './PaymentModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showSuccess } from '@/lib/ui/swal';
+import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
 
 export const PaymentList: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -203,7 +204,7 @@ export const PaymentList: React.FC = () => {
             }}
           >
             <Calendar size={14} color="#64748b" />
-            <span>Apr 1, 2026 - Apr 30, 2026</span>
+            <span>{getCurrentMonthRangeLabel()}</span>
           </div>
         </div>
       </div>

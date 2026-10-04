@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Menu, Search, Calendar, Bell, ChevronDown } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
+import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
 
 interface HeaderProps {
   onToggleMobileMenu?: () => void;
@@ -113,7 +114,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
           className="header-date-pill"
         >
           <Calendar size={13} color="#636366" />
-          <span>Apr 1 – Apr 30, 2026</span>
+          <span>{getCurrentMonthRangeLabel()}</span>
           <ChevronDown size={12} color="#8e8e93" />
         </div>
 

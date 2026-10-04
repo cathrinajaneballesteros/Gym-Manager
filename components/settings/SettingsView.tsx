@@ -62,6 +62,7 @@ export const SettingsView: React.FC = () => {
     e.preventDefault();
     const updated = DBService.updateProfile({
       full_name: fullName,
+      email,
       gym_name: gymName,
       currency,
       phone,
