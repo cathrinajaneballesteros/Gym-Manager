@@ -184,7 +184,7 @@ export const PaymentList: React.FC = () => {
             <option value="all">All Status</option>
             <option value="completed">Paid</option>
             <option value="pending">Pending</option>
-            <option value="failed">Failed</option>
+            <option value="refunded">Refunded</option>
           </select>
 
           {/* Date range filter pill */}
@@ -316,7 +316,7 @@ export const PaymentList: React.FC = () => {
                               : 'badge-danger'
                           }`}
                         >
-                          {p.payment_status === 'completed' ? 'Paid' : p.payment_status === 'pending' ? 'Pending' : 'Failed'}
+                          {p.payment_status === 'completed' ? 'Paid' : p.payment_status === 'pending' ? 'Pending' : 'Refunded'}
                         </span>
                       </td>
 

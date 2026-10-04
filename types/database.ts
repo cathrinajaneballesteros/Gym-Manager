@@ -95,6 +95,32 @@ export interface AttendanceLog {
   check_in_time: string;
 }
 
+export type AuditAction =
+  | 'auth.login'
+  | 'auth.logout'
+  | 'auth.signup'
+  | 'member.create'
+  | 'member.update'
+  | 'member.delete'
+  | 'payment.create'
+  | 'expense.create'
+  | 'expense.update'
+  | 'expense.delete';
+
+export type AuditEntityType = 'auth' | 'member' | 'payment' | 'expense';
+
+export interface AuditLogEntry {
+  id: string;
+  admin_id: string;
+  actor_email: string;
+  action: AuditAction;
+  entity_type: AuditEntityType;
+  entity_id?: string;
+  entity_label?: string;
+  metadata?: Record<string, string | number | boolean | null>;
+  created_at: string;
+}
+
 export interface DashboardKPIs {
   totalRevenue: number;
   totalExpenses: number;

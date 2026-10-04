@@ -11,6 +11,7 @@ import {
   FileBarChart2,
   Sparkles,
   Settings,
+  ScrollText,
   LogOut,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
@@ -43,6 +44,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const initials = DBService.getInitials(profile?.full_name);
 
   const handleLogout = async () => {
+    DBService.recordAudit({
+      action: 'auth.logout',
+      entity_type: 'auth',
+      entity_label: profile?.email || 'Unknown user',
+    });
     try {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
@@ -52,6 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     }
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('sgfm_authenticated');
+      sessionStorage.removeItem('sgfm_login_logged');
     }
     router.push('/login');
   };
@@ -73,7 +80,13 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         { name: 'AI Analytics', href: '/analytics', icon: Sparkles },
       ],
     },
-    { section: 'SYSTEM', items: [{ name: 'Settings', href: '/settings', icon: Settings }] },
+    {
+      section: 'SYSTEM',
+      items: [
+        { name: 'Audit Log', href: '/audit', icon: ScrollText },
+        { name: 'Settings', href: '/settings', icon: Settings },
+      ],
+    },
   ];
 
   return (

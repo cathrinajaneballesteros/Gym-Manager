@@ -137,6 +137,12 @@ export default function LoginPage() {
             console.warn('Profile setup note:', pErr);
           }
 
+          DBService.recordAudit({
+            action: 'auth.signup',
+            entity_type: 'auth',
+            entity_label: data.user.email || email.trim() || 'Unknown user',
+          });
+
           // If session is already created (auto-confirm enabled in Supabase)
           if (data.session) {
             if (typeof window !== 'undefined') {

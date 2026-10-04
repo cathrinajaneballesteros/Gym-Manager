@@ -8,6 +8,7 @@ import {
   UserProfile,
   DashboardKPIs,
   MonthlyTrendData,
+  AuditLogEntry,
 } from '@/types/database';
 import {
   INITIAL_PROFILE,
@@ -24,7 +25,10 @@ const STORAGE_KEYS = {
   PLANS: 'sgfm_plans_clean',
   PAYMENTS: 'sgfm_payments_clean',
   EXPENSES: 'sgfm_expenses_clean',
+  AUDIT: 'sgfm_audit_log_clean',
 };
+
+const MAX_AUDIT_ENTRIES = 1000;
 
 // Clear legacy sample data and previous demo sessions for a completely clean slate
 if (typeof window !== 'undefined') {
@@ -33,7 +37,7 @@ if (typeof window !== 'undefined') {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (k && (k.startsWith('sgfm_') || k.startsWith('sb-'))) {
+        if (k && k.startsWith('sgfm_')) {
           keysToRemove.push(k);
         }
       }
@@ -66,6 +70,20 @@ function setStoredItem<T>(key: string, value: T): void {
   }
 }
 
+// Derive the most recent N month buckets, ending with the current month.
+function getRecentMonthBuckets(count: number): { month: string; monthKey: string }[] {
+  const now = new Date();
+  const buckets: { month: string; monthKey: string }[] = [];
+  for (let i = count - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    buckets.push({
+      month: d.toLocaleString('en-US', { month: 'short' }),
+      monthKey: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+    });
+  }
+  return buckets;
+}
+
 export class DBService {
   // 1. Profile / Settings
   static getProfile(): UserProfile {
@@ -94,6 +112,35 @@ export class DBService {
       window.dispatchEvent(new CustomEvent('sgfm_profile_updated', { detail: updated }));
     }
     return updated;
+  }
+
+  // 1b. User Audit Trail
+  static getAuditLogs(): AuditLogEntry[] {
+    return getStoredItem<AuditLogEntry[]>(STORAGE_KEYS.AUDIT, []);
+  }
+
+  static recordAudit(
+    input: Omit<AuditLogEntry, 'id' | 'admin_id' | 'actor_email' | 'created_at'>
+  ): AuditLogEntry {
+    const profile = this.getProfile();
+    const entry: AuditLogEntry = {
+      ...input,
+      id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      admin_id: profile.id,
+      actor_email: profile.email,
+      created_at: new Date().toISOString(),
+    };
+    const logs = getStoredItem<AuditLogEntry[]>(STORAGE_KEYS.AUDIT, []);
+    setStoredItem(STORAGE_KEYS.AUDIT, [entry, ...logs].slice(0, MAX_AUDIT_ENTRIES));
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sgfm_audit_updated', { detail: entry }));
+    }
+    return entry;
+  }
+
+  private static memberLabel(member?: Member): string {
+    if (!member) return 'Unknown member';
+    return `${member.first_name} ${member.last_name}`.trim() || member.id;
   }
 
   // 2. Membership Plans
@@ -173,6 +220,18 @@ export class DBService {
     const updated = [newMember, ...members];
     setStoredItem(STORAGE_KEYS.MEMBERS, updated);
 
+    this.recordAudit({
+      action: 'member.create',
+      entity_type: 'member',
+      entity_id: newMember.id,
+      entity_label: this.memberLabel(newMember),
+      metadata: {
+        plan_id: newMember.membership_plan_id,
+        start_date: newMember.start_date,
+        end_date: newMember.end_date,
+      },
+    });
+
     // If an initial plan was selected, record the payment automatically if desired
     const plans = this.getPlans();
     const plan = plans.find((p) => p.id === data.membership_plan_id);
@@ -196,20 +255,43 @@ export class DBService {
     const index = members.findIndex((m) => m.id === id);
     if (index === -1) throw new Error('Member not found');
 
+    const previous = members[index];
     const updatedMember = {
-      ...members[index],
+      ...previous,
       ...updates,
       updated_at: new Date().toISOString(),
     };
     members[index] = updatedMember;
     setStoredItem(STORAGE_KEYS.MEMBERS, members);
+
+    const changed = Object.keys(updates).filter(
+      (key) =>
+        (previous as unknown as Record<string, unknown>)[key] !==
+        (updates as Record<string, unknown>)[key]
+    );
+    this.recordAudit({
+      action: 'member.update',
+      entity_type: 'member',
+      entity_id: id,
+      entity_label: this.memberLabel(updatedMember),
+      metadata: { changed: changed.join(', ') || 'none' },
+    });
+
     return updatedMember;
   }
 
   static deleteMember(id: string): void {
     const members = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
+    const member = members.find((m) => m.id === id);
     const filtered = members.filter((m) => m.id !== id);
     setStoredItem(STORAGE_KEYS.MEMBERS, filtered);
+
+    this.recordAudit({
+      action: 'member.delete',
+      entity_type: 'member',
+      entity_id: id,
+      entity_label: this.memberLabel(member),
+    });
   }
 
   // 4. Payments
@@ -240,6 +322,22 @@ export class DBService {
     };
     const updated = [newPayment, ...payments];
     setStoredItem(STORAGE_KEYS.PAYMENTS, updated);
+
+    const member = this.getMemberById(newPayment.member_id);
+    const currency = this.getProfile().currency || '';
+    this.recordAudit({
+      action: 'payment.create',
+      entity_type: 'payment',
+      entity_id: newPayment.id,
+      entity_label: `${this.memberLabel(member)} · ${currency}${Number(newPayment.amount).toLocaleString()}`,
+      metadata: {
+        amount: Number(newPayment.amount),
+        method: newPayment.payment_method,
+        status: newPayment.payment_status,
+        member_id: newPayment.member_id,
+      },
+    });
+
     return newPayment;
   }
 
@@ -260,6 +358,19 @@ export class DBService {
     };
     const updated = [newExpense, ...expenses];
     setStoredItem(STORAGE_KEYS.EXPENSES, updated);
+
+    const currency = this.getProfile().currency || '';
+    this.recordAudit({
+      action: 'expense.create',
+      entity_type: 'expense',
+      entity_id: newExpense.id,
+      entity_label: `${newExpense.title} · ${currency}${Number(newExpense.amount).toLocaleString()}`,
+      metadata: {
+        category: newExpense.category,
+        amount: Number(newExpense.amount),
+      },
+    });
+
     return newExpense;
   }
 
@@ -268,20 +379,43 @@ export class DBService {
     const index = expenses.findIndex((e) => e.id === id);
     if (index === -1) throw new Error('Expense not found');
 
+    const previous = expenses[index];
     const updatedExpense = {
-      ...expenses[index],
+      ...previous,
       ...updates,
       updated_at: new Date().toISOString(),
     };
     expenses[index] = updatedExpense;
     setStoredItem(STORAGE_KEYS.EXPENSES, expenses);
+
+    const changed = Object.keys(updates).filter(
+      (key) =>
+        (previous as unknown as Record<string, unknown>)[key] !==
+        (updates as Record<string, unknown>)[key]
+    );
+    this.recordAudit({
+      action: 'expense.update',
+      entity_type: 'expense',
+      entity_id: id,
+      entity_label: updatedExpense.title || id,
+      metadata: { changed: changed.join(', ') || 'none' },
+    });
+
     return updatedExpense;
   }
 
   static deleteExpense(id: string): void {
     const expenses = getStoredItem<Expense[]>(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
+    const expense = expenses.find((e) => e.id === id);
     const filtered = expenses.filter((e) => e.id !== id);
     setStoredItem(STORAGE_KEYS.EXPENSES, filtered);
+
+    this.recordAudit({
+      action: 'expense.delete',
+      entity_type: 'expense',
+      entity_id: id,
+      entity_label: expense?.title || id,
+    });
   }
 
   // 6. Reset to seed data
@@ -292,6 +426,7 @@ export class DBService {
     localStorage.removeItem(STORAGE_KEYS.PLANS);
     localStorage.removeItem(STORAGE_KEYS.PAYMENTS);
     localStorage.removeItem(STORAGE_KEYS.EXPENSES);
+    localStorage.removeItem(STORAGE_KEYS.AUDIT);
   }
 
   // 7. Dashboard Financial KPI Calculation
@@ -318,12 +453,18 @@ export class DBService {
       filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(lastMonthKey));
     } else if (timeframe === 'this-month') {
       label = 'This Month';
-      filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(thisMonthKey) || !p.payment_date);
-      filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(thisMonthKey) || !e.expense_date);
-    } else if (timeframe === 'last-3-months') {
-      label = 'Last 3 Months';
-    } else if (timeframe === 'last-6-months') {
-      label = 'Last 6 Months';
+      filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(thisMonthKey));
+      filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(thisMonthKey));
+    } else if (timeframe === 'last-3-months' || timeframe === 'last-6-months') {
+      const count = timeframe === 'last-3-months' ? 3 : 6;
+      label = timeframe === 'last-3-months' ? 'Last 3 Months' : 'Last 6 Months';
+      const monthKeys = getRecentMonthBuckets(count).map((b) => b.monthKey);
+      filteredPayments = filteredPayments.filter((p) =>
+        monthKeys.some((k) => (p.payment_date || '').startsWith(k))
+      );
+      filteredExpenses = filteredExpenses.filter((e) =>
+        monthKeys.some((k) => (e.expense_date || '').startsWith(k))
+      );
     } else if (timeframe === 'this-year') {
       label = 'Year to Date';
       filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(`${currentYear}-`));
@@ -360,11 +501,10 @@ export class DBService {
     const expenses = this.getExpenses();
     const members = this.getMembers();
 
-    const months = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep'];
-    const monthKeys = ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'];
+    const buckets = getRecentMonthBuckets(6);
 
-    return months.map((month, idx) => {
-      const key = monthKeys[idx];
+    return buckets.map(({ month, monthKey }) => {
+      const key = monthKey;
       const revenue = payments
         .filter((p) => p.payment_status === 'completed' && (p.payment_date || '').startsWith(key))
         .reduce((sum, p) => sum + Number(p.amount), 0);
@@ -375,7 +515,7 @@ export class DBService {
 
       return {
         month,
-        monthKey: key,
+        monthKey,
         revenue,
         expenses: expenseTotal,
         profit: revenue - expenseTotal,
