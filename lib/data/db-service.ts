@@ -479,7 +479,8 @@ export class DBService {
     const activeMembers = members.filter((m) => m.status === 'active').length;
     const expiringMemberships = members.filter((m) => m.status === 'expiring').length;
     const expiredMemberships = members.filter((m) => m.status === 'expired').length;
-    const totalMembers = activeMembers + expiringMemberships + expiredMemberships;
+    const inactiveMembers = members.filter((m) => m.status === 'inactive').length;
+    const totalMembers = activeMembers + expiringMemberships + expiredMemberships + inactiveMembers;
     const renewalRate = totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 1000) / 10 : 0;
 
     return {
