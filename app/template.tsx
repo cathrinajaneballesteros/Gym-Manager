@@ -28,8 +28,8 @@ export default function Template({ children }: { children: React.ReactNode }) {
         DBService.updateProfile({
           id: session.user.id,
           email: session.user.email || profile.email,
-          full_name: meta.full_name || meta.name || profile.full_name || 'Gym Administrator',
-          gym_name: meta.gym_name || profile.gym_name || 'My Fitness Gym',
+          full_name: profile.full_name || meta.full_name || meta.name || 'Gym Administrator',
+          gym_name: profile.gym_name || meta.gym_name || 'My Fitness Gym',
           currency: profile.currency || '₱',
         });
         recordLoginOnce(session.user.email);
@@ -46,8 +46,8 @@ export default function Template({ children }: { children: React.ReactNode }) {
           DBService.updateProfile({
             id: session.user.id,
             email: session.user.email || profile.email,
-            full_name: meta.full_name || meta.name || profile.full_name || 'Gym Administrator',
-            gym_name: meta.gym_name || profile.gym_name || 'My Fitness Gym',
+            full_name: profile.full_name || meta.full_name || meta.name || 'Gym Administrator',
+            gym_name: profile.gym_name || meta.gym_name || 'My Fitness Gym',
             currency: profile.currency || '₱',
           });
           if (event === 'SIGNED_IN') {
