@@ -13,6 +13,7 @@ import {
   Settings,
   ScrollText,
   LogOut,
+  Calendar,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
@@ -71,6 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         { name: 'Members', href: '/members', icon: Users },
         { name: 'Payments', href: '/payments', icon: CreditCard },
         { name: 'Expenses', href: '/expenses', icon: Receipt },
+        { name: 'Calendar', href: '/calendar', icon: Calendar },
       ],
     },
     {

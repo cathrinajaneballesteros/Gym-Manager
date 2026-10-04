@@ -32,7 +32,7 @@ const MAX_AUDIT_ENTRIES = 1000;
 // Clear legacy sample data and previous demo sessions for a completely clean slate
 if (typeof window !== 'undefined') {
   try {
-    if (!localStorage.getItem('sgfm_fresh_slate_v3')) {
+    if (!localStorage.getItem('sgfm_fresh_slate_v4')) {
       const keysToRemove: string[] = [];
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
@@ -41,7 +41,7 @@ if (typeof window !== 'undefined') {
         }
       }
       keysToRemove.forEach((k) => localStorage.removeItem(k));
-      localStorage.setItem('sgfm_fresh_slate_v3', 'true');
+      localStorage.setItem('sgfm_fresh_slate_v4', 'true');
     }
   } catch (err) {
     // Ignore storage errors in private browsing
@@ -110,6 +110,13 @@ export class DBService {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('sgfm_profile_updated', { detail: updated }));
     }
+    this.recordAudit({
+      action: 'settings.update',
+      entity_type: 'settings',
+      entity_id: updated.id,
+      entity_label: updated.gym_name || updated.email || 'Settings',
+      metadata: { changed: Object.keys(updates).join(', ') },
+    });
     return updated;
   }
 
@@ -317,6 +324,7 @@ export class DBService {
       ...data,
       id: `pay_${Date.now()}`,
       admin_id: this.getProfile().id,
+      receipt_status: data.receipt_status || (data.payment_method === 'Cash' ? 'verified' : 'unverified'),
       created_at: new Date().toISOString(),
     };
     const updated = [newPayment, ...payments];
@@ -333,11 +341,128 @@ export class DBService {
         amount: Number(newPayment.amount),
         method: newPayment.payment_method,
         status: newPayment.payment_status,
+        receipt_status: newPayment.receipt_status || 'unverified',
         member_id: newPayment.member_id,
       },
     });
 
     return newPayment;
+  }
+
+  static updatePayment(id: string, updates: Partial<Payment>): Payment {
+    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
+    const index = payments.findIndex((p) => p.id === id);
+    if (index === -1) throw new Error('Payment not found');
+
+    const previous = payments[index];
+    const updatedPayment: Payment = {
+      ...previous,
+      ...updates,
+    };
+    payments[index] = updatedPayment;
+    setStoredItem(STORAGE_KEYS.PAYMENTS, payments);
+
+    this.recordAudit({
+      action: 'payment.update',
+      entity_type: 'payment',
+      entity_id: id,
+      entity_label: `Payment #${updatedPayment.reference_number || id}`,
+      metadata: {
+        payment_status: updatedPayment.payment_status,
+        amount: Number(updatedPayment.amount),
+        receipt_status: updatedPayment.receipt_status || 'unverified',
+      },
+    });
+
+    return updatedPayment;
+  }
+
+  static verifyPaymentReceipt(id: string, options?: { notes?: string }): Payment {
+    const profile = this.getProfile();
+    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
+    const index = payments.findIndex((p) => p.id === id);
+    if (index === -1) throw new Error('Payment not found');
+
+    const current = payments[index];
+    const updatedPayment: Payment = {
+      ...current,
+      payment_status: 'completed',
+      receipt_status: 'verified',
+      verified_at: new Date().toISOString(),
+      verified_by: profile.full_name || profile.email || 'Admin',
+      receipt_notes: options?.notes || current.receipt_notes,
+    };
+    payments[index] = updatedPayment;
+    setStoredItem(STORAGE_KEYS.PAYMENTS, payments);
+
+    const member = this.getMemberById(updatedPayment.member_id);
+    const currency = profile.currency || '₱';
+
+    this.recordAudit({
+      action: 'payment.receipt_verify',
+      entity_type: 'payment',
+      entity_id: id,
+      entity_label: `${this.memberLabel(member)} · ${currency}${Number(updatedPayment.amount).toLocaleString()}`,
+      metadata: {
+        receipt_status: 'verified',
+        reference_number: updatedPayment.reference_number || '',
+        verified_by: updatedPayment.verified_by || 'Admin',
+        notes: options?.notes || '',
+      },
+    });
+
+    return updatedPayment;
+  }
+
+  static rejectPaymentReceipt(id: string, reason: string): Payment {
+    const profile = this.getProfile();
+    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
+    const index = payments.findIndex((p) => p.id === id);
+    if (index === -1) throw new Error('Payment not found');
+
+    const current = payments[index];
+    const updatedPayment: Payment = {
+      ...current,
+      receipt_status: 'rejected',
+      verified_at: new Date().toISOString(),
+      verified_by: profile.full_name || profile.email || 'Admin',
+      rejection_reason: reason,
+    };
+    payments[index] = updatedPayment;
+    setStoredItem(STORAGE_KEYS.PAYMENTS, payments);
+
+    const member = this.getMemberById(updatedPayment.member_id);
+    const currency = profile.currency || '₱';
+
+    this.recordAudit({
+      action: 'payment.receipt_reject',
+      entity_type: 'payment',
+      entity_id: id,
+      entity_label: `${this.memberLabel(member)} · ${currency}${Number(updatedPayment.amount).toLocaleString()}`,
+      metadata: {
+        receipt_status: 'rejected',
+        reference_number: current.reference_number || '',
+        rejection_reason: reason,
+        verified_by: updatedPayment.verified_by || 'Admin',
+      },
+    });
+
+    return updatedPayment;
+  }
+
+  static deletePayment(id: string): void {
+    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
+    const payment = payments.find((p) => p.id === id);
+    const filtered = payments.filter((p) => p.id !== id);
+    setStoredItem(STORAGE_KEYS.PAYMENTS, filtered);
+
+    this.recordAudit({
+      action: 'payment.delete',
+      entity_type: 'payment',
+      entity_id: id,
+      entity_label: `Payment #${payment?.reference_number || id}`,
+      metadata: { amount: payment?.amount || 0 },
+    });
   }
 
   // 5. Expenses
@@ -522,5 +647,93 @@ export class DBService {
         memberCount,
       };
     });
+  }
+
+  // 9. Historical Expense Analytics
+  static getExpenseHistoryMonths(): { monthKey: string; monthLabel: string }[] {
+    const expenses = this.getExpenses();
+    const map = new Map<string, string>();
+
+    // Always include current month and previous 5 months
+    const recentBuckets = getRecentMonthBuckets(6);
+    recentBuckets.forEach((b) => {
+      const [y, m] = b.monthKey.split('-');
+      const d = new Date(Number(y), Number(m) - 1, 1);
+      map.set(b.monthKey, d.toLocaleString('en-US', { month: 'short', year: 'numeric' }));
+    });
+
+    // Also include any other month present in expense dates
+    expenses.forEach((e) => {
+      if (e.expense_date && e.expense_date.length >= 7) {
+        const key = e.expense_date.slice(0, 7);
+        if (!map.has(key)) {
+          const [y, m] = key.split('-');
+          const d = new Date(Number(y), Number(m) - 1, 1);
+          map.set(key, d.toLocaleString('en-US', { month: 'short', year: 'numeric' }));
+        }
+      }
+    });
+
+    return Array.from(map.entries())
+      .map(([monthKey, monthLabel]) => ({ monthKey, monthLabel }))
+      .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  }
+
+  static getHistoricalExpenseSummary(): {
+    categories: Record<string, { total: number; monthlyAvg: number; count: number; recentMonths: { month: string; amount: number }[] }>;
+    monthlyTotals: { month: string; monthKey: string; total: number }[];
+    overallMonthlyAverage: number;
+  } {
+    const expenses = this.getExpenses();
+    const months = this.getExpenseHistoryMonths();
+    const monthKeys = months.map((m) => m.monthKey).slice(0, 6);
+
+    const monthlyTotals = monthKeys.map((key) => {
+      const match = months.find((m) => m.monthKey === key);
+      const total = expenses
+        .filter((e) => (e.expense_date || '').startsWith(key))
+        .reduce((sum, e) => sum + Number(e.amount), 0);
+      return {
+        monthKey: key,
+        month: match ? match.monthLabel : key,
+        total,
+      };
+    });
+
+    const categories: Record<string, { total: number; monthlyAvg: number; count: number; recentMonths: { month: string; amount: number }[] }> = {};
+    const catList = [
+      'Rent', 'Utilities', 'Salaries', 'Equipment', 'Maintenance', 'Supplies', 'Marketing', 'Other'
+    ];
+
+    catList.forEach((cat) => {
+      const catExpenses = expenses.filter((e) => e.category === cat);
+      const total = catExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+      const recentMonths = monthKeys.map((key) => {
+        const match = months.find((m) => m.monthKey === key);
+        const amount = catExpenses
+          .filter((e) => (e.expense_date || '').startsWith(key))
+          .reduce((sum, e) => sum + Number(e.amount), 0);
+        return {
+          month: match ? match.monthLabel : key,
+          amount,
+        };
+      });
+
+      categories[cat] = {
+        total,
+        monthlyAvg: Math.round(total / (monthKeys.length || 1)),
+        count: catExpenses.length,
+        recentMonths,
+      };
+    });
+
+    const overallTotal = monthlyTotals.reduce((sum, m) => sum + m.total, 0);
+    const overallMonthlyAverage = Math.round(overallTotal / (monthlyTotals.length || 1));
+
+    return {
+      categories,
+      monthlyTotals,
+      overallMonthlyAverage,
+    };
   }
 }

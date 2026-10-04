@@ -17,16 +17,386 @@ export const INITIAL_PROFILE: UserProfile = {
   created_at: new Date().toISOString(),
 };
 
-// Clean slate: No sample plans, members, payments, or expenses
-export const INITIAL_PLANS: MembershipPlan[] = [];
-export const INITIAL_MEMBERS: Member[] = [];
-export const INITIAL_PAYMENTS: Payment[] = [];
-export const INITIAL_EXPENSES: Expense[] = [];
-export const HISTORICAL_MONTHLY_DATA: {
-  month: string;
-  monthKey: string;
-  revenue: number;
-  expenses: number;
-  profit: number;
-  memberCount: number;
-}[] = [];
+// Standard initial plans so fresh installations can create members immediately
+export const INITIAL_PLANS: MembershipPlan[] = [
+  {
+    id: 'plan_monthly',
+    admin_id: '',
+    name: 'Monthly Standard Pass',
+    price: 1500,
+    duration_months: 1,
+    description: 'Unlimited access to gym facilities, free weights, and cardio equipment.',
+    is_active: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'plan_quarterly',
+    admin_id: '',
+    name: 'Quarterly Fitness Pass',
+    price: 4000,
+    duration_months: 3,
+    description: '3 months full access with locker perks and 1 body composition checkup.',
+    is_active: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+  },
+  {
+    id: 'plan_annual',
+    admin_id: '',
+    name: 'Annual VIP All-Access',
+    price: 14000,
+    duration_months: 12,
+    description: '1 year unlimited access, free guest passes, and priority sauna booking.',
+    is_active: true,
+    created_at: '2026-01-01T00:00:00.000Z',
+  },
+];
+
+// Helper to generate dynamic ISO dates relative to today
+const now = new Date();
+const currentY = now.getFullYear();
+const currentM = now.getMonth();
+
+const formatDateRel = (monthsOffset: number, day: number) => {
+  const d = new Date(currentY, currentM - monthsOffset, day);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+export const INITIAL_MEMBERS: Member[] = [
+  {
+    id: 'mem_1',
+    admin_id: '',
+    first_name: 'Juan',
+    last_name: 'Dela Cruz',
+    email: 'juan.delacruz@example.com',
+    phone: '09171234567',
+    emergency_contact: 'Maria Dela Cruz (09179876543)',
+    membership_plan_id: 'plan_monthly',
+    start_date: formatDateRel(1, 8),
+    end_date: formatDateRel(0, 8), // Expiring in a few days
+    status: 'expiring',
+    last_visit_date: formatDateRel(0, 2),
+    notes: 'Renewing monthly member. Preferred payment: GCash.',
+    created_at: '2026-08-01T00:00:00.000Z',
+  },
+  {
+    id: 'mem_2',
+    admin_id: '',
+    first_name: 'Maria',
+    last_name: 'Santos',
+    email: 'maria.santos@example.com',
+    phone: '09182345678',
+    emergency_contact: 'Roberto Santos (09187654321)',
+    membership_plan_id: 'plan_quarterly',
+    start_date: formatDateRel(2, 15),
+    end_date: formatDateRel(-1, 15), // Active for another month
+    status: 'active',
+    last_visit_date: formatDateRel(0, 3),
+    notes: 'Attends morning strength training classes.',
+    created_at: '2026-07-15T00:00:00.000Z',
+  },
+  {
+    id: 'mem_3',
+    admin_id: '',
+    first_name: 'Carlo',
+    last_name: 'Reyes',
+    email: 'carlo.reyes@example.com',
+    phone: '09203456789',
+    emergency_contact: 'Ana Reyes (09209876543)',
+    membership_plan_id: 'plan_monthly',
+    start_date: formatDateRel(2, 1),
+    end_date: formatDateRel(1, 1), // Expired last month
+    status: 'expired',
+    last_visit_date: formatDateRel(1, 10),
+    notes: 'Pending renewal. Follow up required.',
+    created_at: '2026-07-01T00:00:00.000Z',
+  },
+  {
+    id: 'mem_4',
+    admin_id: '',
+    first_name: 'Angelo',
+    last_name: 'Mendoza',
+    email: 'angelo.mendoza@example.com',
+    phone: '09194567890',
+    emergency_contact: 'Elena Mendoza (09191234567)',
+    membership_plan_id: 'plan_annual',
+    start_date: formatDateRel(3, 10),
+    end_date: formatDateRel(-9, 10),
+    status: 'active',
+    last_visit_date: formatDateRel(0, 1),
+    notes: 'Annual VIP pass.',
+    created_at: '2026-06-10T00:00:00.000Z',
+  },
+  {
+    id: 'mem_5',
+    admin_id: '',
+    first_name: 'Bea',
+    last_name: 'Alonzo',
+    email: 'bea.alonzo@example.com',
+    phone: '09225678901',
+    emergency_contact: 'Grace Alonzo (09223456789)',
+    membership_plan_id: 'plan_monthly',
+    start_date: formatDateRel(1, 6),
+    end_date: formatDateRel(0, 6), // Expiring
+    status: 'expiring',
+    last_visit_date: formatDateRel(0, 3),
+    notes: 'Prefers SMS reminders.',
+    created_at: '2026-08-06T00:00:00.000Z',
+  },
+];
+
+export const INITIAL_PAYMENTS: Payment[] = [
+  {
+    id: 'pay_101',
+    admin_id: '',
+    member_id: 'mem_1',
+    membership_plan_id: 'plan_monthly',
+    amount: 1500,
+    payment_date: formatDateRel(1, 8),
+    payment_method: 'GCash',
+    payment_status: 'completed',
+    receipt_status: 'verified',
+    reference_number: 'GCASH-982348123491',
+    verified_at: formatDateRel(1, 8),
+    verified_by: 'Admin',
+    notes: 'Monthly pass renewal verified via GCash SMS reference.',
+    created_at: '2026-09-08T00:00:00.000Z',
+  },
+  {
+    id: 'pay_102',
+    admin_id: '',
+    member_id: 'mem_2',
+    membership_plan_id: 'plan_quarterly',
+    amount: 4000,
+    payment_date: formatDateRel(2, 15),
+    payment_method: 'Bank Transfer',
+    payment_status: 'completed',
+    receipt_status: 'verified',
+    reference_number: 'BDO-2918349281',
+    verified_at: formatDateRel(2, 15),
+    verified_by: 'Admin',
+    notes: 'BDO online bank transfer deposit slip verified.',
+    created_at: '2026-08-15T00:00:00.000Z',
+  },
+  {
+    id: 'pay_103',
+    admin_id: '',
+    member_id: 'mem_4',
+    membership_plan_id: 'plan_annual',
+    amount: 14000,
+    payment_date: formatDateRel(3, 10),
+    payment_method: 'Credit Card',
+    payment_status: 'completed',
+    receipt_status: 'verified',
+    reference_number: 'CC-AUTH-882739',
+    verified_at: formatDateRel(3, 10),
+    verified_by: 'Admin',
+    notes: 'POS swipe slip on record.',
+    created_at: '2026-07-10T00:00:00.000Z',
+  },
+  {
+    id: 'pay_104',
+    admin_id: '',
+    member_id: 'mem_5',
+    membership_plan_id: 'plan_monthly',
+    amount: 1500,
+    payment_date: formatDateRel(0, 2),
+    payment_method: 'GCash',
+    payment_status: 'pending',
+    receipt_status: 'unverified', // Unverified receipt waiting for manual checker!
+    reference_number: 'GCASH-491823758192',
+    receipt_notes: 'Member submitted GCash screenshot via front desk.',
+    notes: 'Awaiting manual receipt verification.',
+    created_at: new Date().toISOString(),
+  },
+  {
+    id: 'pay_105',
+    admin_id: '',
+    member_id: 'mem_1',
+    membership_plan_id: 'plan_monthly',
+    amount: 1500,
+    payment_date: formatDateRel(0, 3),
+    payment_method: 'Bank Transfer',
+    payment_status: 'pending',
+    receipt_status: 'unverified', // Another unverified receipt waiting for review!
+    reference_number: 'BPI-TRX-77491028',
+    receipt_notes: 'BPI express online transfer slip attached.',
+    notes: 'Member requests confirmation for upcoming cycle.',
+    created_at: new Date().toISOString(),
+  },
+];
+
+// Rich multi-month historical expenses to power Expense Historical Data & AI Savings Analytics
+export const INITIAL_EXPENSES: Expense[] = [
+  // Current Month Expenses
+  {
+    id: 'exp_curr_1',
+    admin_id: '',
+    category: 'Rent',
+    title: 'Monthly Facility Lease',
+    amount: 45000,
+    expense_date: formatDateRel(0, 1),
+    payment_method: 'Bank Transfer',
+    description: 'Ground floor gym space lease contract.',
+    created_at: '2026-10-01T00:00:00.000Z',
+  },
+  {
+    id: 'exp_curr_2',
+    admin_id: '',
+    category: 'Utilities',
+    title: 'Meralco Electric Bill (High AC Usage)',
+    amount: 14850,
+    expense_date: formatDateRel(0, 2),
+    payment_method: 'GCash',
+    description: 'Electricity spike due to non-stop AC run times during afternoon peak hours.',
+    created_at: '2026-10-02T00:00:00.000Z',
+  },
+  {
+    id: 'exp_curr_3',
+    admin_id: '',
+    category: 'Salaries',
+    title: 'Staff & Trainer Payroll (1st Half)',
+    amount: 18000,
+    expense_date: formatDateRel(0, 15),
+    payment_method: 'Bank Transfer',
+    description: 'Front desk staff and 2 gym floor trainers.',
+    created_at: '2026-10-15T00:00:00.000Z',
+  },
+  {
+    id: 'exp_curr_4',
+    admin_id: '',
+    category: 'Supplies',
+    title: 'Sanitation & Disinfectant Refills',
+    amount: 4200,
+    expense_date: formatDateRel(0, 3),
+    payment_method: 'Cash',
+    description: 'Equipment sanitizer, microfiber towels, gym chalk.',
+    created_at: '2026-10-03T00:00:00.000Z',
+  },
+
+  // 1 Month Ago (Historical)
+  {
+    id: 'exp_hist1_1',
+    admin_id: '',
+    category: 'Rent',
+    title: 'Monthly Facility Lease',
+    amount: 45000,
+    expense_date: formatDateRel(1, 1),
+    payment_method: 'Bank Transfer',
+    description: 'Monthly gym space lease.',
+    created_at: '2026-09-01T00:00:00.000Z',
+  },
+  {
+    id: 'exp_hist1_2',
+    admin_id: '',
+    category: 'Utilities',
+    title: 'Electricity & Water Bill',
+    amount: 8200,
+    expense_date: formatDateRel(1, 3),
+    payment_method: 'Bank Transfer',
+    description: 'Normal seasonal power bill.',
+    created_at: '2026-09-03T00:00:00.000Z',
+  },
+  {
+    id: 'exp_hist1_3',
+    admin_id: '',
+    category: 'Salaries',
+    title: 'Staff & Trainer Full Payroll',
+    amount: 36000,
+    expense_date: formatDateRel(1, 15),
+    payment_method: 'Bank Transfer',
+    description: 'Full monthly staff salaries.',
+    created_at: '2026-09-15T00:00:00.000Z',
+  },
+  {
+    id: 'exp_hist1_4',
+    admin_id: '',
+    category: 'Maintenance',
+    title: 'Treadmill Belt & Cable Lubrication',
+    amount: 5200,
+    expense_date: formatDateRel(1, 12),
+    payment_method: 'Cash',
+    description: 'Quarterly technician routine servicing.',
+    created_at: '2026-09-12T00:00:00.000Z',
+  },
+
+  // 2 Months Ago (Historical)
+  {
+    id: 'exp_hist2_1',
+    admin_id: '',
+    category: 'Rent',
+    title: 'Monthly Facility Lease',
+    amount: 45000,
+    expense_date: formatDateRel(2, 1),
+    payment_method: 'Bank Transfer',
+    description: 'Monthly gym space lease.',
+    created_at: '2026-08-01T00:00:00.000Z',
+  },
+  {
+    id: 'exp_hist2_2',
+    admin_id: '',
+    category: 'Utilities',
+    title: 'Electric & Water Utilities',
+    amount: 7900,
+    expense_date: formatDateRel(2, 4),
+    payment_method: 'Bank Transfer',
+    description: 'Monthly utility consumption.',
+    created_at: '2026-08-04T00:00:00.000Z',
+  },
+  {
+    id: 'exp_hist2_3',
+    admin_id: '',
+    category: 'Salaries',
+    title: 'Staff & Trainer Payroll',
+    amount: 36000,
+    expense_date: formatDateRel(2, 15),
+    payment_method: 'Bank Transfer',
+    description: 'Full staff monthly compensation.',
+    created_at: '2026-08-15T00:00:00.000Z',
+  },
+  {
+    id: 'exp_hist2_4',
+    admin_id: '',
+    category: 'Supplies',
+    title: 'Cleaning Agents & Toiletries',
+    amount: 3100,
+    expense_date: formatDateRel(2, 10),
+    payment_method: 'Cash',
+    description: 'Restroom supplies and paper rolls.',
+    created_at: '2026-08-10T00:00:00.000Z',
+  },
+
+  // 3 Months Ago (Historical)
+  {
+    id: 'exp_hist3_1',
+    admin_id: '',
+    category: 'Rent',
+    title: 'Monthly Facility Lease',
+    amount: 45000,
+    expense_date: formatDateRel(3, 1),
+    payment_method: 'Bank Transfer',
+    description: 'Monthly gym space lease.',
+    created_at: '2026-07-01T00:00:00.000Z',
+  },
+  {
+    id: 'exp_hist3_2',
+    admin_id: '',
+    category: 'Utilities',
+    title: 'Electric & Water Utilities',
+    amount: 8100,
+    expense_date: formatDateRel(3, 5),
+    payment_method: 'Bank Transfer',
+    description: 'Standard monthly utility baseline.',
+    created_at: '2026-07-05T00:00:00.000Z',
+  },
+  {
+    id: 'exp_hist3_3',
+    admin_id: '',
+    category: 'Equipment',
+    title: 'Olympic Bumper Plates (Capital Purchase)',
+    amount: 15500,
+    expense_date: formatDateRel(3, 18),
+    payment_method: 'Bank Transfer',
+    description: 'One-off bumper plate set purchase (capital asset).',
+    created_at: '2026-07-18T00:00:00.000Z',
+  },
+];

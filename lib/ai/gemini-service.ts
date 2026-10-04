@@ -145,4 +145,50 @@ Write an engaging, warm check-in message offering encouragement or inviting them
 
     return this.prompt(system, user);
   }
+
+  /**
+   * Generates a tailored Cost-Cutting Action Plan for gym owner to save money
+   */
+  static async generateCostSavingPlan(data: {
+    gymName?: string;
+    currency?: string;
+    totalExpenses: number;
+    potentialMonthlySavings: number;
+    potentialAnnualSavings: number;
+    topExpenseCategory?: string;
+    anomalies?: { category: string; currentAmount: number; baseline: number; difference: number }[];
+  }): Promise<string> {
+    const system =
+      'You are a seasoned fitness business consultant and financial controller specializing in gym profitability. ' +
+      'Your sole objective is to help the gym owner eliminate operational waste, reduce unnecessary expenses, and maximize net take-home profit. ' +
+      'Be direct, practical, and highly specific with concrete monetary targets and operational steps. Keep under 300 words.';
+
+    const anomaliesText =
+      data.anomalies && data.anomalies.length > 0
+        ? data.anomalies
+            .map(
+              (a) =>
+                `  * ${a.category}: Spent ${data.currency || '₱'}${a.currentAmount.toLocaleString()} vs ${data.currency || '₱'}${a.baseline.toLocaleString()} baseline (+${data.currency || '₱'}${a.difference.toLocaleString()} overage)`
+            )
+            .join('\n')
+        : '  * General operations baseline tracking';
+
+    const user = `Analyze our gym expenditures and design an aggressive cost-cutting action plan:
+- Gym Name: ${data.gymName || 'Fitness Center'}
+- Currency: ${data.currency || '₱'}
+- Total Monthly Expenses: ${data.currency || '₱'}${data.totalExpenses.toLocaleString()}
+- Detected Potential Monthly Savings: ${data.currency || '₱'}${data.potentialMonthlySavings.toLocaleString()}
+- Detected Potential Annual Savings: ${data.currency || '₱'}${data.potentialAnnualSavings.toLocaleString()}
+- Largest Expense Category: ${data.topExpenseCategory || 'Utilities'}
+- Spending Anomalies Flagged:
+${anomaliesText}
+
+Provide:
+1. Top 3 Immediate Quick Wins (Actions to take this week to stop cash bleed)
+2. Strategic Cost-Cutting Initiatives (Vendors, utilities, maintenance, supplies)
+3. 30-Day Expense Reduction Checklist for staff
+4. Projected Bottom-Line Profit Increase`;
+
+    return this.prompt(system, user);
+  }
 }

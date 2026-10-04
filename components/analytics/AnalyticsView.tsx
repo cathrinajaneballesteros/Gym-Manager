@@ -12,11 +12,17 @@ import {
   ArrowRight,
   ShieldCheck,
   Send,
+  PiggyBank,
+  Zap,
+  CheckCircle2,
+  DollarSign,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { calculateRevenueForecast } from '@/lib/ai/forecasting';
 import { predictMemberChurn } from '@/lib/ai/churn-detector';
 import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
-import { RevenueForecastResult, ChurnPredictionResult, ExpenseLeakResult } from '@/types/ai';
+import { RevenueForecastResult, ChurnPredictionResult, ExpenseLeakResult, CostSavingPlaybook } from '@/types/ai';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
 import { showAlert, showToast, showError } from '@/lib/ui/swal';
@@ -40,6 +46,8 @@ export const AnalyticsView: React.FC = () => {
   const [leaks, setLeaks] = useState<ExpenseLeakResult | null>(null);
   const [contactedMemberId, setContactedMemberId] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isCostSavingAiLoading, setIsCostSavingAiLoading] = useState(false);
+  const [checkedPlaybookTasks, setCheckedPlaybookTasks] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     setProfile(DBService.getProfile());
@@ -151,6 +159,75 @@ export const AnalyticsView: React.FC = () => {
     } catch (err: any) {
       handleContactMember(member.memberId);
     }
+  };
+
+  const handleGenerateCostSavingPlan = async () => {
+    setIsCostSavingAiLoading(true);
+    try {
+      const kpis = DBService.getDashboardKPIs('this-month');
+      const expenses = DBService.getExpenses();
+      const totalsByCategory = expenses.reduce<Record<string, number>>((acc, e) => {
+        acc[e.category] = (acc[e.category] || 0) + Number(e.amount);
+        return acc;
+      }, {});
+      const topCat =
+        Object.entries(totalsByCategory).sort((a, b) => b[1] - a[1])[0]?.[0] || 'Utilities';
+
+      const res = await fetch('/api/ai/narrative', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'cost-saving-plan',
+          gymName: profile?.gym_name || 'Fitness Center',
+          currency,
+          totalExpenses: kpis.totalExpenses,
+          potentialMonthlySavings: leaks?.potentialMonthlySavings || 0,
+          potentialAnnualSavings: leaks?.potentialAnnualSavings || 0,
+          topExpenseCategory: topCat,
+          anomalies: (leaks?.anomalies || []).map((a) => ({
+            category: a.category,
+            currentAmount: a.currentAmount,
+            baseline: a.historicalAverage,
+            difference: a.differenceAmount,
+          })),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || 'Failed to generate cost-saving action plan');
+      }
+
+      const formattedHtml = escapeHtml(data.report)
+        .replace(/### (.*?)\n/g, '<h4 style="font-weight:700; color:#0f172a; margin-top:1rem; margin-bottom:0.4rem; font-size:1rem;">$1</h4>')
+        .replace(/#### (.*?)\n/g, '<h5 style="font-weight:600; color:#334155; margin-top:0.75rem; margin-bottom:0.25rem; font-size:0.9rem;">$1</h5>')
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\* (.*?)\n/g, '<li style="margin-bottom:0.35rem; color:#475569;">$1</li>')
+        .replace(/\n\n/g, '<br/>');
+
+      showAlert({
+        icon: 'success',
+        title: 'Gemini Cost-Cutting Roadmap',
+        html: `
+          <div style="text-align: left; font-size: 0.875rem; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding: 0.5rem 0.25rem;">
+            ${formattedHtml}
+          </div>
+        `,
+        confirmButtonText: 'Adopt Plan',
+        confirmButtonColor: '#059669',
+      });
+    } catch (err: any) {
+      showError('AI Optimization Notice', err.message || 'Unable to generate cost-saving plan at this time.');
+    } finally {
+      setIsCostSavingAiLoading(false);
+    }
+  };
+
+  const togglePlaybookTask = (taskId: string) => {
+    setCheckedPlaybookTasks((prev) => ({
+      ...prev,
+      [taskId]: !prev[taskId],
+    }));
   };
 
   if (!forecast || !churn || !leaks) return null;
@@ -301,7 +378,14 @@ export const AnalyticsView: React.FC = () => {
           {[
             { key: 'forecast', label: 'Revenue Forecast' },
             { key: 'churn', label: 'Churn Prediction' },
-            { key: 'leaks', label: 'Expense Anomalies' },
+            {
+              key: 'leaks',
+              label: `Cost Optimization & Leaks ${
+                leaks.potentialMonthlySavings > 0
+                  ? `(Save ${currency}${(leaks.potentialMonthlySavings / 1000).toFixed(0)}k/mo)`
+                  : ''
+              }`,
+            },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -516,49 +600,309 @@ export const AnalyticsView: React.FC = () => {
         </ScrollReveal>
       )}
 
-      {/* 5. Tab: Expense Anomalies */}
+      {/* 5. Tab: Cost Optimization & Leaks */}
       {activeTab === 'leaks' && (
         <ScrollReveal delay={70}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            {leaks.anomalies.length === 0 ? (
-              <div className="card" style={{ padding: '3.5rem 1.5rem', textAlign: 'center', color: '#94a3b8' }}>
-                <p style={{ fontWeight: 600, color: '#334155', fontSize: '1rem', marginBottom: '0.35rem' }}>
-                  No Expense Anomalies Detected
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* A. Money-Saving Action Center Banner */}
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%)',
+                color: '#ffffff',
+                borderRadius: '14px',
+                padding: '1.75rem',
+                boxShadow: '0 8px 24px rgba(6, 78, 59, 0.22)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '1.5rem',
+              }}
+            >
+              <div style={{ maxWidth: '640px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.3rem 0.75rem', borderRadius: '999px', backgroundColor: 'rgba(255, 255, 255, 0.18)', backdropFilter: 'blur(8px)', fontSize: '0.785rem', fontWeight: 600, marginBottom: '0.75rem' }}>
+                  <PiggyBank size={14} style={{ color: '#6ee7b7' }} />
+                  <span>AI Profit Maximizer & Cost Control</span>
+                </div>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '0.4rem', color: '#ffffff' }}>
+                  Potential Savings: {currency}{leaks.potentialMonthlySavings.toLocaleString()}/mo
+                </h2>
+                <p style={{ fontSize: '0.875rem', color: '#d1fae5', lineHeight: 1.5 }}>
+                  {leaks.alertSummary}
                 </p>
-                <p style={{ fontSize: '0.85rem', color: '#64748b', maxWidth: '480px', margin: '0 auto' }}>
-                  All operational expenses are within baseline thresholds or no expense records have been logged yet.
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', marginTop: '1rem', flexWrap: 'wrap', fontSize: '0.825rem' }}>
+                  <div>
+                    <span style={{ color: '#a7f3d0', display: 'block', fontSize: '0.75rem' }}>Annualized Profit Boost</span>
+                    <strong style={{ fontSize: '1.15rem', color: '#ffffff' }}>{currency}{leaks.potentialAnnualSavings.toLocaleString()}/yr</strong>
+                  </div>
+                  <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
+                  <div>
+                    <span style={{ color: '#a7f3d0', display: 'block', fontSize: '0.75rem' }}>Anomalies Flagged</span>
+                    <strong style={{ fontSize: '1.15rem', color: '#ffffff' }}>{leaks.anomalies.length} Categories</strong>
+                  </div>
+                  <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255, 255, 255, 0.2)' }} />
+                  <div>
+                    <span style={{ color: '#a7f3d0', display: 'block', fontSize: '0.75rem' }}>Categories Monitored</span>
+                    <strong style={{ fontSize: '1.15rem', color: '#ffffff' }}>{leaks.totalCategoriesAnalyzed} Expense Types</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <button
+                  onClick={handleGenerateCostSavingPlan}
+                  disabled={isCostSavingAiLoading}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    backgroundColor: '#ffffff',
+                    color: '#064e3b',
+                    padding: '0.75rem 1.4rem',
+                    borderRadius: '10px',
+                    fontSize: '0.875rem',
+                    fontWeight: 700,
+                    border: 'none',
+                    boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
+                    cursor: isCostSavingAiLoading ? 'wait' : 'pointer',
+                    transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                  }}
+                >
+                  <Sparkles size={16} style={{ color: '#059669' }} />
+                  <span>{isCostSavingAiLoading ? 'Generating Plan...' : 'Generate Gemini Cost-Cutting Plan'}</span>
+                </button>
+              </div>
+            </div>
+
+            {/* B. Actionable Cost-Saving Playbooks */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>
+                    Interactive Cost-Saving Playbooks
+                  </h3>
+                  <p style={{ fontSize: '0.825rem', color: '#64748b' }}>
+                    Actionable operational playbooks to help gym owners reduce recurring expenses and prevent revenue leaks.
+                  </p>
+                </div>
+              </div>
+
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+                  gap: '1rem',
+                }}
+              >
+                {leaks.savingOpportunities.map((playbook) => {
+                  const completedCount = playbook.actionChecklist.filter(
+                    (_, idx) => checkedPlaybookTasks[`${playbook.id}-${idx}`]
+                  ).length;
+                  const totalCount = playbook.actionChecklist.length;
+                  const isAllDone = completedCount === totalCount;
+
+                  return (
+                    <div
+                      key={playbook.id}
+                      className="card"
+                      style={{
+                        padding: '1.35rem',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        border: isAllDone ? '1px solid #10b981' : '1px solid #e2e8f0',
+                        backgroundColor: isAllDone ? '#f0fdf4' : '#ffffff',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <div>
+                        {/* Playbook Tags & Header */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.6rem' }}>
+                          <span
+                            style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '6px',
+                              backgroundColor: '#e0f2fe',
+                              color: '#0369a1',
+                            }}
+                          >
+                            {playbook.category}
+                          </span>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                            <span
+                              style={{
+                                fontSize: '0.72rem',
+                                fontWeight: 600,
+                                padding: '0.2rem 0.5rem',
+                                borderRadius: '6px',
+                                backgroundColor: playbook.difficulty === 'Easy' ? '#ecfdf5' : '#fef3c7',
+                                color: playbook.difficulty === 'Easy' ? '#047857' : '#b45309',
+                              }}
+                            >
+                              {playbook.difficulty}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: '#64748b' }}>
+                              ⏱ {playbook.timeline}
+                            </span>
+                          </div>
+                        </div>
+
+                        <h4 style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
+                          {playbook.title}
+                        </h4>
+                        <p style={{ fontSize: '0.8rem', color: '#475569', lineHeight: 1.45, marginBottom: '0.85rem' }}>
+                          {playbook.description}
+                        </p>
+
+                        {/* Financial Return Callout */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            backgroundColor: '#f8fafc',
+                            padding: '0.6rem 0.85rem',
+                            borderRadius: '8px',
+                            border: '1px solid #e2e8f0',
+                            marginBottom: '1rem',
+                            fontSize: '0.8rem',
+                          }}
+                        >
+                          <div>
+                            <span style={{ color: '#64748b', fontSize: '0.725rem', display: 'block' }}>Monthly Savings</span>
+                            <strong style={{ color: '#059669', fontSize: '0.95rem' }}>+{currency}{playbook.estimatedMonthlySavings.toLocaleString()}/mo</strong>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ color: '#64748b', fontSize: '0.725rem', display: 'block' }}>Annualized ROI</span>
+                            <strong style={{ color: '#0284c7', fontSize: '0.95rem' }}>+{currency}{playbook.estimatedAnnualSavings.toLocaleString()}/yr</strong>
+                          </div>
+                        </div>
+
+                        {/* Interactive Checklist */}
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                              Implementation Checklist
+                            </span>
+                            <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isAllDone ? '#059669' : '#64748b' }}>
+                              {completedCount}/{totalCount} Done
+                            </span>
+                          </div>
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                            {playbook.actionChecklist.map((task, idx) => {
+                              const taskId = `${playbook.id}-${idx}`;
+                              const isChecked = Boolean(checkedPlaybookTasks[taskId]);
+
+                              return (
+                                <label
+                                  key={idx}
+                                  onClick={() => togglePlaybookTask(taskId)}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: '0.5rem',
+                                    fontSize: '0.785rem',
+                                    lineHeight: 1.35,
+                                    color: isChecked ? '#94a3b8' : '#334155',
+                                    textDecoration: isChecked ? 'line-through' : 'none',
+                                    cursor: 'pointer',
+                                    userSelect: 'none',
+                                    padding: '0.25rem 0',
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => {}} // Controlled via label click
+                                    style={{
+                                      marginTop: '2px',
+                                      accentColor: '#059669',
+                                      cursor: 'pointer',
+                                    }}
+                                  />
+                                  <span>{task}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* C. Detected Expense Anomalies & Overages */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '0.5rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a' }}>
+                  Spending Leaks & Historical Anomalies
+                </h3>
+                <p style={{ fontSize: '0.825rem', color: '#64748b' }}>
+                  Categories where active month expenditures exceed historical baselines by 20% or more.
                 </p>
               </div>
-            ) : (
-              leaks.anomalies.map((leak) => (
-                <div key={leak.id} className="card" style={{ padding: '1.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
-                    <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-                        <span className="badge badge-warning">Unusual Spending Detected</span>
-                        <span style={{ fontSize: '0.8rem', color: '#64748b' }}>Category: {leak.category}</span>
-                      </div>
-                      <h3 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
-                        {leak.category} Surge Detected
-                      </h3>
-                      <p style={{ fontSize: '0.875rem', color: '#475569', maxWidth: '680px', lineHeight: 1.5 }}>
-                        {leak.detectionReason}
-                      </p>
-                    </div>
 
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '0.8rem', color: '#64748b' }}>Anomaly Amount</div>
-                      <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ef4444' }}>
-                        {currency}{leak.currentAmount.toLocaleString()}
+              {leaks.anomalies.length === 0 ? (
+                <div className="card" style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: '#94a3b8' }}>
+                  <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.75rem' }}>
+                    <CheckCircle2 size={24} />
+                  </div>
+                  <p style={{ fontWeight: 600, color: '#334155', fontSize: '0.95rem', marginBottom: '0.25rem' }}>
+                    Zero Spending Leaks Detected
+                  </p>
+                  <p style={{ fontSize: '0.825rem', color: '#64748b', maxWidth: '460px', margin: '0 auto' }}>
+                    All operating expense categories are tracking cleanly within their multi-month averages. Execute the playbooks above to unlock additional baseline profit.
+                  </p>
+                </div>
+              ) : (
+                leaks.anomalies.map((leak) => (
+                  <div key={leak.id} className="card" style={{ padding: '1.5rem', borderLeft: leak.severity === 'critical' ? '4px solid #ef4444' : '4px solid #f59e0b' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+                      <div style={{ maxWidth: '720px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                          <span className={leak.severity === 'critical' ? 'badge badge-danger' : 'badge badge-warning'}>
+                            {leak.severity.toUpperCase()} LEAK
+                          </span>
+                          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#64748b' }}>
+                            Category: {leak.category}
+                          </span>
+                          <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 700 }}>
+                            +{leak.percentageIncrease}% vs Baseline
+                          </span>
+                        </div>
+                        <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.35rem' }}>
+                          {leak.category} Surge Detected
+                        </h4>
+                        <p style={{ fontSize: '0.85rem', color: '#475569', lineHeight: 1.5, marginBottom: '0.6rem' }}>
+                          {leak.detectionReason}
+                        </p>
+                        <div style={{ backgroundColor: '#f8fafc', padding: '0.65rem 0.85rem', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '0.8rem', color: '#334155' }}>
+                          <strong style={{ color: '#0f172a' }}>Recommended Action:</strong> {leak.suggestedAction}
+                        </div>
                       </div>
-                      <div style={{ fontSize: '0.785rem', color: '#64748b' }}>
-                        Historical baseline: {currency}{leak.historicalAverage.toLocaleString()}
+
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>Active Outlay</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ef4444' }}>
+                          {currency}{leak.currentAmount.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '0.785rem', color: '#64748b', marginTop: '2px' }}>
+                          Baseline: {currency}{leak.historicalAverage.toLocaleString()}
+                        </div>
+                        <div style={{ fontSize: '0.785rem', color: '#059669', fontWeight: 600, marginTop: '4px' }}>
+                          Recoverable: {currency}{leak.differenceAmount.toLocaleString()}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </ScrollReveal>
       )}

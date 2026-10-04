@@ -10,6 +10,7 @@ import {
   Receipt,
   Settings,
   Sparkles,
+  Calendar,
 } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
@@ -26,6 +27,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Members', href: '/members', icon: Users },
     { name: 'Payments', href: '/payments', icon: CreditCard },
+    { name: 'Calendar', href: '/calendar', icon: Calendar },
     { name: 'Expenses', href: '/expenses', icon: Receipt },
     { name: 'AI', href: '/analytics', icon: Sparkles },
     { name: 'Settings', href: '/settings', icon: Settings },

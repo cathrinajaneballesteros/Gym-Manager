@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { LucideIcon, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { LucideIcon, ArrowUpRight, ArrowDownRight, ChevronRight } from 'lucide-react';
 
 interface MetricCardProps {
   title: string;
@@ -14,6 +14,8 @@ interface MetricCardProps {
     label?: string;
   };
   variant?: 'emerald' | 'rose' | 'blue' | 'purple' | 'amber';
+  onClick?: () => void;
+  clickableHint?: string;
 }
 
 export const MetricCard: React.FC<MetricCardProps> = ({
@@ -23,32 +25,50 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   icon: Icon,
   trend,
   variant = 'emerald',
+  onClick,
+  clickableHint,
 }) => {
   const variantStyles = {
     emerald: {
       iconBg: 'rgba(52, 199, 89, 0.12)',
       iconColor: '#34c759',
+      hoverBorder: 'rgba(52, 199, 89, 0.4)',
     },
     rose: {
       iconBg: 'rgba(255, 59, 48, 0.1)',
       iconColor: '#ff3b30',
+      hoverBorder: 'rgba(255, 59, 48, 0.4)',
     },
     blue: {
       iconBg: 'rgba(0, 113, 227, 0.1)',
       iconColor: '#0071e3',
+      hoverBorder: 'rgba(0, 113, 227, 0.4)',
     },
     purple: {
       iconBg: 'rgba(88, 86, 214, 0.1)',
       iconColor: '#5856d6',
+      hoverBorder: 'rgba(88, 86, 214, 0.4)',
     },
     amber: {
       iconBg: 'rgba(255, 149, 0, 0.1)',
       iconColor: '#ff9500',
+      hoverBorder: 'rgba(255, 149, 0, 0.4)',
     },
   }[variant];
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <div
+      onClick={onClick}
+      onKeyDown={handleKeyDown}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
       style={{
         backgroundColor: '#ffffff',
         border: '0.5px solid rgba(0, 0, 0, 0.08)',
@@ -58,29 +78,64 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'space-between',
-        transition: 'transform 0.18s cubic-bezier(0.25, 1, 0.5, 1), box-shadow 0.18s cubic-bezier(0.25, 1, 0.5, 1)',
+        cursor: onClick ? 'pointer' : 'default',
+        transition: 'all 0.18s cubic-bezier(0.25, 1, 0.5, 1)',
+        position: 'relative',
+        outline: 'none',
+      }}
+      onMouseEnter={(e) => {
+        if (onClick) {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04)';
+          e.currentTarget.style.borderColor = variantStyles.hoverBorder;
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (onClick) {
+          e.currentTarget.style.transform = 'translateY(0)';
+          e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02)';
+          e.currentTarget.style.borderColor = 'rgba(0, 0, 0, 0.08)';
+        }
       }}
     >
-      {/* Top Row: Icon + Title */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', marginBottom: '0.85rem' }}>
-        <div
-          style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '9px',
-            backgroundColor: variantStyles.iconBg,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: variantStyles.iconColor,
-            flexShrink: 0,
-          }}
-        >
-          <Icon size={17} strokeWidth={2.2} />
+      {/* Top Row: Icon + Title + Inspect Hint */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '9px',
+              backgroundColor: variantStyles.iconBg,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: variantStyles.iconColor,
+              flexShrink: 0,
+            }}
+          >
+            <Icon size={17} strokeWidth={2.2} />
+          </div>
+          <span style={{ fontSize: '0.825rem', fontWeight: 500, color: '#86868b' }}>
+            {title}
+          </span>
         </div>
-        <span style={{ fontSize: '0.825rem', fontWeight: 500, color: '#86868b' }}>
-          {title}
-        </span>
+
+        {onClick && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              fontSize: '0.72rem',
+              color: '#8e8e93',
+              fontWeight: 500,
+            }}
+          >
+            <span>{clickableHint || 'Details'}</span>
+            <ChevronRight size={13} />
+          </div>
+        )}
       </div>
 
       {/* Main Metric Value */}

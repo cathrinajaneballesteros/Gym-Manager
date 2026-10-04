@@ -14,11 +14,13 @@ import {
   CreditCard,
   Eye,
   Dumbbell,
+  Bell,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { Member, MembershipPlan } from '@/types/database';
 import { MemberModal } from './MemberModal';
 import { PaymentModal } from '@/components/payments/PaymentModal';
+import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showToast } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
@@ -37,6 +39,7 @@ export const MemberList: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<Member | null>(null);
   const [paymentMemberId, setPaymentMemberId] = useState<string | null>(null);
+  const [selectedReminderMember, setSelectedReminderMember] = useState<Member | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const refreshData = () => {
@@ -447,6 +450,27 @@ export const MemberList: React.FC = () => {
 
                             <button
                               onClick={() => {
+                                setSelectedReminderMember(member);
+                                setActiveMenuId(null);
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.5rem',
+                                padding: '0.5rem 0.75rem',
+                                fontSize: '0.8rem',
+                                color: '#0071e3',
+                                borderRadius: '4px',
+                                width: '100%',
+                                fontWeight: 500,
+                              }}
+                            >
+                              <Bell size={14} />
+                              <span>Send Reminder (SMS/Email)</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
                                 setEditingMember(member);
                                 setIsAddModalOpen(true);
                                 setActiveMenuId(null);
@@ -593,6 +617,16 @@ export const MemberList: React.FC = () => {
           refreshData();
         }}
         preselectedMemberId={paymentMemberId || undefined}
+      />
+
+      {/* Payment Reminder Modal */}
+      <PaymentReminderModal
+        isOpen={Boolean(selectedReminderMember)}
+        onClose={() => setSelectedReminderMember(null)}
+        member={selectedReminderMember}
+        onSuccess={() => {
+          refreshData();
+        }}
       />
     </div>
   );

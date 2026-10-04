@@ -27,6 +27,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true, message });
     }
 
+    if (action === 'cost-saving-plan') {
+      const plan = await GeminiService.generateCostSavingPlan({
+        gymName: body.gymName,
+        currency: body.currency,
+        totalExpenses: Number(body.totalExpenses) || 0,
+        potentialMonthlySavings: Number(body.potentialMonthlySavings) || 0,
+        potentialAnnualSavings: Number(body.potentialAnnualSavings) || 0,
+        topExpenseCategory: body.topExpenseCategory,
+        anomalies: body.anomalies || [],
+      });
+      return NextResponse.json({ success: true, report: plan });
+    }
+
     // Default: Executive Financial Report
     const stats: ExecutiveReportRequest = {
       gymName: body.gymName,

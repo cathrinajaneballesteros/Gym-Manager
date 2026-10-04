@@ -64,10 +64,24 @@ export interface ExpenseAnomaly {
   dateDetected: string;
 }
 
+export interface CostSavingPlaybook {
+  id: string;
+  title: string;
+  category: string;
+  estimatedMonthlySavings: number;
+  estimatedAnnualSavings: number;
+  difficulty: 'Easy' | 'Moderate' | 'Advanced';
+  timeline: string;
+  description: string;
+  actionChecklist: string[];
+}
+
 export interface ExpenseLeakResult {
   anomalies: ExpenseAnomaly[];
   totalCategoriesAnalyzed: number;
   hasSufficientData: boolean;
   alertSummary: string;
   potentialMonthlySavings: number;
+  potentialAnnualSavings: number;
+  savingOpportunities: CostSavingPlaybook[];
 }

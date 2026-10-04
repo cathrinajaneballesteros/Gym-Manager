@@ -16,9 +16,12 @@ import {
 import { DBService } from '@/lib/data/db-service';
 import { Payment, UserProfile, Member } from '@/types/database';
 import { PaymentModal } from './PaymentModal';
+import { ReceiptCheckerModal } from './ReceiptCheckerModal';
+import { PaymentReminderModal } from './PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { showSuccess } from '@/lib/ui/swal';
+import { showSuccess, showToast } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
+import { Bell, CheckCircle2, Clock, AlertTriangle, FileText } from 'lucide-react';
 
 export const PaymentList: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -27,8 +30,11 @@ export const PaymentList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [memberFilter, setMemberFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [receiptFilter, setReceiptFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState<Payment | null>(null);
+  const [remindingPayment, setRemindingPayment] = useState<Payment | null>(null);
   const pageSize = 8;
 
   const refreshData = () => {
@@ -43,6 +49,10 @@ export const PaymentList: React.FC = () => {
 
   const currency = profile?.currency || '₱';
 
+  const unverifiedCount = useMemo(() => {
+    return payments.filter((p) => (p.receipt_status || 'unverified') === 'unverified' && p.payment_method !== 'Cash').length;
+  }, [payments]);
+
   const filteredPayments = useMemo(() => {
     return payments.filter((p) => {
       const memberName = p.member ? `${p.member.first_name} ${p.member.last_name}` : '';
@@ -53,10 +63,12 @@ export const PaymentList: React.FC = () => {
 
       const matchesMember = memberFilter === 'all' || p.member_id === memberFilter;
       const matchesStatus = statusFilter === 'all' || p.payment_status === statusFilter;
+      const receiptStatus = p.receipt_status || 'unverified';
+      const matchesReceipt = receiptFilter === 'all' || receiptStatus === receiptFilter;
 
-      return matchesSearch && matchesMember && matchesStatus;
+      return matchesSearch && matchesMember && matchesStatus && matchesReceipt;
     });
-  }, [payments, searchQuery, memberFilter, statusFilter]);
+  }, [payments, searchQuery, memberFilter, statusFilter, receiptFilter]);
 
   const totalPages = Math.ceil(filteredPayments.length / pageSize) || 1;
   const paginated = filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -182,10 +194,33 @@ export const PaymentList: React.FC = () => {
               cursor: 'pointer',
             }}
           >
-            <option value="all">All Status</option>
+            <option value="all">All Payment Status</option>
             <option value="completed">Paid</option>
             <option value="pending">Pending</option>
             <option value="refunded">Refunded</option>
+          </select>
+
+          {/* Receipt Status Filter */}
+          <select
+            value={receiptFilter}
+            onChange={(e) => {
+              setReceiptFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            style={{
+              backgroundColor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '8px',
+              padding: '0.5rem 0.85rem',
+              fontSize: '0.85rem',
+              color: '#334155',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="all">All Receipts</option>
+            <option value="unverified">Needs Verification ({unverifiedCount})</option>
+            <option value="verified">Verified Receipts</option>
+            <option value="rejected">Rejected Receipts</option>
           </select>
 
           {/* Date range filter pill */}
@@ -210,6 +245,52 @@ export const PaymentList: React.FC = () => {
       </div>
       </ScrollReveal>
 
+      {/* Unverified Receipts Attention Banner */}
+      {unverifiedCount > 0 && (
+        <ScrollReveal delay={60}>
+          <div
+            style={{
+              backgroundColor: '#fffbeb',
+              border: '1px solid #fde68a',
+              borderRadius: '12px',
+              padding: '0.85rem 1.25rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '0.75rem',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <AlertTriangle size={18} color="#d97706" />
+              <div>
+                <span style={{ fontSize: '0.875rem', fontWeight: 700, color: '#92400e' }}>
+                  {unverifiedCount} {unverifiedCount === 1 ? 'payment receipt requires' : 'payment receipts require'} manual review.
+                </span>
+                <span style={{ fontSize: '0.825rem', color: '#b45309', marginLeft: '0.5rem' }}>
+                  Inspect GCash and online bank transfer vouchers to verify or reject.
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={() => setReceiptFilter('unverified')}
+              style={{
+                backgroundColor: '#d97706',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '0.4rem 0.85rem',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+              }}
+            >
+              Filter Needs Review ({unverifiedCount})
+            </button>
+          </div>
+        </ScrollReveal>
+      )}
+
       {/* 3. Payments Table Card */}
       <ScrollReveal delay={80}>
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
@@ -225,8 +306,9 @@ export const PaymentList: React.FC = () => {
                   <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Plan</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Amount</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Method</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Status</th>
+                  <th style={{ padding: '0.9rem 1.25rem' }}>Method & Ref</th>
+                  <th style={{ padding: '0.9rem 1.25rem' }}>Payment</th>
+                  <th style={{ padding: '0.9rem 1.25rem' }}>Receipt Check</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Date</th>
                   <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
                 </tr>
@@ -289,21 +371,30 @@ export const PaymentList: React.FC = () => {
                         {currency}{Number(p.amount).toLocaleString()}
                       </td>
 
-                      {/* Method Pill */}
+                      {/* Method & Ref */}
                       <td style={{ padding: '1rem 1.25rem' }}>
-                        <span
-                          style={{
-                            padding: '0.25rem 0.65rem',
-                            borderRadius: '6px',
-                            backgroundColor: '#f1f5f9',
-                            color: '#334155',
-                            fontSize: '0.785rem',
-                            fontWeight: 500,
-                            border: '1px solid #e2e8f0',
-                          }}
-                        >
-                          {p.payment_method}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              padding: '0.2rem 0.5rem',
+                              borderRadius: '6px',
+                              backgroundColor: '#f1f5f9',
+                              color: '#334155',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              border: '1px solid #e2e8f0',
+                              width: 'fit-content',
+                            }}
+                          >
+                            {p.payment_method}
+                          </span>
+                          {p.reference_number && (
+                            <span style={{ fontSize: '0.72rem', color: '#64748b', fontFamily: 'monospace' }}>
+                              #{p.reference_number}
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Status Badge */}
@@ -321,6 +412,55 @@ export const PaymentList: React.FC = () => {
                         </span>
                       </td>
 
+                      {/* Receipt Status Badge */}
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            padding: '0.25rem 0.55rem',
+                            borderRadius: '6px',
+                            backgroundColor:
+                              (p.receipt_status || 'unverified') === 'verified'
+                                ? '#f0fdf4'
+                                : p.receipt_status === 'rejected'
+                                ? '#fef2f2'
+                                : '#fffbeb',
+                            color:
+                              (p.receipt_status || 'unverified') === 'verified'
+                                ? '#166534'
+                                : p.receipt_status === 'rejected'
+                                ? '#991b1b'
+                                : '#92400e',
+                            border: '1px solid',
+                            borderColor:
+                              (p.receipt_status || 'unverified') === 'verified'
+                                ? '#bbf7d0'
+                                : p.receipt_status === 'rejected'
+                                ? '#fecaca'
+                                : '#fde68a',
+                          }}
+                        >
+                          {(p.receipt_status || 'unverified') === 'verified' ? (
+                            <CheckCircle2 size={12} />
+                          ) : p.receipt_status === 'rejected' ? (
+                            <AlertTriangle size={12} />
+                          ) : (
+                            <Clock size={12} />
+                          )}
+                          <span>
+                            {(p.receipt_status || 'unverified') === 'verified'
+                              ? 'Verified'
+                              : p.receipt_status === 'rejected'
+                              ? 'Rejected'
+                              : 'Needs Check'}
+                          </span>
+                        </span>
+                      </td>
+
                       {/* Date */}
                       <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
                         {formatDate(p.payment_date)}
@@ -328,26 +468,59 @@ export const PaymentList: React.FC = () => {
 
                       {/* Actions */}
                       <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                        <button
-                          onClick={() =>
-                            showSuccess(
-                              'Receipt Verified',
-                              `Receipt #${p.reference_number || p.id} for ${currency}${Number(p.amount).toLocaleString()} is verified.`
-                            )
-                          }
-                          style={{
-                            padding: '0.35rem 0.65rem',
-                            borderRadius: '6px',
-                            border: '1px solid #e2e8f0',
-                            backgroundColor: '#ffffff',
-                            color: '#475569',
-                            fontSize: '0.75rem',
-                            fontWeight: 500,
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Receipt
-                        </button>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem' }}>
+                          <button
+                            onClick={() => setRemindingPayment(p)}
+                            title="Send Payment Reminder (SMS/Email)"
+                            style={{
+                              padding: '0.35rem 0.6rem',
+                              borderRadius: '6px',
+                              border: '1px solid #e2e8f0',
+                              backgroundColor: '#ffffff',
+                              color: '#475569',
+                              fontSize: '0.75rem',
+                              fontWeight: 500,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                            }}
+                          >
+                            <Bell size={13} />
+                            <span>Remind</span>
+                          </button>
+
+                          <button
+                            onClick={() => setCheckingPayment(p)}
+                            title="Manual Receipt Checker & Inspector"
+                            style={{
+                              padding: '0.35rem 0.65rem',
+                              borderRadius: '6px',
+                              border: '1px solid',
+                              borderColor:
+                                (p.receipt_status || 'unverified') === 'unverified' && p.payment_method !== 'Cash'
+                                  ? '#d97706'
+                                  : '#e2e8f0',
+                              backgroundColor:
+                                (p.receipt_status || 'unverified') === 'unverified' && p.payment_method !== 'Cash'
+                                  ? '#fffbeb'
+                                  : '#ffffff',
+                              color:
+                                (p.receipt_status || 'unverified') === 'unverified' && p.payment_method !== 'Cash'
+                                  ? '#b45309'
+                                  : '#0f172a',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                            }}
+                          >
+                            <FileCheck size={13} />
+                            <span>Receipt</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -440,6 +613,26 @@ export const PaymentList: React.FC = () => {
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => {
           setIsModalOpen(false);
+          refreshData();
+        }}
+      />
+
+      {/* Manual Receipt Checker Modal */}
+      <ReceiptCheckerModal
+        isOpen={Boolean(checkingPayment)}
+        onClose={() => setCheckingPayment(null)}
+        payment={checkingPayment}
+        onSuccess={() => {
+          refreshData();
+        }}
+      />
+
+      {/* Payment Reminder Modal (SMS & Email) */}
+      <PaymentReminderModal
+        isOpen={Boolean(remindingPayment)}
+        onClose={() => setRemindingPayment(null)}
+        payment={remindingPayment}
+        onSuccess={() => {
           refreshData();
         }}
       />

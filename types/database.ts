@@ -49,6 +49,8 @@ export interface Member {
 export type PaymentMethod = 'Cash' | 'GCash' | 'Bank Transfer' | 'Credit Card' | 'Debit Card' | 'Other';
 export type PaymentStatus = 'completed' | 'pending' | 'refunded';
 
+export type ReceiptStatus = 'verified' | 'unverified' | 'rejected';
+
 export interface Payment {
   id: string;
   admin_id: string;
@@ -60,6 +62,12 @@ export interface Payment {
   payment_date: string; // YYYY-MM-DD
   payment_method: PaymentMethod;
   payment_status: PaymentStatus;
+  receipt_status?: ReceiptStatus;
+  receipt_url?: string;
+  receipt_notes?: string;
+  verified_at?: string;
+  verified_by?: string;
+  rejection_reason?: string;
   reference_number?: string;
   notes?: string;
   created_at: string;
@@ -102,12 +110,19 @@ export type AuditAction =
   | 'member.create'
   | 'member.update'
   | 'member.delete'
+  | 'member.reminder_sent'
   | 'payment.create'
+  | 'payment.update'
+  | 'payment.delete'
+  | 'payment.receipt_verify'
+  | 'payment.receipt_reject'
+  | 'payment.reminder_sent'
   | 'expense.create'
   | 'expense.update'
-  | 'expense.delete';
+  | 'expense.delete'
+  | 'settings.update';
 
-export type AuditEntityType = 'auth' | 'member' | 'payment' | 'expense';
+export type AuditEntityType = 'auth' | 'member' | 'payment' | 'expense' | 'settings';
 
 export interface AuditLogEntry {
   id: string;

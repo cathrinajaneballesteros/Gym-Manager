@@ -13,6 +13,11 @@ import {
   ArrowDownRight,
   ArrowUpRight,
   TrendingDown,
+  History,
+  Layers,
+  BarChart3,
+  Download,
+  CalendarDays,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { Expense, UserProfile } from '@/types/database';
@@ -29,6 +34,8 @@ export const ExpenseList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [methodFilter, setMethodFilter] = useState('all');
+  const [timeframeFilter, setTimeframeFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState<'records' | 'historical'>('records');
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
@@ -45,6 +52,21 @@ export const ExpenseList: React.FC = () => {
 
   const currency = profile?.currency || '₱';
 
+  const historyMonths = useMemo(() => {
+    return DBService.getExpenseHistoryMonths();
+  }, [expenses]);
+
+  const historicalSummary = useMemo(() => {
+    return DBService.getHistoricalExpenseSummary();
+  }, [expenses]);
+
+  const now = new Date();
+  const currentY = now.getFullYear();
+  const currentM = now.getMonth();
+  const thisMonthKey = `${currentY}-${String(currentM + 1).padStart(2, '0')}`;
+  const lastMonthDate = new Date(currentY, currentM - 1, 1);
+  const lastMonthKey = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
   const filteredExpenses = useMemo(() => {
     return expenses.filter((e) => {
       const matchesSearch =
@@ -55,15 +77,31 @@ export const ExpenseList: React.FC = () => {
       const matchesCategory = categoryFilter === 'all' || e.category === categoryFilter;
       const matchesMethod = methodFilter === 'all' || e.payment_method === methodFilter;
 
-      return matchesSearch && matchesCategory && matchesMethod;
+      let matchesTime = true;
+      if (timeframeFilter === 'this-month') {
+        matchesTime = (e.expense_date || '').startsWith(thisMonthKey);
+      } else if (timeframeFilter === 'last-month') {
+        matchesTime = (e.expense_date || '').startsWith(lastMonthKey);
+      } else if (timeframeFilter === 'last-3-months') {
+        const last3Keys = historyMonths.slice(0, 3).map((m) => m.monthKey);
+        matchesTime = last3Keys.some((k) => (e.expense_date || '').startsWith(k));
+      } else if (timeframeFilter === 'last-6-months') {
+        const last6Keys = historyMonths.slice(0, 6).map((m) => m.monthKey);
+        matchesTime = last6Keys.some((k) => (e.expense_date || '').startsWith(k));
+      } else if (timeframeFilter !== 'all') {
+        matchesTime = (e.expense_date || '').startsWith(timeframeFilter);
+      }
+
+      return matchesSearch && matchesCategory && matchesMethod && matchesTime;
     });
-  }, [expenses, searchQuery, categoryFilter, methodFilter]);
+  }, [expenses, searchQuery, categoryFilter, methodFilter, timeframeFilter, thisMonthKey, lastMonthKey, historyMonths]);
 
-  const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const periodExpensesTotal = filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const allTimeExpensesTotal = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
-  // Calculate top category
+  // Top category for active view
   const catSums: Record<string, number> = {};
-  expenses.forEach((e) => {
+  filteredExpenses.forEach((e) => {
     catSums[e.category] = (catSums[e.category] || 0) + Number(e.amount);
   });
   let topCategoryName = '—';
@@ -74,12 +112,41 @@ export const ExpenseList: React.FC = () => {
       topCategoryName = name;
     }
   });
-  const topCategoryPct = totalExpenses > 0 ? Math.round((topCategoryAmount / totalExpenses) * 100) : 0;
-  const lastMonthTotalExpenses = DBService.getDashboardKPIs('last-month').totalExpenses;
-  const thisMonthTotalExpenses = DBService.getDashboardKPIs('this-month').totalExpenses;
+  const topCategoryPct = periodExpensesTotal > 0 ? Math.round((topCategoryAmount / periodExpensesTotal) * 100) : 0;
+
+  const thisMonthExpenses = expenses
+    .filter((e) => (e.expense_date || '').startsWith(thisMonthKey))
+    .reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const lastMonthExpenses = expenses
+    .filter((e) => (e.expense_date || '').startsWith(lastMonthKey))
+    .reduce((sum, e) => sum + Number(e.amount), 0);
 
   const totalPages = Math.ceil(filteredExpenses.length / pageSize) || 1;
   const paginated = filteredExpenses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const exportHistoricalCSV = () => {
+    const headers = ['ID', 'Date', 'Category', 'Title', 'Amount', 'Payment Method', 'Description'];
+    const rows = expenses.map((e) => [
+      e.id,
+      e.expense_date,
+      e.category,
+      `"${e.title.replace(/"/g, '""')}"`,
+      e.amount,
+      e.payment_method,
+      `"${(e.description || '').replace(/"/g, '""')}"`,
+    ]);
+
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `Gym_Expenses_History_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Historical expenses CSV exported successfully!');
+  };
 
   const handleDelete = async (id: string, title: string) => {
     const confirmed = await showConfirm(
@@ -134,182 +201,379 @@ export const ExpenseList: React.FC = () => {
       {/* 2. Top 3 Summary Cards */}
       <ScrollReveal delay={40}>
         <div className="grid grid-cols-3 gap-4">
-          {/* Total Expenses */}
+          {/* Selected Period Expenses */}
           <div className="card" style={{ padding: '1.25rem 1.4rem' }}>
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
-              Total Expenses
+              {timeframeFilter === 'all' ? 'Total Historical Outlay' : 'Selected Period Outlay'}
             </div>
             <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
-              {currency}{totalExpenses.toLocaleString()}
+              {currency}{periodExpensesTotal.toLocaleString()}
             </div>
-            {lastMonthTotalExpenses > 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: totalExpenses <= lastMonthTotalExpenses ? '#059669' : '#ef4444', fontWeight: 600 }}>
-                {totalExpenses <= lastMonthTotalExpenses ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
-                <span>{Math.abs(Math.round(((totalExpenses - lastMonthTotalExpenses) / lastMonthTotalExpenses) * 100))}% from last month</span>
+            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+              {timeframeFilter === 'all'
+                ? `${expenses.length} records across all history`
+                : `${filteredExpenses.length} entries for selected filter`}
+            </div>
+          </div>
+
+          {/* This Month vs Last Month */}
+          <div className="card" style={{ padding: '1.25rem 1.4rem' }}>
+            <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
+              This Month ({now.toLocaleString('en-US', { month: 'short' })})
+            </div>
+            <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
+              {currency}{thisMonthExpenses.toLocaleString()}
+            </div>
+            {lastMonthExpenses > 0 ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: thisMonthExpenses <= lastMonthExpenses ? '#059669' : '#ef4444', fontWeight: 600 }}>
+                {thisMonthExpenses <= lastMonthExpenses ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
+                <span>
+                  {Math.abs(Math.round(((thisMonthExpenses - lastMonthExpenses) / lastMonthExpenses) * 100))}% vs last month ({currency}{lastMonthExpenses.toLocaleString()})
+                </span>
               </div>
             ) : (
               <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                No prior month records
+                First month on record
               </div>
             )}
           </div>
 
-          {/* This Month */}
+          {/* Historical Monthly Baseline Average */}
           <div className="card" style={{ padding: '1.25rem 1.4rem' }}>
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
-              This Month
+              Monthly Baseline Average
             </div>
             <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
-              {currency}{thisMonthTotalExpenses.toLocaleString()}
+              {currency}{historicalSummary.overallMonthlyAverage.toLocaleString()}
             </div>
-            <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-              Current billing cycle
-            </div>
-          </div>
-
-          {/* Top Category */}
-          <div className="card" style={{ padding: '1.25rem 1.4rem' }}>
-            <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
-              Top Category
-            </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
-              {topCategoryName}
-            </div>
-            <div style={{ fontSize: '0.8rem', color: totalExpenses > 0 ? '#059669' : '#94a3b8', fontWeight: totalExpenses > 0 ? 600 : 400 }}>
-              {totalExpenses > 0 ? `${topCategoryPct}% of total outlays` : 'No expenses recorded'}
+            <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+              Average across {historicalSummary.monthlyTotals.length} recorded months
             </div>
           </div>
         </div>
       </ScrollReveal>
 
-      {/* 3. Expense Breakdown Chart Card */}
-      <ScrollReveal delay={70}>
-        <div className="card">
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem' }}>
-            Expenses by Category
-          </h2>
-          <CategoryExpenseChart expenses={expenses} currency={currency} />
-        </div>
-      </ScrollReveal>
-
-      {/* 4. Filters & Search Bar */}
-      <ScrollReveal delay={100}>
+      {/* View Switcher: Ledger vs Historical Analysis */}
+      <ScrollReveal delay={60}>
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            gap: '1rem',
+            borderBottom: '1px solid #e2e8f0',
+            paddingBottom: '0.75rem',
             flexWrap: 'wrap',
+            gap: '0.75rem',
           }}
         >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.65rem',
-            backgroundColor: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '8px',
-            padding: '0.5rem 0.85rem',
-            width: '100%',
-            maxWidth: '320px',
-          }}
-        >
-          <Search size={15} color="#94a3b8" />
-          <input
-            type="text"
-            placeholder="Search expenses..."
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              outline: 'none',
-              fontSize: '0.85rem',
-              color: '#0f172a',
-              width: '100%',
-              padding: 0,
-            }}
-          />
-        </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={() => setActiveTab('records')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.5rem 0.85rem',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                backgroundColor: activeTab === 'records' ? '#0f172a' : '#ffffff',
+                color: activeTab === 'records' ? '#ffffff' : '#64748b',
+                border: '1px solid',
+                borderColor: activeTab === 'records' ? '#0f172a' : '#e2e8f0',
+                cursor: 'pointer',
+              }}
+            >
+              <Receipt size={15} />
+              <span>Expense Ledger ({filteredExpenses.length})</span>
+            </button>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <select
-            value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '0.5rem 0.85rem',
-              fontSize: '0.85rem',
-              color: '#334155',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="all">All Categories</option>
-            <option value="Rent">Rent</option>
-            <option value="Salaries">Salaries</option>
-            <option value="Utilities">Utilities</option>
-            <option value="Equipment">Equipment</option>
-            <option value="Maintenance">Maintenance</option>
-            <option value="Marketing">Marketing</option>
-            <option value="Supplies">Supplies</option>
-            <option value="Other">Other</option>
-          </select>
+            <button
+              onClick={() => setActiveTab('historical')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                padding: '0.5rem 0.85rem',
+                borderRadius: '8px',
+                fontSize: '0.85rem',
+                fontWeight: 600,
+                backgroundColor: activeTab === 'historical' ? '#0f172a' : '#ffffff',
+                color: activeTab === 'historical' ? '#ffffff' : '#64748b',
+                border: '1px solid',
+                borderColor: activeTab === 'historical' ? '#0f172a' : '#e2e8f0',
+                cursor: 'pointer',
+              }}
+            >
+              <History size={15} />
+              <span>Historical Trends & Multi-Month Matrix</span>
+            </button>
+          </div>
 
-          <select
-            value={methodFilter}
-            onChange={(e) => {
-              setMethodFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            style={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '0.5rem 0.85rem',
-              fontSize: '0.85rem',
-              color: '#334155',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="all">All Methods</option>
-            <option value="Bank Transfer">Bank Transfer</option>
-            <option value="Cash">Cash</option>
-            <option value="GCash">GCash</option>
-            <option value="Credit Card">Credit Card</option>
-            <option value="Check">Check</option>
-            <option value="Other">Other</option>
-          </select>
-
-          <div
+          <button
+            onClick={exportHistoricalCSV}
             style={{
               display: 'flex',
               alignItems: 'center',
               gap: '0.45rem',
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
               padding: '0.5rem 0.85rem',
+              borderRadius: '8px',
               fontSize: '0.825rem',
-              color: '#475569',
               fontWeight: 500,
+              backgroundColor: '#ffffff',
+              color: '#334155',
+              border: '1px solid #e2e8f0',
+              cursor: 'pointer',
             }}
           >
-            <Calendar size={14} color="#64748b" />
-            <span>{getCurrentMonthRangeLabel()}</span>
-          </div>
+            <Download size={14} />
+            <span>Export Historical Ledger CSV</span>
+          </button>
         </div>
-      </div>
       </ScrollReveal>
+
+      {/* Content depending on activeTab */}
+      {activeTab === 'historical' ? (
+        <ScrollReveal delay={80}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* 6-Month Trajectory Cards */}
+            <div className="card">
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem' }}>
+                Monthly Historical Trajectory (Last 6 Months)
+              </h2>
+              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, historicalSummary.monthlyTotals.length)}, 1fr)`, gap: '0.85rem' }}>
+                {historicalSummary.monthlyTotals.map((m) => (
+                  <div
+                    key={m.monthKey}
+                    style={{
+                      backgroundColor: m.monthKey === thisMonthKey ? '#eff6ff' : '#f8fafc',
+                      border: '1px solid',
+                      borderColor: m.monthKey === thisMonthKey ? '#bfdbfe' : '#e2e8f0',
+                      borderRadius: '10px',
+                      padding: '1rem',
+                      textAlign: 'center',
+                    }}
+                  >
+                    <div style={{ fontSize: '0.785rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
+                      {m.month}
+                    </div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 700, color: m.monthKey === thisMonthKey ? '#1d4ed8' : '#0f172a', margin: '0.35rem 0' }}>
+                      {currency}{m.total.toLocaleString()}
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                      {m.monthKey === thisMonthKey ? 'Current Cycle' : 'Historical'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Multi-Month Category Comparison Matrix */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>
+                    Historical Category Spend Matrix
+                  </h2>
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    Month-by-month expense comparison across operational categories.
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      <th style={{ padding: '0.9rem 1.5rem' }}>Category</th>
+                      {historicalSummary.monthlyTotals.map((m) => (
+                        <th key={m.monthKey} style={{ padding: '0.9rem 1.25rem', textAlign: 'right' }}>
+                          {m.month}
+                        </th>
+                      ))}
+                      <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Monthly Avg</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(historicalSummary.categories).map(([catName, catData]) => (
+                      <tr
+                        key={catName}
+                        style={{ borderBottom: '1px solid #f8fafc', transition: 'background-color 0.15s ease' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                      >
+                        <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>
+                          <span
+                            style={{
+                              padding: '0.2rem 0.55rem',
+                              borderRadius: '6px',
+                              backgroundColor: '#f1f5f9',
+                              border: '1px solid #e2e8f0',
+                              fontSize: '0.785rem',
+                            }}
+                          >
+                            {catName}
+                          </span>
+                        </td>
+                        {catData.recentMonths.map((rm, idx) => (
+                          <td key={idx} style={{ padding: '1rem 1.25rem', textAlign: 'right', color: rm.amount > 0 ? '#0f172a' : '#94a3b8' }}>
+                            {rm.amount > 0 ? `${currency}${rm.amount.toLocaleString()}` : '—'}
+                          </td>
+                        ))}
+                        <td style={{ padding: '1rem 1.5rem', textAlign: 'right', fontWeight: 700, color: '#0071e3' }}>
+                          {currency}{catData.monthlyAvg.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+      ) : (
+        <>
+          {/* 3. Expense Breakdown Chart Card */}
+          <ScrollReveal delay={70}>
+            <div className="card">
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem' }}>
+                Expenses by Category
+              </h2>
+              <CategoryExpenseChart expenses={filteredExpenses} currency={currency} />
+            </div>
+          </ScrollReveal>
+
+          {/* 4. Filters & Search Bar */}
+          <ScrollReveal delay={100}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.65rem',
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '0.5rem 0.85rem',
+                  width: '100%',
+                  maxWidth: '300px',
+                }}
+              >
+                <Search size={15} color="#94a3b8" />
+                <input
+                  type="text"
+                  placeholder="Search expenses..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    outline: 'none',
+                    fontSize: '0.85rem',
+                    color: '#0f172a',
+                    width: '100%',
+                    padding: 0,
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+                {/* Timeframe Filter */}
+                <select
+                  value={timeframeFilter}
+                  onChange={(e) => {
+                    setTimeframeFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '0.5rem 0.85rem',
+                    fontSize: '0.85rem',
+                    color: '#334155',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="all">All Historical Records</option>
+                  <option value="this-month">This Month</option>
+                  <option value="last-month">Last Month</option>
+                  <option value="last-3-months">Last 3 Months</option>
+                  <option value="last-6-months">Last 6 Months</option>
+                  <optgroup label="Specific Historical Months">
+                    {historyMonths.map((m) => (
+                      <option key={m.monthKey} value={m.monthKey}>
+                        {m.monthLabel}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => {
+                    setCategoryFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '0.5rem 0.85rem',
+                    fontSize: '0.85rem',
+                    color: '#334155',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="all">All Categories</option>
+                  <option value="Rent">Rent</option>
+                  <option value="Salaries">Salaries</option>
+                  <option value="Utilities">Utilities</option>
+                  <option value="Equipment">Equipment</option>
+                  <option value="Maintenance">Maintenance</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Supplies">Supplies</option>
+                  <option value="Other">Other</option>
+                </select>
+
+                <select
+                  value={methodFilter}
+                  onChange={(e) => {
+                    setMethodFilter(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '0.5rem 0.85rem',
+                    fontSize: '0.85rem',
+                    color: '#334155',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="all">All Methods</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Cash">Cash</option>
+                  <option value="GCash">GCash</option>
+                  <option value="Credit Card">Credit Card</option>
+                  <option value="Check">Check</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+          </ScrollReveal>
 
       {/* 5. Recent Expenses Table Card */}
       <ScrollReveal delay={130}>
@@ -497,6 +761,8 @@ export const ExpenseList: React.FC = () => {
         )}
       </div>
       </ScrollReveal>
+      </>
+      )}
 
       {/* Expense Modal */}
       <ExpenseModal

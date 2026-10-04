@@ -9,9 +9,14 @@ import {
   Activity,
   Clock,
   CalendarDays,
+  Download,
+  Info,
+  CheckCircle,
 } from 'lucide-react';
 import { AuditAction, AuditEntityType, AuditLogEntry } from '@/types/database';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { Modal } from '@/components/ui/Modal';
+import { showToast } from '@/lib/ui/swal';
 
 const AUDIT_STORAGE_KEY = 'sgfm_audit_log_clean';
 
@@ -45,10 +50,17 @@ const ACTION_META: Record<AuditAction, ActionMeta> = {
   'member.create': { label: 'Member created', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
   'member.update': { label: 'Member updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
   'member.delete': { label: 'Member deleted', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
+  'member.reminder_sent': { label: 'Reminder dispatched', color: '#d97706', background: '#fffbeb', border: '#fde68a' },
   'payment.create': { label: 'Payment recorded', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
+  'payment.update': { label: 'Payment updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
+  'payment.delete': { label: 'Payment deleted', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
+  'payment.receipt_verify': { label: 'Receipt verified', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
+  'payment.receipt_reject': { label: 'Receipt rejected', color: '#dc2626', background: '#fef2f2', border: '#fecaca' },
+  'payment.reminder_sent': { label: 'Payment reminder sent', color: '#d97706', background: '#fffbeb', border: '#fde68a' },
   'expense.create': { label: 'Expense added', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
   'expense.update': { label: 'Expense updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
   'expense.delete': { label: 'Expense deleted', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
+  'settings.update': { label: 'Settings updated', color: '#4b5563', background: '#f3f4f6', border: '#e5e7eb' },
 };
 
 const ENTITY_LABEL: Record<AuditEntityType, string> = {
@@ -56,6 +68,7 @@ const ENTITY_LABEL: Record<AuditEntityType, string> = {
   member: 'Member',
   payment: 'Payment',
   expense: 'Expense',
+  settings: 'Settings',
 };
 
 export const AuditLogView: React.FC = () => {
@@ -73,6 +86,29 @@ export const AuditLogView: React.FC = () => {
   const [entityFilter, setEntityFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
+
+  const [selectedEntry, setSelectedEntry] = useState<AuditLogEntry | null>(null);
+
+  const exportCSV = () => {
+    const headers = ['Timestamp', 'Actor', 'Action', 'Entity', 'Label', 'Metadata'];
+    const rows = entries.map((e) => [
+      e.created_at,
+      e.actor_email,
+      e.action,
+      e.entity_type,
+      `"${(e.entity_label || '').replace(/"/g, '""')}"`,
+      `"${JSON.stringify(e.metadata || {}).replace(/"/g, '""')}"`,
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `User_Audit_Trail_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    showToast('Audit trail exported successfully!');
+  };
 
   const filteredEntries = useMemo(() => {
     const query = searchQuery.toLowerCase();
@@ -131,30 +167,52 @@ export const AuditLogView: React.FC = () => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       {/* 1. Page Header */}
       <ScrollReveal delay={0}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-          <div
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+            <div
+              style={{
+                width: '42px',
+                height: '42px',
+                borderRadius: '10px',
+                backgroundColor: '#0f172a',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                flexShrink: 0,
+              }}
+            >
+              <ShieldCheck size={22} />
+            </div>
+            <div>
+              <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.15rem' }}>
+                User Auditing
+              </h1>
+              <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
+                Chronological audit trail of staff actions, security events, payments, and member modifications.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={exportCSV}
             style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '10px',
-              backgroundColor: '#0f172a',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              color: '#ffffff',
-              flexShrink: 0,
+              gap: '0.45rem',
+              padding: '0.5rem 0.85rem',
+              borderRadius: '8px',
+              border: '1px solid #e2e8f0',
+              backgroundColor: '#ffffff',
+              color: '#334155',
+              fontSize: '0.825rem',
+              fontWeight: 500,
+              cursor: 'pointer',
             }}
           >
-            <ShieldCheck size={22} />
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.15rem' }}>
-              Audit Log
-            </h1>
-            <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
-              A chronological record of administrator activity across members, payments, expenses, and sign-ins.
-            </p>
-          </div>
+            <Download size={15} />
+            <span>Export Audit CSV</span>
+          </button>
         </div>
       </ScrollReveal>
 
@@ -295,9 +353,11 @@ export const AuditLogView: React.FC = () => {
                     return (
                       <tr
                         key={entry.id}
-                        style={{ borderBottom: '1px solid #f8fafc', transition: 'background-color 0.15s ease' }}
+                        onClick={() => setSelectedEntry(entry)}
+                        style={{ borderBottom: '1px solid #f8fafc', transition: 'background-color 0.15s ease', cursor: 'pointer' }}
                         onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        title="Click to view complete event details"
                       >
                         <td style={{ padding: '1rem 1.5rem', color: '#64748b', whiteSpace: 'nowrap' }}>
                           {formatDateTime(entry.created_at)}
@@ -418,6 +478,69 @@ export const AuditLogView: React.FC = () => {
           )}
         </div>
       </ScrollReveal>
+
+      {/* Audit Event Details Modal */}
+      <Modal
+        isOpen={Boolean(selectedEntry)}
+        onClose={() => setSelectedEntry(null)}
+        title="Audit Event Details"
+        maxWidth="540px"
+      >
+        {selectedEntry && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase' }}>
+                  Action Taken
+                </span>
+                <span
+                  style={{
+                    padding: '0.2rem 0.55rem',
+                    borderRadius: '6px',
+                    backgroundColor: ACTION_META[selectedEntry.action]?.background || '#f1f5f9',
+                    color: ACTION_META[selectedEntry.action]?.color || '#334155',
+                    fontSize: '0.75rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  {ACTION_META[selectedEntry.action]?.label || selectedEntry.action}
+                </span>
+              </div>
+              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
+                {selectedEntry.entity_label || 'Unnamed Entity'}
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.2rem' }}>
+                Actor: {selectedEntry.actor_email} • {formatDateTime(selectedEntry.created_at)}
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
+                Event Metadata Payload
+              </div>
+              <pre
+                style={{
+                  backgroundColor: '#0f172a',
+                  color: '#e2e8f0',
+                  padding: '1rem',
+                  borderRadius: '8px',
+                  fontSize: '0.785rem',
+                  overflowX: 'auto',
+                  fontFamily: 'monospace',
+                }}
+              >
+                {JSON.stringify(selectedEntry.metadata || {}, null, 2)}
+              </pre>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+              <button onClick={() => setSelectedEntry(null)} className="btn btn-primary btn-sm">
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
