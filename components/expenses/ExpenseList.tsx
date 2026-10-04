@@ -76,6 +76,7 @@ export const ExpenseList: React.FC = () => {
   });
   const topCategoryPct = totalExpenses > 0 ? Math.round((topCategoryAmount / totalExpenses) * 100) : 0;
   const lastMonthTotalExpenses = DBService.getDashboardKPIs('last-month').totalExpenses;
+  const thisMonthTotalExpenses = DBService.getDashboardKPIs('this-month').totalExpenses;
 
   const totalPages = Math.ceil(filteredExpenses.length / pageSize) || 1;
   const paginated = filteredExpenses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -159,7 +160,7 @@ export const ExpenseList: React.FC = () => {
               This Month
             </div>
             <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
-              {currency}{totalExpenses.toLocaleString()}
+              {currency}{thisMonthTotalExpenses.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
               Current billing cycle
