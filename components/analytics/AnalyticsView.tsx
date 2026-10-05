@@ -143,7 +143,7 @@ export const AnalyticsView: React.FC = () => {
               "${escapeHtml(data.message)}"
             </div>
             <p style="font-size: 0.8rem; color: #64748b;">
-              Click copy to send this message to the member.
+              Click copy to copy this message to your clipboard.
             </p>
           </div>
         `,
@@ -253,7 +253,7 @@ export const AnalyticsView: React.FC = () => {
 
   const handleContactMember = (memberId: string) => {
     setContactedMemberId(memberId);
-    showToast('Reminder notification sent to member');
+    showToast('Message copied to clipboard!');
     setTimeout(() => setContactedMemberId(null), 3000);
   };
 
@@ -586,7 +586,7 @@ export const AnalyticsView: React.FC = () => {
                             className="btn btn-secondary btn-sm"
                             style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
                           >
-                            {contactedMemberId === m.memberId ? 'Sent ✓' : 'Direct Ping'}
+                            {contactedMemberId === m.memberId ? 'Copied ✓' : 'Copy message'}
                           </button>
                         </div>
                       </td>
