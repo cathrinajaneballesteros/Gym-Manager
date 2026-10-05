@@ -157,10 +157,7 @@ export const DashboardOverview: React.FC = () => {
   const monthCompletedPayments = payments.filter(
     (p) => p.payment_status === 'completed' && (p.payment_date || '').startsWith(thisMonthKey)
   );
-  const activePaymentsList =
-    monthCompletedPayments.length > 0
-      ? monthCompletedPayments
-      : payments.filter((p) => p.payment_status === 'completed');
+  const activePaymentsList = monthCompletedPayments;
 
   const paymentsByMethod = activePaymentsList.reduce<Record<string, { total: number; count: number }>>((acc, p) => {
     const method = p.payment_method || 'Other';
@@ -181,7 +178,7 @@ export const DashboardOverview: React.FC = () => {
   }, {});
 
   const monthExpensesList = expenses.filter((e) => (e.expense_date || '').startsWith(thisMonthKey));
-  const activeExpensesList = monthExpensesList.length > 0 ? monthExpensesList : expenses;
+  const activeExpensesList = monthExpensesList;
 
   const expensesByCategory = activeExpensesList.reduce<Record<string, { total: number; count: number }>>((acc, e) => {
     if (!acc[e.category]) acc[e.category] = { total: 0, count: 0 };
@@ -697,8 +694,12 @@ export const DashboardOverview: React.FC = () => {
                 </div>
 
                 <p style={{ fontSize: '0.825rem', color: '#64748b', marginTop: '4px' }}>
-                  {activeBreakdown === 'revenue' && `Aggregated across ${activePaymentsList.length} verified member payments in ${kpis.periodLabel}.`}
-                  {activeBreakdown === 'expenses' && `Recorded operational expenditures across ${activeExpensesList.length} verified expense entries.`}
+                  {activeBreakdown === 'revenue' && (activePaymentsList.length > 0
+                    ? `Aggregated across ${activePaymentsList.length} verified member payments in ${kpis.periodLabel}.`
+                    : 'No payments recorded this month.')}
+                  {activeBreakdown === 'expenses' && (activeExpensesList.length > 0
+                    ? `Recorded operational expenditures across ${activeExpensesList.length} verified expense entries.`
+                    : 'No expenses recorded this month.')}
                   {activeBreakdown === 'profit' && `Reconciled net take-home cash flow after deducting operational facility costs.`}
                   {activeBreakdown === 'members' && `Current member status, tier distribution, and active retention cohorts.`}
                 </p>
@@ -747,7 +748,7 @@ export const DashboardOverview: React.FC = () => {
               }}
             >
               {/* BREAKDOWN 1: TOTAL REVENUE */}
-              {activeBreakdown === 'revenue' && (
+              {activeBreakdown === 'revenue' && activePaymentsList.length > 0 && (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
@@ -900,8 +901,14 @@ export const DashboardOverview: React.FC = () => {
                 </>
               )}
 
+              {activeBreakdown === 'revenue' && activePaymentsList.length === 0 && (
+                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                  No payments recorded this month.
+                </div>
+              )}
+
               {/* BREAKDOWN 2: TOTAL EXPENSES */}
-              {activeBreakdown === 'expenses' && (
+              {activeBreakdown === 'expenses' && activeExpensesList.length > 0 && (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
@@ -1080,6 +1087,12 @@ export const DashboardOverview: React.FC = () => {
                     </div>
                   </div>
                 </>
+              )}
+
+              {activeBreakdown === 'expenses' && activeExpensesList.length === 0 && (
+                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                  No expenses recorded this month.
+                </div>
               )}
 
               {/* BREAKDOWN 3: NET PROFIT */}
