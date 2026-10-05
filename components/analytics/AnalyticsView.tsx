@@ -143,7 +143,7 @@ export const AnalyticsView: React.FC = () => {
               "${escapeHtml(data.message)}"
             </div>
             <p style="font-size: 0.8rem; color: #64748b;">
-              Click copy to copy this message to your clipboard.
+              Click Copy to put this message on your clipboard.
             </p>
           </div>
         `,
