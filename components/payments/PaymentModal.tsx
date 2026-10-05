@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -47,6 +47,17 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     ? plans.find((p) => p.id === defaultMember.membership_plan_id) || plans[0]
     : plans[0];
 
+  const buildDefaultValues = (): PaymentFormData => ({
+    member_id: defaultMember?.id || '',
+    membership_plan_id: defaultPlan?.id || '',
+    amount: defaultPlan?.price || 1500,
+    payment_date: todayStr,
+    payment_method: 'GCash',
+    payment_status: 'completed',
+    reference_number: '',
+    notes: '',
+  });
+
   const {
     register,
     handleSubmit,
@@ -55,17 +66,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     formState: { errors, isSubmitting },
   } = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
-    defaultValues: {
-      member_id: defaultMember?.id || '',
-      membership_plan_id: defaultPlan?.id || '',
-      amount: defaultPlan?.price || 1500,
-      payment_date: todayStr,
-      payment_method: 'GCash',
-      payment_status: 'completed',
-      reference_number: '',
-      notes: '',
-    },
+    defaultValues: buildDefaultValues(),
   });
+
+  // Refill the form with the correct values every time the modal opens or the preselected member changes.
+  useEffect(() => {
+    if (!isOpen) return;
+    reset(buildDefaultValues());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, preselectedMemberId]);
 
   const handleMemberChange = (memberId: string) => {
     const member = members.find((m) => m.id === memberId);
