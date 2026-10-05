@@ -110,13 +110,18 @@ export class DBService {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('sgfm_profile_updated', { detail: updated }));
     }
-    this.recordAudit({
-      action: 'settings.update',
-      entity_type: 'settings',
-      entity_id: updated.id,
-      entity_label: updated.gym_name || updated.email || 'Settings',
-      metadata: { changed: Object.keys(updates).join(', ') },
-    });
+    const changed = Object.keys(updates).filter(
+      (k) => (current as unknown as Record<string, unknown>)[k] !== (updates as Record<string, unknown>)[k]
+    );
+    if (changed.length > 0) {
+      this.recordAudit({
+        action: 'settings.update',
+        entity_type: 'settings',
+        entity_id: updated.id,
+        entity_label: updated.gym_name || updated.email || 'Settings',
+        metadata: { changed: changed.join(', ') },
+      });
+    }
     return updated;
   }
 
