@@ -11,6 +11,7 @@ interface MetricCardProps {
   trend?: {
     value: string | number;
     positive: boolean;
+    direction?: 'up' | 'down';
     label?: string;
   };
   variant?: 'emerald' | 'rose' | 'blue' | 'purple' | 'amber';
@@ -164,7 +165,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
               gap: '0.15rem',
             }}
           >
-            {trend.positive ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />}
+            {(trend.direction ?? (trend.positive ? 'up' : 'down')) === 'up' ? (
+              <ArrowUpRight size={13} />
+            ) : (
+              <ArrowDownRight size={13} />
+            )}
             {trend.value}
           </span>
           <span style={{ color: '#86868b' }}>

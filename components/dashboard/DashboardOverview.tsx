@@ -119,6 +119,7 @@ export const DashboardOverview: React.FC = () => {
     ? {
         value: `${Math.abs(Math.round(((kpis.totalRevenue - lastMonthKpis.totalRevenue) / lastMonthKpis.totalRevenue) * 100))}%`,
         positive: kpis.totalRevenue >= lastMonthKpis.totalRevenue,
+        direction: kpis.totalRevenue > lastMonthKpis.totalRevenue ? ('up' as const) : ('down' as const),
         label: 'from last month',
       }
     : undefined;
@@ -127,6 +128,7 @@ export const DashboardOverview: React.FC = () => {
     ? {
         value: `${Math.abs(Math.round(((kpis.totalExpenses - lastMonthKpis.totalExpenses) / lastMonthKpis.totalExpenses) * 100))}%`,
         positive: kpis.totalExpenses <= lastMonthKpis.totalExpenses,
+        direction: kpis.totalExpenses > lastMonthKpis.totalExpenses ? ('up' as const) : ('down' as const),
         label: 'from last month',
       }
     : undefined;
@@ -135,6 +137,7 @@ export const DashboardOverview: React.FC = () => {
     ? {
         value: `${Math.abs(Math.round(((kpis.netProfit - lastMonthKpis.netProfit) / Math.abs(lastMonthKpis.netProfit)) * 100))}%`,
         positive: kpis.netProfit >= lastMonthKpis.netProfit,
+        direction: kpis.netProfit > lastMonthKpis.netProfit ? ('up' as const) : ('down' as const),
         label: 'from last month',
       }
     : undefined;
