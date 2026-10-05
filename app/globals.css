@@ -331,6 +331,16 @@ textarea::placeholder {
   border-color: #cbd5e1;
 }
 
+.btn-outline {
+  background: transparent;
+  color: var(--text-heading);
+  border: 1px solid var(--border-light);
+}
+.btn-outline:hover {
+  background: var(--bg-surface-hover);
+  border-color: #cbd5e1;
+}
+
 .btn-ghost {
   color: var(--text-muted);
   background: transparent;

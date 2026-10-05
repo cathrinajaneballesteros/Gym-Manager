@@ -110,13 +110,18 @@ export class DBService {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('sgfm_profile_updated', { detail: updated }));
     }
-    this.recordAudit({
-      action: 'settings.update',
-      entity_type: 'settings',
-      entity_id: updated.id,
-      entity_label: updated.gym_name || updated.email || 'Settings',
-      metadata: { changed: Object.keys(updates).join(', ') },
-    });
+    const changed = Object.keys(updates).filter(
+      (k) => (current as unknown as Record<string, unknown>)[k] !== (updates as Record<string, unknown>)[k]
+    );
+    if (changed.length > 0) {
+      this.recordAudit({
+        action: 'settings.update',
+        entity_type: 'settings',
+        entity_id: updated.id,
+        entity_label: updated.gym_name || updated.email || 'Settings',
+        metadata: { changed: changed.join(', ') },
+      });
+    }
     return updated;
   }
 
@@ -423,6 +428,7 @@ export class DBService {
     const current = payments[index];
     const updatedPayment: Payment = {
       ...current,
+      payment_status: 'pending',
       receipt_status: 'rejected',
       verified_at: new Date().toISOString(),
       verified_by: profile.full_name || profile.email || 'Admin',
@@ -441,6 +447,7 @@ export class DBService {
       entity_label: `${this.memberLabel(member)} · ${currency}${Number(updatedPayment.amount).toLocaleString()}`,
       metadata: {
         receipt_status: 'rejected',
+        payment_status: 'pending',
         reference_number: current.reference_number || '',
         rejection_reason: reason,
         verified_by: updatedPayment.verified_by || 'Admin',

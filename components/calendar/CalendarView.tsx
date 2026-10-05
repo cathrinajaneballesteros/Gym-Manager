@@ -59,7 +59,7 @@ export const CalendarView: React.FC = () => {
   }, []);
 
   const currency = profile?.currency || '₱';
-  const todayStr = today.toISOString().split('T')[0];
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
   // Navigation handlers
   const handlePrevMonth = () => {

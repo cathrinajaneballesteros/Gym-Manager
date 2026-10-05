@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -44,14 +44,8 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
 }) => {
   const todayStr = new Date().toISOString().split('T')[0];
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<ExpenseFormData>({
-    resolver: zodResolver(expenseSchema),
-    defaultValues: initialExpense
+  const buildDefaultValues = (): ExpenseFormData =>
+    initialExpense
       ? {
           category: initialExpense.category,
           title: initialExpense.title,
@@ -67,8 +61,24 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
           expense_date: todayStr,
           payment_method: 'GCash',
           description: '',
-        },
+        };
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<ExpenseFormData>({
+    resolver: zodResolver(expenseSchema),
+    defaultValues: buildDefaultValues(),
   });
+
+  // Refill the form with the correct values every time the modal opens or the record changes.
+  useEffect(() => {
+    if (!isOpen) return;
+    reset(buildDefaultValues());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialExpense?.id]);
 
   const onSubmit = (data: ExpenseFormData) => {
     try {

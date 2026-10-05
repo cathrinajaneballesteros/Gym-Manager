@@ -52,15 +52,21 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
     const targetMember = member || (payment?.member_id ? DBService.getMemberById(payment.member_id) : null);
     const targetPlan = targetMember?.plan || (payment?.membership_plan_id ? DBService.getPlans().find(p => p.id === payment.membership_plan_id) : null);
 
+    // Local YYYY-MM-DD. toISOString() is UTC and can be a day off in the Philippines.
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
     if (targetMember) {
       setEmail(targetMember.email || '');
       setPhone(targetMember.phone || '');
-      setDueDate(targetMember.end_date || new Date().toISOString().split('T')[0]);
     }
+
+    const resolvedDueDate =
+      (targetMember && targetMember.end_date) || (payment && payment.payment_date) || todayStr;
+    setDueDate(resolvedDueDate);
 
     if (payment) {
       setAmount(String(payment.amount));
-      if (!dueDate) setDueDate(payment.payment_date);
     } else if (targetPlan) {
       setAmount(String(targetPlan.price));
     } else {
@@ -96,6 +102,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
 
     setIsSending(true);
     const results: string[] = [];
+    let successCount = 0;
 
     try {
       // 1. Send Email Reminder
@@ -114,9 +121,14 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
               customNote,
             }),
           });
-          const data = await res.json();
-          if (data.success) {
+          const data: { success?: boolean; error?: string; simulated?: boolean } = await res
+            .json()
+            .catch(() => ({}));
+          if (res.ok && data.success) {
+            successCount += 1;
             results.push(`Email reminder sent to ${email}${data.simulated ? ' (Simulated)' : ''}`);
+          } else {
+            results.push(`Email failed: ${data.error || `HTTP ${res.status}`}`);
           }
         }
       }
@@ -137,14 +149,25 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
               customMessage: customNote ? `Hi ${memberFullName.split(' ')[0]}, reminder that your ${planName} renewal (${currency}${Number(amount).toLocaleString()}) is due on ${dueDate}. ${customNote}` : undefined,
             }),
           });
-          const data = await res.json();
-          if (data.success) {
+          const data: { success?: boolean; error?: string; simulated?: boolean } = await res
+            .json()
+            .catch(() => ({}));
+          if (res.ok && data.success) {
+            successCount += 1;
             results.push(`SMS reminder sent to ${phone}${data.simulated ? ' (Simulated)' : ''}`);
+          } else {
+            results.push(`SMS failed: ${data.error || `HTTP ${res.status}`}`);
           }
         }
       }
 
-      // 3. Record User Audit Entry
+      // Stop if every channel failed. Keep the modal open so the user can retry.
+      if (successCount === 0) {
+        showError('Reminder Not Sent', results.join(' ') || 'All channels failed.');
+        return;
+      }
+
+      // 3. Record User Audit Entry (only after a real success)
       DBService.recordAudit({
         action: 'member.reminder_sent',
         entity_type: 'member',
@@ -160,12 +183,14 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
         },
       });
 
+      const failureCount = results.filter((r) => r.includes('failed:')).length;
+
       showAlert({
-        icon: 'success',
-        title: 'Payment Reminder Sent!',
+        icon: failureCount > 0 ? 'warning' : 'success',
+        title: failureCount > 0 ? 'Reminder Partially Sent' : 'Payment Reminder Sent!',
         html: `
           <div style="text-align: left; font-size: 0.875rem; color: #334155; line-height: 1.5;">
-            <p style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">Reminder dispatched successfully:</p>
+            <p style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">${failureCount > 0 ? 'Some channels failed:' : 'Reminder dispatched successfully:'}</p>
             <ul style="padding-left: 1.25rem; margin-bottom: 0.85rem;">
               ${results.map((r) => `<li style="margin-bottom: 0.25rem;">${escapeHtml(r)}</li>`).join('')}
             </ul>

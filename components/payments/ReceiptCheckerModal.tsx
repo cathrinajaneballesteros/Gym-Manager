@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FileCheck,
   CheckCircle,
@@ -39,6 +39,18 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   const [isRejecting, setIsRejecting] = useState(false);
   const [adminNotes, setAdminNotes] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const processingRef = useRef(false);
+
+  // Clear any typed note/reason and the reject box when a different payment is opened.
+  useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- reset form state when the opened payment changes */
+    setRejectReason('');
+    setAdminNotes('');
+    setIsRejecting(false);
+    setIsProcessing(false);
+    processingRef.current = false;
+    /* eslint-enable react-hooks/set-state-in-effect */
+  }, [isOpen, payment?.id]);
 
   if (!payment) return null;
 
@@ -59,6 +71,8 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   const isAmountMatching = payment.plan ? payment.amount === payment.plan.price : true;
 
   const handleVerify = () => {
+    if (processingRef.current) return;
+    processingRef.current = true;
     setIsProcessing(true);
     try {
       DBService.verifyPaymentReceipt(payment.id, { notes: adminNotes });
@@ -68,6 +82,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
     } catch (err: any) {
       showError('Verification Failed', err.message);
     } finally {
+      processingRef.current = false;
       setIsProcessing(false);
     }
   };
@@ -78,6 +93,8 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
       return;
     }
 
+    if (processingRef.current) return;
+    processingRef.current = true;
     setIsProcessing(true);
     try {
       DBService.rejectPaymentReceipt(payment.id, rejectReason.trim());
@@ -87,6 +104,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
     } catch (err: any) {
       showError('Rejection Failed', err.message);
     } finally {
+      processingRef.current = false;
       setIsProcessing(false);
     }
   };

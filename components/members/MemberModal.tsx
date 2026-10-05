@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -44,16 +44,8 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   defaultEndDate.setMonth(defaultEndDate.getMonth() + 1);
   const defaultEndStr = defaultEndDate.toISOString().split('T')[0];
 
-  const {
-    register,
-    handleSubmit,
-    setValue,
-    getValues,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<MemberFormData>({
-    resolver: zodResolver(memberSchema),
-    defaultValues: initialMember
+  const buildDefaultValues = (): MemberFormData =>
+    initialMember
       ? {
           first_name: initialMember.first_name,
           last_name: initialMember.last_name,
@@ -75,8 +67,26 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           start_date: todayStr,
           end_date: defaultEndStr,
           notes: '',
-        },
+        };
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    getValues,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<MemberFormData>({
+    resolver: zodResolver(memberSchema),
+    defaultValues: buildDefaultValues(),
   });
+
+  // Refill the form with the correct values every time the modal opens or the record changes.
+  useEffect(() => {
+    if (!isOpen) return;
+    reset(buildDefaultValues());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, initialMember?.id]);
 
   const onSubmit = (data: MemberFormData) => {
     try {

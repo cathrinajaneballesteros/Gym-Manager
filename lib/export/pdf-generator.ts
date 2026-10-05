@@ -13,6 +13,7 @@ interface PDFReportOptions {
 
 export function generateFinancialPDFReport(options: PDFReportOptions): void {
   const { gymName, currency, reportPeriod, kpis, trends, expenses } = options;
+  const pdfCurrency = currency === '₱' ? 'PHP ' : currency;
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -54,9 +55,9 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
 
   const kpiData = [
     ['Metric', 'Amount / Value', 'Analysis / Status'],
-    ['Total Gross Revenue', `${currency}${kpis.totalRevenue.toLocaleString()}`, 'All membership collections'],
-    ['Total Operating Expenses', `${currency}${kpis.totalExpenses.toLocaleString()}`, 'Rent, utilities, staff, upkeep'],
-    ['Net Profit (EBITDA)', `${currency}${kpis.netProfit.toLocaleString()}`, kpis.netProfit >= 0 ? 'Profitable (Positive Return)' : 'Deficit'],
+    ['Total Gross Revenue', `${pdfCurrency}${kpis.totalRevenue.toLocaleString()}`, 'All membership collections'],
+    ['Total Operating Expenses', `${pdfCurrency}${kpis.totalExpenses.toLocaleString()}`, 'Rent, utilities, staff, upkeep'],
+    ['Net Profit (EBITDA)', `${pdfCurrency}${kpis.netProfit.toLocaleString()}`, kpis.netProfit >= 0 ? 'Profitable (Positive Return)' : 'Deficit'],
     ['Operating Profit Margin', `${kpis.profitMargin}%`, 'Target benchmark > 15%'],
     ['Active Member Community', `${kpis.activeMembers} Members`, `${kpis.renewalRate}% renewal rate`],
     ['Expiring Memberships', `${kpis.expiringMemberships} Members`, 'Next 7-14 day renewal queue'],
@@ -83,9 +84,9 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
 
   const monthlyRows = trends.map((t) => [
     t.monthKey,
-    `${currency}${t.revenue.toLocaleString()}`,
-    `${currency}${t.expenses.toLocaleString()}`,
-    `${currency}${t.profit.toLocaleString()}`,
+    `${pdfCurrency}${t.revenue.toLocaleString()}`,
+    `${pdfCurrency}${t.expenses.toLocaleString()}`,
+    `${pdfCurrency}${t.profit.toLocaleString()}`,
     `${t.memberCount} members`,
   ]);
 
@@ -113,7 +114,7 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
       e.category,
       e.title,
       e.payment_method,
-      `${currency}${Number(e.amount).toLocaleString()}`,
+      `${pdfCurrency}${Number(e.amount).toLocaleString()}`,
     ]);
 
     autoTable(doc, {

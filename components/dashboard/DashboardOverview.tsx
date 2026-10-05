@@ -112,6 +112,8 @@ export const DashboardOverview: React.FC = () => {
 
   const currency = profile?.currency || '₱';
   const adminFirstName = DBService.getFirstName(profile?.full_name);
+  const currentHour = new Date().getHours();
+  const greeting = currentHour < 12 ? 'Good morning' : currentHour < 18 ? 'Good afternoon' : 'Good evening';
   const expiringMembers = members.filter((m) => m.status === 'expiring');
   const recentPayments = payments.slice(0, 2);
 
@@ -119,6 +121,7 @@ export const DashboardOverview: React.FC = () => {
     ? {
         value: `${Math.abs(Math.round(((kpis.totalRevenue - lastMonthKpis.totalRevenue) / lastMonthKpis.totalRevenue) * 100))}%`,
         positive: kpis.totalRevenue >= lastMonthKpis.totalRevenue,
+        direction: kpis.totalRevenue > lastMonthKpis.totalRevenue ? ('up' as const) : ('down' as const),
         label: 'from last month',
       }
     : undefined;
@@ -127,6 +130,7 @@ export const DashboardOverview: React.FC = () => {
     ? {
         value: `${Math.abs(Math.round(((kpis.totalExpenses - lastMonthKpis.totalExpenses) / lastMonthKpis.totalExpenses) * 100))}%`,
         positive: kpis.totalExpenses <= lastMonthKpis.totalExpenses,
+        direction: kpis.totalExpenses > lastMonthKpis.totalExpenses ? ('up' as const) : ('down' as const),
         label: 'from last month',
       }
     : undefined;
@@ -135,6 +139,7 @@ export const DashboardOverview: React.FC = () => {
     ? {
         value: `${Math.abs(Math.round(((kpis.netProfit - lastMonthKpis.netProfit) / Math.abs(lastMonthKpis.netProfit)) * 100))}%`,
         positive: kpis.netProfit >= lastMonthKpis.netProfit,
+        direction: kpis.netProfit > lastMonthKpis.netProfit ? ('up' as const) : ('down' as const),
         label: 'from last month',
       }
     : undefined;
@@ -154,10 +159,7 @@ export const DashboardOverview: React.FC = () => {
   const monthCompletedPayments = payments.filter(
     (p) => p.payment_status === 'completed' && (p.payment_date || '').startsWith(thisMonthKey)
   );
-  const activePaymentsList =
-    monthCompletedPayments.length > 0
-      ? monthCompletedPayments
-      : payments.filter((p) => p.payment_status === 'completed');
+  const activePaymentsList = monthCompletedPayments;
 
   const paymentsByMethod = activePaymentsList.reduce<Record<string, { total: number; count: number }>>((acc, p) => {
     const method = p.payment_method || 'Other';
@@ -178,7 +180,7 @@ export const DashboardOverview: React.FC = () => {
   }, {});
 
   const monthExpensesList = expenses.filter((e) => (e.expense_date || '').startsWith(thisMonthKey));
-  const activeExpensesList = monthExpensesList.length > 0 ? monthExpensesList : expenses;
+  const activeExpensesList = monthExpensesList;
 
   const expensesByCategory = activeExpensesList.reduce<Record<string, { total: number; count: number }>>((acc, e) => {
     if (!acc[e.category]) acc[e.category] = { total: 0, count: 0 };
@@ -267,7 +269,7 @@ export const DashboardOverview: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
-              Good morning, {adminFirstName}!
+              {greeting}, {adminFirstName}!
             </h1>
             <p style={{ fontSize: '0.875rem', color: '#86868b' }}>
               Here&apos;s what&apos;s happening with your gym&apos;s finances today.
@@ -694,8 +696,12 @@ export const DashboardOverview: React.FC = () => {
                 </div>
 
                 <p style={{ fontSize: '0.825rem', color: '#64748b', marginTop: '4px' }}>
-                  {activeBreakdown === 'revenue' && `Aggregated across ${activePaymentsList.length} verified member payments in ${kpis.periodLabel}.`}
-                  {activeBreakdown === 'expenses' && `Recorded operational expenditures across ${activeExpensesList.length} verified expense entries.`}
+                  {activeBreakdown === 'revenue' && (activePaymentsList.length > 0
+                    ? `Aggregated across ${activePaymentsList.length} verified member payments in ${kpis.periodLabel}.`
+                    : 'No payments recorded this month.')}
+                  {activeBreakdown === 'expenses' && (activeExpensesList.length > 0
+                    ? `Recorded operational expenditures across ${activeExpensesList.length} verified expense entries.`
+                    : 'No expenses recorded this month.')}
                   {activeBreakdown === 'profit' && `Reconciled net take-home cash flow after deducting operational facility costs.`}
                   {activeBreakdown === 'members' && `Current member status, tier distribution, and active retention cohorts.`}
                 </p>
@@ -744,7 +750,7 @@ export const DashboardOverview: React.FC = () => {
               }}
             >
               {/* BREAKDOWN 1: TOTAL REVENUE */}
-              {activeBreakdown === 'revenue' && (
+              {activeBreakdown === 'revenue' && activePaymentsList.length > 0 && (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
@@ -897,8 +903,14 @@ export const DashboardOverview: React.FC = () => {
                 </>
               )}
 
+              {activeBreakdown === 'revenue' && activePaymentsList.length === 0 && (
+                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                  No payments recorded this month.
+                </div>
+              )}
+
               {/* BREAKDOWN 2: TOTAL EXPENSES */}
-              {activeBreakdown === 'expenses' && (
+              {activeBreakdown === 'expenses' && activeExpensesList.length > 0 && (
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
@@ -1077,6 +1089,12 @@ export const DashboardOverview: React.FC = () => {
                     </div>
                   </div>
                 </>
+              )}
+
+              {activeBreakdown === 'expenses' && activeExpensesList.length === 0 && (
+                <div style={{ padding: '2rem 1rem', textAlign: 'center', color: '#64748b', fontSize: '0.9rem' }}>
+                  No expenses recorded this month.
+                </div>
               )}
 
               {/* BREAKDOWN 3: NET PROFIT */}
