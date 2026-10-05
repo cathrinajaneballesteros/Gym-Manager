@@ -423,6 +423,7 @@ export class DBService {
     const current = payments[index];
     const updatedPayment: Payment = {
       ...current,
+      payment_status: 'pending',
       receipt_status: 'rejected',
       verified_at: new Date().toISOString(),
       verified_by: profile.full_name || profile.email || 'Admin',
@@ -441,6 +442,7 @@ export class DBService {
       entity_label: `${this.memberLabel(member)} · ${currency}${Number(updatedPayment.amount).toLocaleString()}`,
       metadata: {
         receipt_status: 'rejected',
+        payment_status: 'pending',
         reference_number: current.reference_number || '',
         rejection_reason: reason,
         verified_by: updatedPayment.verified_by || 'Admin',
