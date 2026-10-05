@@ -112,6 +112,8 @@ export const DashboardOverview: React.FC = () => {
 
   const currency = profile?.currency || '₱';
   const adminFirstName = DBService.getFirstName(profile?.full_name);
+  const currentHour = new Date().getHours();
+  const greeting = currentHour < 12 ? 'Good morning' : currentHour < 18 ? 'Good afternoon' : 'Good evening';
   const expiringMembers = members.filter((m) => m.status === 'expiring');
   const recentPayments = payments.slice(0, 2);
 
@@ -267,7 +269,7 @@ export const DashboardOverview: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
-              Good morning, {adminFirstName}!
+              {greeting}, {adminFirstName}!
             </h1>
             <p style={{ fontSize: '0.875rem', color: '#86868b' }}>
               Here&apos;s what&apos;s happening with your gym&apos;s finances today.
