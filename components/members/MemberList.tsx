@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
   Users,
@@ -42,6 +43,60 @@ export const MemberList: React.FC = () => {
   const [paymentMemberId, setPaymentMemberId] = useState<string | null>(null);
   const [selectedReminderMember, setSelectedReminderMember] = useState<Member | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!activeMenuId) return;
+
+    const handleClose = () => {
+      setActiveMenuId(null);
+      setMenuPosition(null);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+
+    document.addEventListener('click', handleClose);
+    window.addEventListener('resize', handleClose);
+    window.addEventListener('scroll', handleClose, true);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('click', handleClose);
+      window.removeEventListener('resize', handleClose);
+      window.removeEventListener('scroll', handleClose, true);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [activeMenuId]);
+
+  const handleToggleMenu = (memberId: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (activeMenuId === memberId) {
+      setActiveMenuId(null);
+      setMenuPosition(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const menuHeight = 220;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const openUpwards = spaceBelow < menuHeight && rect.top > menuHeight;
+
+      setMenuPosition({
+        top: openUpwards ? Math.max(10, rect.top - menuHeight - 6) : rect.bottom + 6,
+        right: Math.max(16, window.innerWidth - rect.right),
+      });
+      setActiveMenuId(memberId);
+    }
+  };
+
+  const activeMember = useMemo(() => {
+    return members.find((m) => m.id === activeMenuId) || null;
+  }, [members, activeMenuId]);
 
   const refreshData = () => {
     setMembers(DBService.getMembers());
@@ -401,140 +456,40 @@ export const MemberList: React.FC = () => {
                         {formatDate(member.end_date)}
                       </td>
 
-                      {/* Actions Menu */}
-                      <td style={{ padding: '1rem 1.5rem', textAlign: 'right', position: 'relative' }}>
+                      {/* Actions Menu Trigger */}
+                      <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                         <button
-                          onClick={() => setActiveMenuId(activeMenuId === member.id ? null : member.id)}
+                          type="button"
+                          onClick={(e) => handleToggleMenu(member.id, e)}
                           style={{
-                            padding: '0.4rem',
-                            color: '#64748b',
-                            borderRadius: '6px',
+                            padding: '0.45rem',
+                            color: activeMenuId === member.id ? '#0f172a' : '#64748b',
+                            backgroundColor: activeMenuId === member.id ? '#f1f5f9' : 'transparent',
+                            borderRadius: '7px',
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
                           }}
-                          aria-label="Actions"
+                          onMouseEnter={(e) => {
+                            if (activeMenuId !== member.id) {
+                              e.currentTarget.style.backgroundColor = '#f1f5f9';
+                              e.currentTarget.style.color = '#0f172a';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (activeMenuId !== member.id) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                              e.currentTarget.style.color = '#64748b';
+                            }
+                          }}
+                          aria-label={`Actions for ${fullName}`}
+                          aria-expanded={activeMenuId === member.id}
                         >
                           <MoreVertical size={16} />
                         </button>
-
-                        {/* Dropdown Menu */}
-                        {activeMenuId === member.id && (
-                          <div
-                            style={{
-                              position: 'absolute',
-                              right: '1.5rem',
-                              top: '3rem',
-                              backgroundColor: '#ffffff',
-                              border: '1px solid #e2e8f0',
-                              borderRadius: '8px',
-                              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.08)',
-                              zIndex: 20,
-                              minWidth: '150px',
-                              padding: '0.35rem',
-                              textAlign: 'left',
-                            }}
-                          >
-                            <Link
-                              href={`/members/${member.id}`}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.5rem 0.75rem',
-                                fontSize: '0.8rem',
-                                color: '#334155',
-                                borderRadius: '4px',
-                                textDecoration: 'none',
-                              }}
-                              onClick={() => setActiveMenuId(null)}
-                            >
-                              <Eye size={14} />
-                              <span>View Profile</span>
-                            </Link>
-
-                            <button
-                              onClick={() => {
-                                setPaymentMemberId(member.id);
-                                setActiveMenuId(null);
-                              }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.5rem 0.75rem',
-                                fontSize: '0.8rem',
-                                color: member.status === 'pending' ? '#b45309' : '#334155',
-                                backgroundColor: member.status === 'pending' ? '#fffbeb' : 'transparent',
-                                borderRadius: '4px',
-                                width: '100%',
-                                fontWeight: member.status === 'pending' ? 600 : 400,
-                              }}
-                            >
-                              <CreditCard size={14} />
-                              <span>Record Payment {member.status === 'pending' ? '(Awaiting)' : ''}</span>
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setSelectedReminderMember(member);
-                                setActiveMenuId(null);
-                              }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.5rem 0.75rem',
-                                fontSize: '0.8rem',
-                                color: '#0071e3',
-                                borderRadius: '4px',
-                                width: '100%',
-                                fontWeight: 500,
-                              }}
-                            >
-                              <Bell size={14} />
-                              <span>Send Reminder (SMS/Email)</span>
-                            </button>
-
-                            <button
-                              onClick={() => {
-                                setEditingMember(member);
-                                setIsAddModalOpen(true);
-                                setActiveMenuId(null);
-                              }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.5rem 0.75rem',
-                                fontSize: '0.8rem',
-                                color: '#334155',
-                                borderRadius: '4px',
-                                width: '100%',
-                              }}
-                            >
-                              <Edit size={14} />
-                              <span>Edit Details</span>
-                            </button>
-
-                            <button
-                              onClick={() => handleDeleteMember(member.id, fullName)}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '0.5rem',
-                                padding: '0.5rem 0.75rem',
-                                fontSize: '0.8rem',
-                                color: '#ef4444',
-                                borderRadius: '4px',
-                                width: '100%',
-                              }}
-                            >
-                              <Trash2 size={14} />
-                              <span>Delete</span>
-                            </button>
-                          </div>
-                        )}
                       </td>
                     </tr>
                   );
@@ -620,6 +575,204 @@ export const MemberList: React.FC = () => {
         )}
       </div>
       </ScrollReveal>
+
+      {/* Floating Action Menu Portal (never clipped by table overflow) */}
+      {mounted && activeMember && menuPosition && createPortal(
+        <div
+          role="menu"
+          aria-orientation="vertical"
+          style={{
+            position: 'fixed',
+            top: menuPosition.top,
+            right: menuPosition.right,
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            boxShadow: '0 16px 36px -6px rgba(0, 0, 0, 0.14), 0 6px 16px -2px rgba(0, 0, 0, 0.05)',
+            zIndex: 9999,
+            minWidth: '205px',
+            padding: '0.35rem',
+            textAlign: 'left',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+            animation: 'modalSlideUp 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* View Profile */}
+          <Link
+            href={`/members/${activeMember.id}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              padding: '0.55rem 0.75rem',
+              fontSize: '0.825rem',
+              color: '#1e293b',
+              fontWeight: 500,
+              borderRadius: '7px',
+              textDecoration: 'none',
+              transition: 'background-color 0.12s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            onClick={() => setActiveMenuId(null)}
+          >
+            <Eye size={15} color="#64748b" />
+            <span>View Profile</span>
+          </Link>
+
+          {/* Record Payment */}
+          <button
+            type="button"
+            onClick={() => {
+              setPaymentMemberId(activeMember.id);
+              setActiveMenuId(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              padding: '0.55rem 0.75rem',
+              fontSize: '0.825rem',
+              color: activeMember.status === 'pending' ? '#b45309' : '#1e293b',
+              backgroundColor: activeMember.status === 'pending' ? '#fffbeb' : 'transparent',
+              borderRadius: '7px',
+              width: '100%',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontWeight: activeMember.status === 'pending' ? 600 : 500,
+              transition: 'background-color 0.12s ease',
+            }}
+            onMouseEnter={(e) => {
+              if (activeMember.status !== 'pending') e.currentTarget.style.backgroundColor = '#f8fafc';
+            }}
+            onMouseLeave={(e) => {
+              if (activeMember.status !== 'pending') e.currentTarget.style.backgroundColor = 'transparent';
+            }}
+          >
+            <CreditCard size={15} color={activeMember.status === 'pending' ? '#d97706' : '#64748b'} />
+            <span style={{ flex: 1 }}>Record Payment</span>
+            {activeMember.status === 'pending' && (
+              <span
+                style={{
+                  fontSize: '0.65rem',
+                  fontWeight: 700,
+                  padding: '0.15rem 0.4rem',
+                  borderRadius: '9999px',
+                  backgroundColor: '#fef2f2',
+                  color: '#dc2626',
+                  border: '1px solid #fecaca',
+                }}
+              >
+                Awaiting
+              </span>
+            )}
+          </button>
+
+          <div style={{ height: '1px', backgroundColor: '#f1f5f9', margin: '0.25rem 0' }} />
+
+          {/* Send Reminder */}
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedReminderMember(activeMember);
+              setActiveMenuId(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              padding: '0.55rem 0.75rem',
+              fontSize: '0.825rem',
+              color: '#1e293b',
+              borderRadius: '7px',
+              width: '100%',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontWeight: 500,
+              transition: 'background-color 0.12s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            <Bell size={15} color="#64748b" />
+            <span>Send Reminder</span>
+          </button>
+
+          {/* Edit Details */}
+          <button
+            type="button"
+            onClick={() => {
+              setEditingMember(activeMember);
+              setIsAddModalOpen(true);
+              setActiveMenuId(null);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              padding: '0.55rem 0.75rem',
+              fontSize: '0.825rem',
+              color: '#1e293b',
+              borderRadius: '7px',
+              width: '100%',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontWeight: 500,
+              transition: 'background-color 0.12s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            <Edit size={15} color="#64748b" />
+            <span>Edit Details</span>
+          </button>
+
+          <div style={{ height: '1px', backgroundColor: '#f1f5f9', margin: '0.25rem 0' }} />
+
+          {/* Delete */}
+          <button
+            type="button"
+            onClick={() => {
+              const name = `${activeMember.first_name} ${activeMember.last_name}`;
+              setActiveMenuId(null);
+              handleDeleteMember(activeMember.id, name);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              padding: '0.55rem 0.75rem',
+              fontSize: '0.825rem',
+              color: '#ef4444',
+              borderRadius: '7px',
+              width: '100%',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontWeight: 500,
+              transition: 'all 0.12s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = '#fef2f2';
+              e.currentTarget.style.color = '#dc2626';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#ef4444';
+            }}
+          >
+            <Trash2 size={15} color="#ef4444" />
+            <span>Delete Member</span>
+          </button>
+        </div>,
+        document.body
+      )}
 
       {/* Modals */}
       <MemberModal
