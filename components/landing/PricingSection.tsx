@@ -17,7 +17,7 @@ export const PricingSection: React.FC = () => {
       popular: false,
       features: [
         'Up to 300 active members',
-        'Multi-channel payment ledger (GCash/Bank/Cash)',
+        'Payment ledger (GCash / Cash)',
         'Expense tracker & category breakdown',
         'Basic revenue trends & analytics',
         'Executive PDF report exports',

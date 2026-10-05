@@ -238,14 +238,40 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
                   <span style={{ color: '#64748b' }}>Status</span>
                   <span
                     className={`badge ${
-                      member.status === 'active'
+                      member.status === 'pending'
+                        ? 'badge-pending'
+                        : member.status === 'active'
                         ? 'badge-active'
                         : member.status === 'expiring'
                         ? 'badge-expiring'
                         : 'badge-expired'
                     }`}
+                    style={
+                      member.status === 'pending'
+                        ? {
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.3rem',
+                            backgroundColor: '#fffbeb',
+                            color: '#b45309',
+                            border: '1px solid #fde68a',
+                            fontWeight: 600,
+                          }
+                        : undefined
+                    }
                   >
-                    {member.status === 'active' ? 'Active' : member.status === 'expiring' ? 'Expiring Soon' : 'Expired'}
+                    {member.status === 'pending' ? (
+                      <>
+                        <Clock size={11} />
+                        <span>Pending Payment</span>
+                      </>
+                    ) : member.status === 'active' ? (
+                      'Active'
+                    ) : member.status === 'expiring' ? (
+                      'Expiring Soon'
+                    ) : (
+                      'Expired'
+                    )}
                   </span>
                 </div>
 

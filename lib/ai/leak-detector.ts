@@ -2,16 +2,16 @@ import { ExpenseLeakResult, ExpenseAnomaly, CostSavingPlaybook } from '@/types/a
 import { DBService } from '@/lib/data/db-service';
 import { ExpenseCategory } from '@/types/database';
 
-// Standard baseline benchmarks per category for a small-to-medium fitness center
+// Standard baseline benchmarks per category for the fitness center
 const CATEGORY_HISTORICAL_BASELINES: Record<ExpenseCategory, number> = {
-  Rent: 45000,
-  Salaries: 36000,
-  Utilities: 8500, // Proposed benchmark: ₱8,000 - ₱8,500
-  Equipment: 8000,
-  Maintenance: 5500,
-  Supplies: 3000,
-  Marketing: 3500,
-  Other: 2000,
+  Rent: 10000,
+  Salaries: 10000,
+  Utilities: 3000,
+  Equipment: 3000,
+  Maintenance: 2000,
+  Supplies: 1000,
+  Marketing: 1000,
+  Other: 1000,
 };
 
 /**

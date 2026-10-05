@@ -156,7 +156,7 @@ export class ResendService {
                 </div>`
               : ''
           }
-          <p>To avoid any disruption to your gym access and training routine, please settle your renewal at the front desk or via GCash / Bank Transfer.</p>
+          <p>To avoid any disruption to your gym access and training routine, please settle your renewal at the front desk (Cash) or via GCash.</p>
         </div>
 
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">

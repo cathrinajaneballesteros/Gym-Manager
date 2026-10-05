@@ -27,19 +27,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const pathname = usePathname();
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
 
   useEffect(() => {
     setProfile(DBService.getProfile());
     const handleProfileUpdate = () => {
       setProfile(DBService.getProfile());
     };
+    const updatePendingCount = () => {
+      try {
+        const members = DBService.getMembers();
+        setPendingPaymentsCount(members.filter((m) => m.status === 'pending').length);
+      } catch {
+        // Ignore
+      }
+    };
+    updatePendingCount();
+
     window.addEventListener('sgfm_profile_updated', handleProfileUpdate);
+    window.addEventListener('sgfm_data_updated', updatePendingCount);
     window.addEventListener('storage', handleProfileUpdate);
+    window.addEventListener('storage', updatePendingCount);
     return () => {
       window.removeEventListener('sgfm_profile_updated', handleProfileUpdate);
+      window.removeEventListener('sgfm_data_updated', updatePendingCount);
       window.removeEventListener('storage', handleProfileUpdate);
+      window.removeEventListener('storage', updatePendingCount);
     };
-  }, []);
+  }, [pathname]);
 
   const adminName = profile?.full_name || 'Admin';
   const initials = DBService.getInitials(profile?.full_name);
@@ -251,6 +266,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                       strokeWidth={isActive ? 2.2 : 1.9}
                     />
                     <span>{item.name}</span>
+                    {item.href === '/payments' && pendingPaymentsCount > 0 && (
+                      <span
+                        title={`${pendingPaymentsCount} new member${pendingPaymentsCount > 1 ? 's' : ''} waiting to get listed on payments`}
+                        style={{
+                          marginLeft: 'auto',
+                          backgroundColor: '#ef4444',
+                          color: '#ffffff',
+                          fontSize: '0.67rem',
+                          fontWeight: 700,
+                          padding: '1px 6px',
+                          borderRadius: '9999px',
+                          lineHeight: '1.4',
+                          boxShadow: '0 1px 3px rgba(239, 68, 68, 0.4)',
+                        }}
+                      >
+                        {pendingPaymentsCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}

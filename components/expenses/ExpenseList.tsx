@@ -564,12 +564,8 @@ export const ExpenseList: React.FC = () => {
                   }}
                 >
                   <option value="all">All Methods</option>
-                  <option value="Bank Transfer">Bank Transfer</option>
                   <option value="Cash">Cash</option>
                   <option value="GCash">GCash</option>
-                  <option value="Credit Card">Credit Card</option>
-                  <option value="Check">Check</option>
-                  <option value="Other">Other</option>
                 </select>
               </div>
             </div>

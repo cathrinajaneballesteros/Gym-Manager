@@ -2,6 +2,8 @@
 
 import {
   Member,
+  PaymentMethod,
+  MemberStatus,
   MembershipPlan,
   Payment,
   Expense,
@@ -17,6 +19,10 @@ import {
   INITIAL_PAYMENTS,
   INITIAL_EXPENSES,
 } from './mock-data';
+
+/** Only Cash and GCash are supported; anything else (legacy data) is treated as Cash. */
+const normalizeMethod = (method: string | undefined): PaymentMethod =>
+  method === 'GCash' ? 'GCash' : 'Cash';
 
 const STORAGE_KEYS = {
   PROFILE: 'sgfm_profile_clean',
@@ -42,6 +48,14 @@ if (typeof window !== 'undefined') {
       }
       keysToRemove.forEach((k) => localStorage.removeItem(k));
       localStorage.setItem('sgfm_fresh_slate_v4', 'true');
+    }
+    // Hard reset all legacy example members and payments
+    if (!localStorage.getItem('sgfm_purge_legacy_mock_all_v2')) {
+      localStorage.setItem(STORAGE_KEYS.MEMBERS, '[]');
+      localStorage.setItem(STORAGE_KEYS.PAYMENTS, '[]');
+      localStorage.setItem(STORAGE_KEYS.AUDIT, '[]');
+      localStorage.removeItem(STORAGE_KEYS.EXPENSES);
+      localStorage.setItem('sgfm_purge_legacy_mock_all_v2', 'true');
     }
   } catch (err) {
     // Ignore storage errors in private browsing
@@ -127,7 +141,16 @@ export class DBService {
 
   // 1b. User Audit Trail
   static getAuditLogs(): AuditLogEntry[] {
-    return getStoredItem<AuditLogEntry[]>(STORAGE_KEYS.AUDIT, []);
+    const rawLogs = getStoredItem<AuditLogEntry[]>(STORAGE_KEYS.AUDIT, []);
+    const logs = rawLogs.filter(
+      (l) =>
+        !l.entity_id ||
+        !['mem_1', 'mem_2', 'mem_3', 'mem_4', 'mem_5', 'pay_101', 'pay_102', 'pay_103', 'pay_104', 'pay_105'].includes(l.entity_id)
+    );
+    if (logs.length !== rawLogs.length) {
+      setStoredItem(STORAGE_KEYS.AUDIT, logs);
+    }
+    return logs;
   }
 
   static recordAudit(
@@ -174,17 +197,36 @@ export class DBService {
 
   // 3. Members
   static getMembers(): Member[] {
-    const members = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
+    const rawMembers = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
+    // Sanitize: eliminate any legacy example members (mem_1 ... mem_5)
+    const members = rawMembers.filter(
+      (m) => !['mem_1', 'mem_2', 'mem_3', 'mem_4', 'mem_5'].includes(m.id)
+    );
+    if (members.length !== rawMembers.length) {
+      setStoredItem(STORAGE_KEYS.MEMBERS, members);
+    }
     const plans = this.getPlans();
     const planMap = new Map(plans.map((p) => [p.id, p]));
 
-    // Check expiration dynamically
+    // Check expiration and payment presence dynamically
     const todayStr = new Date().toISOString().split('T')[0];
     const today = new Date(todayStr);
 
+    const rawPayments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
+    const validPayments = rawPayments.filter(
+      (p) =>
+        !['pay_101', 'pay_102', 'pay_103', 'pay_104', 'pay_105'].includes(p.id) &&
+        !p.reference_number?.startsWith('REG-')
+    );
+    const memberIdsWithPayments = new Set(validPayments.map((p) => p.member_id));
+
     return members.map((m) => {
-      let status = m.status;
-      if (m.end_date) {
+      let status: MemberStatus = m.status;
+
+      // If the member is not on the payment list yet, mark as pending (waiting to get listed on payments)
+      if (!memberIdsWithPayments.has(m.id)) {
+        status = 'pending';
+      } else if (m.end_date) {
         const endDate = new Date(m.end_date);
         const diffDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
         if (diffDays < 0) {
@@ -211,14 +253,9 @@ export class DBService {
     data: Omit<Member, 'id' | 'admin_id' | 'created_at' | 'updated_at' | 'status'>
   ): Member {
     const members = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
-    const todayStr = new Date().toISOString().split('T')[0];
-    const today = new Date(todayStr);
-    const endDate = new Date(data.end_date);
-    const diffDays = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-    let status: Member['status'] = 'active';
-    if (diffDays < 0) status = 'expired';
-    else if (diffDays <= 7) status = 'expiring';
+    
+    // Newly registered member starts as pending until recorded on payments page
+    const status: Member['status'] = 'pending';
 
     const newMember: Member = {
       ...data,
@@ -242,21 +279,6 @@ export class DBService {
         end_date: newMember.end_date,
       },
     });
-
-    // If an initial plan was selected, record the payment automatically if desired
-    const plans = this.getPlans();
-    const plan = plans.find((p) => p.id === data.membership_plan_id);
-    if (plan) {
-      this.addPayment({
-        member_id: newMember.id,
-        membership_plan_id: plan.id,
-        amount: plan.price,
-        payment_date: data.start_date || todayStr,
-        payment_method: 'Cash',
-        payment_status: 'completed',
-        notes: `Initial registration fee for ${plan.name}`,
-      });
-    }
 
     return newMember;
   }
@@ -297,6 +319,11 @@ export class DBService {
     const filtered = members.filter((m) => m.id !== id);
     setStoredItem(STORAGE_KEYS.MEMBERS, filtered);
 
+    // Clean up payments for this deleted member
+    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
+    const remainingPayments = payments.filter((p) => p.member_id !== id);
+    setStoredItem(STORAGE_KEYS.PAYMENTS, remainingPayments);
+
     this.recordAudit({
       action: 'member.delete',
       entity_type: 'member',
@@ -307,7 +334,21 @@ export class DBService {
 
   // 4. Payments
   static getPayments(): Payment[] {
-    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
+    const rawPayments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
+    // Sanitize: eliminate any legacy example payments (pay_101 ... pay_105) and any auto-created REG payments
+    const payments = rawPayments
+      .filter(
+        (p) =>
+          !['pay_101', 'pay_102', 'pay_103', 'pay_104', 'pay_105'].includes(p.id) &&
+          !p.reference_number?.startsWith('REG-')
+      )
+      .map((p) => ({ ...p, payment_method: normalizeMethod(p.payment_method) }));
+    if (
+      payments.length !== rawPayments.length ||
+      rawPayments.some((p) => p.payment_method !== normalizeMethod(p.payment_method))
+    ) {
+      setStoredItem(STORAGE_KEYS.PAYMENTS, payments);
+    }
     const members = this.getMembers();
     const plans = this.getPlans();
 
@@ -474,7 +515,18 @@ export class DBService {
 
   // 5. Expenses
   static getExpenses(): Expense[] {
-    return getStoredItem<Expense[]>(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
+    const rawExpenses = getStoredItem<Expense[]>(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
+    // Sanitize: eliminate any legacy mock expenses
+    const expenses = rawExpenses
+      .filter((e) => !e.id.startsWith('exp_curr_') && !e.id.startsWith('exp_hist'))
+      .map((e) => ({ ...e, payment_method: normalizeMethod(e.payment_method) }));
+    if (
+      expenses.length !== rawExpenses.length ||
+      rawExpenses.some((e) => e.payment_method !== normalizeMethod(e.payment_method))
+    ) {
+      setStoredItem(STORAGE_KEYS.EXPENSES, expenses);
+    }
+    return expenses;
   }
 
   static addExpense(
@@ -611,7 +663,8 @@ export class DBService {
     const expiringMemberships = members.filter((m) => m.status === 'expiring').length;
     const expiredMemberships = members.filter((m) => m.status === 'expired').length;
     const inactiveMembers = members.filter((m) => m.status === 'inactive').length;
-    const totalMembers = activeMembers + expiringMemberships + expiredMemberships + inactiveMembers;
+    const pendingMembers = members.filter((m) => m.status === 'pending').length;
+    const totalMembers = activeMembers + expiringMemberships + expiredMemberships + inactiveMembers + pendingMembers;
     const renewalRate = totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 1000) / 10 : 0;
 
     return {
@@ -712,6 +765,12 @@ export class DBService {
       'Rent', 'Utilities', 'Salaries', 'Equipment', 'Maintenance', 'Supplies', 'Marketing', 'Other'
     ];
 
+    // Compute monthly average based on months that actually contain recorded expenses
+    const recordedMonthKeys = monthKeys.filter((key) =>
+      expenses.some((e) => (e.expense_date || '').startsWith(key))
+    );
+    const divisor = recordedMonthKeys.length || 1;
+
     catList.forEach((cat) => {
       const catExpenses = expenses.filter((e) => e.category === cat);
       const total = catExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -728,14 +787,14 @@ export class DBService {
 
       categories[cat] = {
         total,
-        monthlyAvg: Math.round(total / (monthKeys.length || 1)),
+        monthlyAvg: Math.round(total / divisor),
         count: catExpenses.length,
         recentMonths,
       };
     });
 
     const overallTotal = monthlyTotals.reduce((sum, m) => sum + m.total, 0);
-    const overallMonthlyAverage = Math.round(overallTotal / (monthlyTotals.length || 1));
+    const overallMonthlyAverage = Math.round(overallTotal / divisor);
 
     return {
       categories,

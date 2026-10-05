@@ -15,6 +15,7 @@ import {
   Eye,
   Dumbbell,
   Bell,
+  Clock,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { Member, MembershipPlan } from '@/types/database';
@@ -222,6 +223,7 @@ export const MemberList: React.FC = () => {
               }}
             >
               <option value="all">All Status</option>
+              <option value="pending">Pending Payment</option>
               <option value="active">Active</option>
               <option value="expiring">Expiring Soon</option>
               <option value="expired">Expired</option>
@@ -356,18 +358,41 @@ export const MemberList: React.FC = () => {
                       <td style={{ padding: '1rem 1.25rem' }}>
                         <span
                           className={`badge ${
-                            member.status === 'active'
+                            member.status === 'pending'
+                              ? 'badge-pending'
+                              : member.status === 'active'
                               ? 'badge-active'
                               : member.status === 'expiring'
                               ? 'badge-expiring'
                               : 'badge-expired'
                           }`}
+                          style={
+                            member.status === 'pending'
+                              ? {
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  backgroundColor: '#fffbeb',
+                                  color: '#b45309',
+                                  border: '1px solid #fde68a',
+                                  fontWeight: 600,
+                                }
+                              : undefined
+                          }
+                          title={member.status === 'pending' ? 'Awaiting payment record to be listed on payments page' : undefined}
                         >
-                          {member.status === 'active'
-                            ? 'Active'
-                            : member.status === 'expiring'
-                            ? 'Expiring Soon'
-                            : 'Expired'}
+                          {member.status === 'pending' ? (
+                            <>
+                              <Clock size={11} />
+                              <span>Pending</span>
+                            </>
+                          ) : member.status === 'active' ? (
+                            'Active'
+                          ) : member.status === 'expiring' ? (
+                            'Expiring Soon'
+                          ) : (
+                            'Expired'
+                          )}
                         </span>
                       </td>
 
@@ -439,13 +464,15 @@ export const MemberList: React.FC = () => {
                                 gap: '0.5rem',
                                 padding: '0.5rem 0.75rem',
                                 fontSize: '0.8rem',
-                                color: '#334155',
+                                color: member.status === 'pending' ? '#b45309' : '#334155',
+                                backgroundColor: member.status === 'pending' ? '#fffbeb' : 'transparent',
                                 borderRadius: '4px',
                                 width: '100%',
+                                fontWeight: member.status === 'pending' ? 600 : 400,
                               }}
                             >
                               <CreditCard size={14} />
-                              <span>Record Payment</span>
+                              <span>Record Payment {member.status === 'pending' ? '(Awaiting)' : ''}</span>
                             </button>
 
                             <button

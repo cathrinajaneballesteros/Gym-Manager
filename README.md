@@ -13,7 +13,7 @@ An intelligent, cloud-based financial management platform and modern web applica
   - **90-Day Cash Flow Projections**: Automated Monte Carlo simulation forecasting future revenues and operating margins.
   - **Member Churn Radar**: Risk scoring identifying at-risk renewals before revenue leakage occurs.
   - **Expense Anomaly Sentinel**: Flagging irregular cost spikes across equipment maintenance, utilities, and payroll.
-- **Comprehensive Ledger & Multi-Payment Processing**: Real-time tracking across Cash, Bank Transfer, GCash, and Card payments.
+- **Comprehensive Ledger & Payment Processing**: Real-time tracking of on-site Cash and GCash payments.
 - **Instant Board-Ready Reports**: 1-click export of structured Financial Statements, P&L, and Ledger summaries in Excel (`.xlsx`) and PDF formats.
 - **Role-Based Access Control**: Granular roles for Admins, Managers, and Staff with row-level security policies.
 

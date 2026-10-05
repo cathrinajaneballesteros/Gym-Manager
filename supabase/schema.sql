@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS public.payments (
   membership_plan_id UUID REFERENCES public.membership_plans(id) ON DELETE SET NULL,
   amount NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
   payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  payment_method TEXT NOT NULL DEFAULT 'Cash' CHECK (payment_method IN ('Cash', 'GCash', 'Bank Transfer', 'Credit Card', 'Debit Card', 'Other')),
+  payment_method TEXT NOT NULL DEFAULT 'Cash' CHECK (payment_method IN ('Cash', 'GCash')),
   payment_status TEXT NOT NULL DEFAULT 'completed' CHECK (payment_status IN ('completed', 'pending', 'refunded')),
   reference_number TEXT,
   notes TEXT,
@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS public.expenses (
   title TEXT NOT NULL,
   amount NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
   expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  payment_method TEXT NOT NULL DEFAULT 'Cash' CHECK (payment_method IN ('Cash', 'Bank Transfer', 'Credit Card', 'GCash', 'Check', 'Other')),
+  payment_method TEXT NOT NULL DEFAULT 'Cash' CHECK (payment_method IN ('Cash', 'GCash')),
   description TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now()),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT timezone('utc'::text, now())

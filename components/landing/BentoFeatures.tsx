@@ -111,7 +111,7 @@ export const BentoFeatures: React.FC = () => {
                   Unified Multi-Channel Payment Ledger
                 </h3>
                 <p style={{ color: '#636366', fontSize: '0.95rem', lineHeight: 1.6, maxWidth: '520px' }}>
-                  Accept payments via Bank Transfer, GCash, Maya, Card, or Cash. Transactions reconcile in real-time with automatic plan activation and receipt generation.
+                  Accept payments via GCash or on-site Cash. Transactions reconcile in real-time with automatic plan activation and receipt generation.
                 </p>
               </div>
 
@@ -119,7 +119,7 @@ export const BentoFeatures: React.FC = () => {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
                   gap: '1rem',
                   backgroundColor: '#f8fafc',
                   padding: '1.25rem',
@@ -130,8 +130,7 @@ export const BentoFeatures: React.FC = () => {
               >
                 {[
                   { method: 'GCash', status: 'Instant Verified', amount: '₱1,500' },
-                  { method: 'Bank Transfer', status: 'Auto-Matched', amount: '₱12,000' },
-                  { method: 'Counter Cash', status: 'Logged by Staff', amount: '₱750' },
+                  { method: 'On-site Cash', status: 'Logged by Staff', amount: '₱750' },
                 ].map((item) => (
                   <div key={item.method} style={{ backgroundColor: '#ffffff', padding: '0.85rem', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)' }}>
                     <div style={{ fontSize: '0.825rem', fontWeight: 600, color: '#1d1d1f' }}>{item.method}</div>

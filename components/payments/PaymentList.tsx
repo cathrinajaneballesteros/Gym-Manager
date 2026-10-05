@@ -19,9 +19,9 @@ import { PaymentModal } from './PaymentModal';
 import { ReceiptCheckerModal } from './ReceiptCheckerModal';
 import { PaymentReminderModal } from './PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { showSuccess, showToast } from '@/lib/ui/swal';
+import { showSuccess, showToast, showConfirm } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
-import { Bell, CheckCircle2, Clock, AlertTriangle, FileText } from 'lucide-react';
+import { Bell, CheckCircle2, Clock, AlertTriangle, FileText, Edit } from 'lucide-react';
 
 export const PaymentList: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -33,6 +33,7 @@ export const PaymentList: React.FC = () => {
   const [receiptFilter, setReceiptFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   const [checkingPayment, setCheckingPayment] = useState<Payment | null>(null);
   const [remindingPayment, setRemindingPayment] = useState<Payment | null>(null);
   const pageSize = 8;
@@ -52,6 +53,11 @@ export const PaymentList: React.FC = () => {
   const unverifiedCount = useMemo(() => {
     return payments.filter((p) => (p.receipt_status || 'unverified') === 'unverified' && p.payment_method !== 'Cash').length;
   }, [payments]);
+
+  const pendingMembers = useMemo(() => {
+    return members.filter((m) => m.status === 'pending');
+  }, [members]);
+  const pendingCount = pendingMembers.length;
 
   const filteredPayments = useMemo(() => {
     return payments.filter((p) => {
@@ -82,6 +88,26 @@ export const PaymentList: React.FC = () => {
     }
   };
 
+  const handleMarkAsPaid = async (p: Payment) => {
+    const memberName = p.member ? `${p.member.first_name} ${p.member.last_name}` : 'Member';
+    const confirmed = await showConfirm(
+      'Mark as Paid?',
+      `Confirm that payment of ${currency}${Number(p.amount).toLocaleString()} for ${memberName} has been received.`,
+      'Yes, Mark as Paid',
+      '#059669'
+    );
+    if (confirmed) {
+      DBService.updatePayment(p.id, {
+        payment_status: 'completed',
+        receipt_status: 'verified',
+        verified_at: new Date().toISOString(),
+        verified_by: profile?.full_name || 'Admin',
+      });
+      refreshData();
+      showToast(`Payment of ${currency}${Number(p.amount).toLocaleString()} marked as paid!`);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
       {/* 1. Page Header */}
@@ -96,15 +122,52 @@ export const PaymentList: React.FC = () => {
             </p>
           </div>
 
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="btn btn-primary"
-          >
-            <Plus size={16} />
-            <span>Add Payment</span>
-          </button>
+          <div style={{ position: 'relative', display: 'inline-flex' }}>
+            <button
+              onClick={() => {
+                setEditingPayment(null);
+                setIsModalOpen(true);
+              }}
+              className="btn btn-primary"
+              style={{ position: 'relative' }}
+              id="add-payment-btn"
+            >
+              <Plus size={16} />
+              <span>Add Payment</span>
+              {pendingCount > 0 && (
+                <span
+                  title={`${pendingCount} new member${pendingCount > 1 ? 's' : ''} waiting to get listed on payments`}
+                  style={{
+                    position: 'absolute',
+                    top: '-8px',
+                    right: '-8px',
+                    minWidth: '22px',
+                    height: '22px',
+                    padding: '0 6px',
+                    borderRadius: '9999px',
+                    backgroundColor: '#ef4444',
+                    color: '#ffffff',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.45), 0 0 0 2px #ffffff',
+                    lineHeight: 1,
+                    zIndex: 10,
+                    pointerEvents: 'none',
+                    letterSpacing: '-0.02em',
+                  }}
+                >
+                  {pendingCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </ScrollReveal>
+
+
 
       {/* 2. Filters & Search Bar */}
       <ScrollReveal delay={40}>
@@ -295,8 +358,72 @@ export const PaymentList: React.FC = () => {
       <ScrollReveal delay={80}>
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         {filteredPayments.length === 0 ? (
-          <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
-            No payments match your search criteria.
+          <div style={{ padding: '4.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div
+              style={{
+                width: '60px',
+                height: '60px',
+                borderRadius: '50%',
+                backgroundColor: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#64748b',
+                marginBottom: '1.25rem',
+              }}
+            >
+              <CreditCard size={28} strokeWidth={1.75} />
+            </div>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#0f172a', marginBottom: '0.4rem' }}>
+              {payments.length === 0 ? 'No payments recorded yet' : 'No payments match your search criteria'}
+            </h3>
+            <p style={{ fontSize: '0.85rem', color: '#64748b', maxWidth: '360px', lineHeight: 1.5, marginBottom: payments.length === 0 ? '1.5rem' : '0' }}>
+              {payments.length === 0
+                ? 'Record a payment when a member joins, renews, or makes an on-site or digital transaction.'
+                : 'Try adjusting your filters or search keywords to find what you are looking for.'}
+            </p>
+            {payments.length === 0 && (
+              <div style={{ position: 'relative', display: 'inline-flex' }}>
+                <button
+                  onClick={() => {
+                    setEditingPayment(null);
+                    setIsModalOpen(true);
+                  }}
+                  className="btn btn-primary"
+                  style={{ position: 'relative' }}
+                >
+                  <Plus size={16} />
+                  <span>Record Payment</span>
+                  {pendingCount > 0 && (
+                    <span
+                      title={`${pendingCount} new member${pendingCount > 1 ? 's' : ''} waiting to get listed on payments`}
+                      style={{
+                        position: 'absolute',
+                        top: '-8px',
+                        right: '-8px',
+                        minWidth: '22px',
+                        height: '22px',
+                        padding: '0 6px',
+                        borderRadius: '9999px',
+                        backgroundColor: '#ef4444',
+                        color: '#ffffff',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.45), 0 0 0 2px #ffffff',
+                        lineHeight: 1,
+                        zIndex: 10,
+                        pointerEvents: 'none',
+                      }}
+                    >
+                      {pendingCount}
+                    </span>
+                  )}
+                </button>
+              </div>
+            )}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
@@ -469,6 +596,29 @@ export const PaymentList: React.FC = () => {
                       {/* Actions */}
                       <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem' }}>
+                          {p.payment_status === 'pending' && (
+                            <button
+                              onClick={() => handleMarkAsPaid(p)}
+                              title="Confirm & Mark Payment as Paid"
+                              style={{
+                                padding: '0.35rem 0.65rem',
+                                borderRadius: '6px',
+                                border: '1px solid #10b981',
+                                backgroundColor: '#ecfdf5',
+                                color: '#047857',
+                                fontSize: '0.75rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '0.3rem',
+                              }}
+                            >
+                              <CheckCircle2 size={13} />
+                              <span>Mark Paid</span>
+                            </button>
+                          )}
+
                           <button
                             onClick={() => setRemindingPayment(p)}
                             title="Send Payment Reminder (SMS/Email)"
@@ -519,6 +669,29 @@ export const PaymentList: React.FC = () => {
                           >
                             <FileCheck size={13} />
                             <span>Receipt</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setEditingPayment(p);
+                              setIsModalOpen(true);
+                            }}
+                            title="Edit Payment Details"
+                            style={{
+                              padding: '0.35rem 0.65rem',
+                              borderRadius: '6px',
+                              border: '1px solid #e2e8f0',
+                              backgroundColor: '#ffffff',
+                              color: '#334155',
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.3rem',
+                            }}
+                          >
+                            <Edit size={13} />
+                            <span>Edit</span>
                           </button>
                         </div>
                       </td>
@@ -610,9 +783,14 @@ export const PaymentList: React.FC = () => {
       {/* Payment Modal */}
       <PaymentModal
         isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
+        onClose={() => {
+          setIsModalOpen(false);
+          setEditingPayment(null);
+        }}
+        initialPayment={editingPayment}
         onSuccess={() => {
           setIsModalOpen(false);
+          setEditingPayment(null);
           refreshData();
         }}
       />

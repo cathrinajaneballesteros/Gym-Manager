@@ -30,6 +30,22 @@ interface MemberModalProps {
   initialMember?: Member | null;
 }
 
+function calculateExpirationDate(startDateStr: string, durationMonths: number): string {
+  if (!startDateStr || !durationMonths) return '';
+  const parts = startDateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return '';
+  const [year, month, day] = parts;
+  const target = new Date(year, month - 1 + durationMonths, day);
+  // Prevent end-of-month rollover (e.g. Jan 31 + 1 month)
+  if (target.getDate() !== day) {
+    target.setDate(0);
+  }
+  const y = target.getFullYear();
+  const m = String(target.getMonth() + 1).padStart(2, '0');
+  const d = String(target.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 export const MemberModal: React.FC<MemberModalProps> = ({
   isOpen,
   onClose,
@@ -39,13 +55,14 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   const plans: MembershipPlan[] = DBService.getPlans();
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // Default expiration 1 month from today
-  const defaultEndDate = new Date();
-  defaultEndDate.setMonth(defaultEndDate.getMonth() + 1);
-  const defaultEndStr = defaultEndDate.toISOString().split('T')[0];
+  const buildDefaultValues = (): MemberFormData => {
+    const defaultPlanId = initialMember?.membership_plan_id || plans[0]?.id || '';
+    const defaultStartDate = initialMember?.start_date || todayStr;
+    const selectedPlan = plans.find((p) => p.id === defaultPlanId);
+    const duration = selectedPlan?.duration_months || 1;
+    const computedEndDate = calculateExpirationDate(defaultStartDate, duration);
 
-  const buildDefaultValues = (): MemberFormData =>
-    initialMember
+    return initialMember
       ? {
           first_name: initialMember.first_name,
           last_name: initialMember.last_name,
@@ -54,7 +71,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           emergency_contact: initialMember.emergency_contact,
           membership_plan_id: initialMember.membership_plan_id,
           start_date: initialMember.start_date,
-          end_date: initialMember.end_date,
+          end_date: initialMember.end_date || computedEndDate,
           notes: initialMember.notes || '',
         }
       : {
@@ -63,23 +80,40 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           email: '',
           phone: '',
           emergency_contact: '',
-          membership_plan_id: plans[0]?.id || '',
-          start_date: todayStr,
-          end_date: defaultEndStr,
+          membership_plan_id: defaultPlanId,
+          start_date: defaultStartDate,
+          end_date: computedEndDate,
           notes: '',
         };
+  };
 
   const {
     register,
     handleSubmit,
     setValue,
     getValues,
+    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<MemberFormData>({
     resolver: zodResolver(memberSchema),
     defaultValues: buildDefaultValues(),
   });
+
+  // Watch start_date and membership_plan_id to automatically recalculate expiration date
+  const watchedStartDate = watch('start_date');
+  const watchedPlanId = watch('membership_plan_id');
+
+  useEffect(() => {
+    if (!watchedStartDate || !watchedPlanId) return;
+    const selectedPlan = plans.find((p) => p.id === watchedPlanId);
+    if (selectedPlan) {
+      const computed = calculateExpirationDate(watchedStartDate, selectedPlan.duration_months);
+      if (computed && computed !== getValues('end_date')) {
+        setValue('end_date', computed, { shouldValidate: true });
+      }
+    }
+  }, [watchedStartDate, watchedPlanId, plans, setValue, getValues]);
 
   // Refill the form with the correct values every time the modal opens or the record changes.
   useEffect(() => {
@@ -107,22 +141,12 @@ export const MemberModal: React.FC<MemberModalProps> = ({
     }
   };
 
-  const handlePlanChange = (planId: string) => {
-    const selectedPlan = plans.find((p) => p.id === planId);
-    if (selectedPlan) {
-      const startDate = getValues('start_date') || new Date().toISOString().split('T')[0];
-      const d = new Date(startDate);
-      d.setMonth(d.getMonth() + selectedPlan.duration_months);
-      setValue('end_date', d.toISOString().split('T')[0]);
-    }
-  };
-
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={initialMember ? 'Edit Gym Member' : 'Register New Member'}
-      subtitle={initialMember ? 'Update subscription details and emergency contacts' : 'Add member to active roster and auto-generate initial payment'}
+      subtitle={initialMember ? 'Update subscription details and emergency contacts' : 'Register member into active roster. Payments can be recorded manually in Payments.'}
     >
       <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div className="grid grid-cols-2 gap-3">
@@ -220,10 +244,6 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           </label>
           <select
             {...register('membership_plan_id')}
-            onChange={(e) => {
-              register('membership_plan_id').onChange(e);
-              handlePlanChange(e.target.value);
-            }}
             style={{ width: '100%' }}
           >
             {plans.map((p) => (
@@ -253,10 +273,38 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           </div>
 
           <div>
-            <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-              Expiration Date *
-            </label>
-            <input type="date" {...register('end_date')} style={{ width: '100%' }} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
+              <label style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                Expiration Date *
+              </label>
+              <span
+                style={{
+                  fontSize: '0.7rem',
+                  color: '#64748b',
+                  fontWeight: 500,
+                  backgroundColor: '#f1f5f9',
+                  padding: '0.1rem 0.45rem',
+                  borderRadius: '4px',
+                  border: '1px solid #e2e8f0',
+                }}
+              >
+                Auto-calculated
+              </span>
+            </div>
+            <input
+              type="date"
+              {...register('end_date')}
+              readOnly
+              tabIndex={-1}
+              title="Automatically calculated from the start date and selected membership plan"
+              style={{
+                width: '100%',
+                backgroundColor: '#f8fafc',
+                color: '#475569',
+                cursor: 'not-allowed',
+                borderColor: '#e2e8f0',
+              }}
+            />
             {errors.end_date && (
               <span style={{ fontSize: '0.725rem', color: 'var(--danger)', marginTop: '0.2rem', display: 'block' }}>
                 {errors.end_date.message}

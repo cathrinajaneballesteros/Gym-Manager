@@ -23,7 +23,7 @@ const expenseSchema = z.object({
   title: z.string().min(3, 'Expense title must be at least 3 characters'),
   amount: z.number().positive('Expense amount must be greater than 0'),
   expense_date: z.string().min(10, 'Expense date is required'),
-  payment_method: z.string().min(1, 'Payment method is required'),
+  payment_method: z.enum(['Cash', 'GCash'], { message: 'Payment method is required' }),
   description: z.string().optional(),
 });
 
@@ -180,12 +180,8 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
               Payment Method *
             </label>
             <select {...register('payment_method')} style={{ width: '100%' }}>
-              <option value="Cash">Cash Voucher</option>
-              <option value="GCash">GCash Transfer</option>
-              <option value="Bank Transfer">Bank Wire / Online Banking</option>
-              <option value="Credit Card">Corporate Credit Card</option>
-              <option value="Check">Check Issue</option>
-              <option value="Other">Other</option>
+              <option value="Cash">Cash (On-site)</option>
+              <option value="GCash">GCash</option>
             </select>
             {errors.payment_method && (
               <span style={{ fontSize: '0.725rem', color: 'var(--danger)', marginTop: '0.2rem', display: 'block' }}>

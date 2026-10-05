@@ -21,7 +21,6 @@ import {
   ArrowDownRight,
   ShieldCheck,
   DollarSign,
-  Wallet,
   Building2,
   Zap,
   Package,
@@ -31,7 +30,6 @@ import {
   Layers,
   Smartphone,
   Banknote,
-  Landmark,
   Activity,
   FileText,
   Percent,
@@ -241,14 +239,8 @@ export const DashboardOverview: React.FC = () => {
       case 'GCash':
         return { icon: Smartphone, color: '#0284c7', bg: '#e0f2fe', border: '#bae6fd', bar: 'linear-gradient(90deg, #0284c7, #38bdf8)' };
       case 'Cash':
-        return { icon: Banknote, color: '#059669', bg: '#ecfdf5', border: '#a7f3d0', bar: 'linear-gradient(90deg, #059669, #34d399)' };
-      case 'Bank Transfer':
-        return { icon: Landmark, color: '#4f46e5', bg: '#eef2ff', border: '#c7d2fe', bar: 'linear-gradient(90deg, #4f46e5, #818cf8)' };
-      case 'Credit Card':
-      case 'Debit Card':
-        return { icon: CreditCard, color: '#d97706', bg: '#fef3c7', border: '#fde68a', bar: 'linear-gradient(90deg, #d97706, #fbbf24)' };
       default:
-        return { icon: Wallet, color: '#64748b', bg: '#f8fafc', border: '#e2e8f0', bar: 'linear-gradient(90deg, #64748b, #94a3b8)' };
+        return { icon: Banknote, color: '#059669', bg: '#ecfdf5', border: '#a7f3d0', bar: 'linear-gradient(90deg, #059669, #34d399)' };
     }
   };
 

@@ -8,13 +8,14 @@ import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Payment, Member, MembershipPlan } from '@/types/database';
 import { showError } from '@/lib/ui/swal';
+import { MemberPicker } from './MemberPicker';
 
 const paymentSchema = z.object({
   member_id: z.string().min(1, 'Please select a member'),
   membership_plan_id: z.string().optional(),
   amount: z.number().positive('Payment amount must be greater than 0'),
   payment_date: z.string().min(10, 'Payment date is required'),
-  payment_method: z.enum(['Cash', 'GCash', 'Bank Transfer', 'Credit Card', 'Debit Card', 'Other']),
+  payment_method: z.enum(['Cash', 'GCash']),
   payment_status: z.enum(['completed', 'pending', 'refunded']),
   reference_number: z.string().optional(),
   notes: z.string().optional(),
@@ -27,6 +28,7 @@ interface PaymentModalProps {
   onClose: () => void;
   onSuccess: (payment: Payment) => void;
   preselectedMemberId?: string;
+  initialPayment?: Payment | null;
 }
 
 export const PaymentModal: React.FC<PaymentModalProps> = ({
@@ -34,6 +36,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   onClose,
   onSuccess,
   preselectedMemberId,
+  initialPayment,
 }) => {
   const members: Member[] = DBService.getMembers();
   const plans: MembershipPlan[] = DBService.getPlans();
@@ -41,27 +44,42 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const defaultMember = preselectedMemberId
     ? members.find((m) => m.id === preselectedMemberId)
-    : members[0];
+    : members.find((m) => m.status === 'pending') || members[0];
 
   const defaultPlan = defaultMember
     ? plans.find((p) => p.id === defaultMember.membership_plan_id) || plans[0]
     : plans[0];
 
-  const buildDefaultValues = (): PaymentFormData => ({
-    member_id: defaultMember?.id || '',
-    membership_plan_id: defaultPlan?.id || '',
-    amount: defaultPlan?.price || 1500,
-    payment_date: todayStr,
-    payment_method: 'GCash',
-    payment_status: 'completed',
-    reference_number: '',
-    notes: '',
-  });
+  const buildDefaultValues = (): PaymentFormData => {
+    if (initialPayment) {
+      return {
+        member_id: initialPayment.member_id,
+        membership_plan_id: initialPayment.membership_plan_id || '',
+        amount: Number(initialPayment.amount),
+        payment_date: initialPayment.payment_date,
+        payment_method: initialPayment.payment_method,
+        payment_status: initialPayment.payment_status,
+        reference_number: initialPayment.reference_number || '',
+        notes: initialPayment.notes || '',
+      };
+    }
+    return {
+      member_id: defaultMember?.id || '',
+      membership_plan_id: defaultPlan?.id || '',
+      amount: defaultPlan?.price || 1500,
+      payment_date: todayStr,
+      payment_method: 'Cash',
+      payment_status: 'completed',
+      reference_number: '',
+      notes: '',
+    };
+  };
 
   const {
     register,
     handleSubmit,
     setValue,
+    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<PaymentFormData>({
@@ -69,12 +87,12 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     defaultValues: buildDefaultValues(),
   });
 
-  // Refill the form with the correct values every time the modal opens or the preselected member changes.
+  // Refill the form with the correct values every time the modal opens or the target payment/member changes.
   useEffect(() => {
     if (!isOpen) return;
     reset(buildDefaultValues());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, preselectedMemberId]);
+  }, [isOpen, preselectedMemberId, initialPayment?.id]);
 
   const handleMemberChange = (memberId: string) => {
     const member = members.find((m) => m.id === memberId);
@@ -96,20 +114,38 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
   const onSubmit = (data: PaymentFormData) => {
     try {
-      const payment = DBService.addPayment(data);
+      let payment: Payment;
+      if (initialPayment) {
+        payment = DBService.updatePayment(initialPayment.id, data);
+      } else {
+        payment = DBService.addPayment(data);
+      }
 
-      // If it's a completed payment, advance the member's subscription date
-      if (data.payment_status === 'completed' && data.membership_plan_id) {
+      // If it's a completed payment and not an edit, advance subscription date for renewals or expired memberships
+      if (!initialPayment && data.payment_status === 'completed' && data.membership_plan_id) {
         const plan = plans.find((p) => p.id === data.membership_plan_id);
         const member = members.find((m) => m.id === data.member_id);
         if (member && plan) {
-          const baseDate = new Date(member.end_date > todayStr ? member.end_date : todayStr);
-          baseDate.setMonth(baseDate.getMonth() + plan.duration_months);
-          DBService.updateMember(member.id, {
-            end_date: baseDate.toISOString().split('T')[0],
-            status: 'active',
-            membership_plan_id: plan.id,
-          });
+          const priorPayments = DBService.getPayments().filter(
+            (p) => p.member_id === member.id && p.payment_status === 'completed' && p.id !== payment.id
+          );
+          const isExpired = new Date(member.end_date).getTime() < new Date(todayStr).getTime();
+
+          // Only extend if renewing (prior payment exists) or reactivating an expired membership
+          if (priorPayments.length > 0 || isExpired) {
+            const baseDate = new Date(member.end_date > todayStr ? member.end_date : todayStr);
+            baseDate.setMonth(baseDate.getMonth() + plan.duration_months);
+            DBService.updateMember(member.id, {
+              end_date: baseDate.toISOString().split('T')[0],
+              status: 'active',
+              membership_plan_id: plan.id,
+            });
+          } else {
+            // First payment recorded for pending member: activate membership status
+            DBService.updateMember(member.id, {
+              status: 'active',
+            });
+          }
         }
       }
 
@@ -117,7 +153,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       reset();
       onClose();
     } catch (err: any) {
-      showError('Payment Failed', err.message || 'Failed to record payment');
+      showError('Payment Failed', err.message || 'Failed to save payment record');
     }
   };
 
@@ -125,8 +161,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Record Membership Payment"
-      subtitle="Track member renewal or new enrollment transaction into revenue stream"
+      title={initialPayment ? 'Edit Payment Record' : 'Record Membership Payment'}
+      subtitle={initialPayment ? 'Update payment transaction details, method, or status' : 'Select member and enter payment details to record revenue'}
     >
       <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div>
@@ -138,21 +174,18 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               ⚠️ No members registered yet. Please add a member in the <strong>Members</strong> tab before recording a payment.
             </div>
           ) : (
-            <select
-              {...register('member_id')}
-              onChange={(e) => {
-                register('member_id').onChange(e);
-                handleMemberChange(e.target.value);
-              }}
-              style={{ width: '100%' }}
-            >
-              <option value="">Select a member...</option>
-              {members.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.first_name} {m.last_name} ({m.email})
-                </option>
-              ))}
-            </select>
+            <>
+              <input type="hidden" {...register('member_id')} />
+              <MemberPicker
+                members={members}
+                value={watch('member_id')}
+                hasError={!!errors.member_id}
+                onChange={(id) => {
+                  setValue('member_id', id, { shouldValidate: true });
+                  handleMemberChange(id);
+                }}
+              />
+            </>
           )}
           {errors.member_id && (
             <span style={{ fontSize: '0.725rem', color: 'var(--danger)', marginTop: '0.2rem', display: 'block' }}>
@@ -176,7 +209,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             >
               {plans.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} (₱{p.price.toLocaleString()})
+                  {p.name}
                 </option>
               ))}
             </select>
@@ -218,12 +251,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               Payment Method *
             </label>
             <select {...register('payment_method')} style={{ width: '100%' }}>
-              <option value="Cash">Cash (Counter)</option>
-              <option value="GCash">GCash / QRPh</option>
-              <option value="Bank Transfer">Bank Transfer / InstaPay</option>
-              <option value="Credit Card">Credit Card (POS Terminal)</option>
-              <option value="Debit Card">Debit Card</option>
-              <option value="Other">Other</option>
+              <option value="Cash">Cash (On-site)</option>
+              <option value="GCash">GCash</option>
             </select>
           </div>
         </div>
@@ -270,7 +299,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             Cancel
           </button>
           <button type="submit" className="btn btn-primary" disabled={isSubmitting || members.length === 0}>
-            {isSubmitting ? 'Recording...' : 'Complete Payment'}
+            {isSubmitting ? 'Saving...' : initialPayment ? 'Update Payment' : 'Complete Payment'}
           </button>
         </div>
       </form>

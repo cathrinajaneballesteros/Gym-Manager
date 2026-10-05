@@ -25,7 +25,7 @@ export interface MembershipPlan {
   created_at: string;
 }
 
-export type MemberStatus = 'active' | 'expiring' | 'expired' | 'inactive';
+export type MemberStatus = 'active' | 'expiring' | 'expired' | 'inactive' | 'pending';
 
 export interface Member {
   id: string;
@@ -46,7 +46,8 @@ export interface Member {
   updated_at?: string;
 }
 
-export type PaymentMethod = 'Cash' | 'GCash' | 'Bank Transfer' | 'Credit Card' | 'Debit Card' | 'Other';
+export type PaymentMethod = 'Cash' | 'GCash';
+export const PAYMENT_METHODS: PaymentMethod[] = ['Cash', 'GCash'];
 export type PaymentStatus = 'completed' | 'pending' | 'refunded';
 
 export type ReceiptStatus = 'verified' | 'unverified' | 'rejected';
@@ -90,7 +91,7 @@ export interface Expense {
   title: string;
   amount: number;
   expense_date: string; // YYYY-MM-DD
-  payment_method: string;
+  payment_method: PaymentMethod;
   description?: string;
   created_at: string;
   updated_at?: string;
