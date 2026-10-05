@@ -2,15 +2,15 @@ import { ExpenseLeakResult, ExpenseAnomaly, CostSavingPlaybook } from '@/types/a
 import { DBService } from '@/lib/data/db-service';
 import { ExpenseCategory } from '@/types/database';
 
-// Standard baseline benchmarks per category for the fitness center
+// Standard baseline benchmarks per category for a provincial open-air fitness center
 const CATEGORY_HISTORICAL_BASELINES: Record<ExpenseCategory, number> = {
   Rent: 10000,
-  Salaries: 10000,
-  Utilities: 3000,
-  Equipment: 3000,
-  Maintenance: 2000,
-  Supplies: 1000,
-  Marketing: 1000,
+  Salaries: 8000,
+  Utilities: 2500,
+  Equipment: 2000,
+  Maintenance: 1500,
+  Supplies: 800,
+  Marketing: 500,
   Other: 1000,
 };
 
@@ -69,9 +69,9 @@ export function detectExpenseLeaks(): ExpenseLeakResult {
     // Prefer real multi-month historical average if available and positive, else use standard benchmark
     const histData = historySummary.categories[category];
     const baseline =
-      histData && histData.monthlyAvg > 1000
+      histData && histData.monthlyAvg > 500
         ? histData.monthlyAvg
-        : CATEGORY_HISTORICAL_BASELINES[category] || 5000;
+        : CATEGORY_HISTORICAL_BASELINES[category] || 2500;
 
     const difference = currentAmount - baseline;
 
@@ -81,33 +81,33 @@ export function detectExpenseLeaks(): ExpenseLeakResult {
 
       let severity: 'low' | 'moderate' | 'critical' = 'low';
       let reason = `${category} spending is ${percentageIncrease}% above the historical monthly baseline.`;
-      let suggestedAction = 'Review recent line-item invoices and enforce pre-approval limits.';
+      let suggestedAction = 'Review recent receipts and check for unneeded store purchases.';
 
       if (category === 'Utilities') {
         severity = percentageIncrease >= 40 ? 'critical' : 'moderate';
-        reason = `Utility bill surged to ₱${currentAmount.toLocaleString()} (${percentageIncrease}% above the ₱${baseline.toLocaleString()} historical average). Typical leak source: 24/7 air conditioning left idling during off-peak hours or water heating cycles.`;
+        reason = `Utility bill surged to ₱${currentAmount.toLocaleString()} (${percentageIncrease}% above baseline). Common sources in open gyms: high-velocity industrial fans left running during closed hours, sound system amplifier on overnight, or water dispenser cooling faults.`;
         suggestedAction =
-          'Program commercial thermostats to 24°C, shut down floor AC units 10 PM - 5 AM, and inspect water heaters for thermal sensor faults.';
+          'Turn off large industrial fans during midday lull hours, unplug sound amplifiers overnight, and keep high-bay gym lights off until dusk.';
       } else if (category === 'Equipment') {
         severity = percentageIncrease > 75 ? 'moderate' : 'low';
-        reason = `Equipment expenditures rose by ${percentageIncrease}% (₱${currentAmount.toLocaleString()} vs ₱${baseline.toLocaleString()} baseline). If this is a long-term asset acquisition (e.g., plates or treadmills), capitalize over 36 months rather than expensing as immediate operational overhead.`;
+        reason = `Equipment expenditures rose by ${percentageIncrease}% (₱${currentAmount.toLocaleString()} vs ₱${baseline.toLocaleString()} baseline). For iron weights, bars, or pulley benches, prioritize local welding and refurbishing over expensive brand replacements.`;
         suggestedAction =
-          'Distinguish capital improvements (CapEx) from regular maintenance; review equipment warranty terms before authorizing vendor repairs.';
+          'Consult a local welder or machine shop to repair benches, racks, and pulleys before ordering expensive new equipment.';
       } else if (category === 'Maintenance') {
         severity = percentageIncrease >= 35 ? 'moderate' : 'low';
-        reason = `Maintenance spending is ${percentageIncrease}% higher than the typical ₱${baseline.toLocaleString()}/mo upkeep allocation. Spikes often correlate with emergency breakdown service fees.`;
+        reason = `Maintenance spending is ${percentageIncrease}% above normal baseline. In an open-air provincial gym, humidity and sweat accelerate barbell rust and bench vinyl tears.`;
         suggestedAction =
-          'Lock in a fixed quarterly preventative maintenance SLA with certified gym equipment technicians to eliminate emergency call-out surcharges.';
+          'Apply routine oil/WD-40 to barbells and plates to stop rust, and patch torn bench leatherette early before the foam core gets ruined.';
       } else if (category === 'Supplies') {
         severity = 'low';
-        reason = `Consumables and cleaning supplies outlays exceed baseline by ${percentageIncrease}%. Frequent ad-hoc retail purchases incur 20-30% markups.`;
+        reason = `Supplies expenses rose by ${percentageIncrease}%. Buying small ad-hoc supplies at nearby sari-sari stores carries high retail markups.`;
         suggestedAction =
-          'Switch to quarterly wholesale bulk procurement for gym wipes, sanitation liquid, and paper towels directly from commercial distributors.';
+          'Purchase 5-gallon water refills, gym chalk, and floor disinfectant in bulk from public market (palengke) wholesalers or local refill stations.';
       } else if (category === 'Marketing') {
         severity = 'low';
-        reason = `Promotional spend increased by ${percentageIncrease}%. Ensure digital ad spend correlates with tracked member conversions.`;
+        reason = `Promotional spend increased by ${percentageIncrease}%. In provincial towns, community word-of-mouth and Facebook group updates work best.`;
         suggestedAction =
-          'Review cost-per-acquisition across paid social channels and prioritize zero-cost member referral incentives.';
+          'Focus on member referral perks (e.g., 3 free gym days for bringing a friend) rather than paid digital ads.';
       }
 
       anomalies.push({
@@ -131,87 +131,98 @@ export function detectExpenseLeaks(): ExpenseLeakResult {
   const severityRank = { critical: 3, moderate: 2, low: 1 };
   anomalies.sort((a, b) => severityRank[b.severity] - severityRank[a.severity]);
 
-  // Generate actionable, tailored Cost-Saving Playbooks for gym profitability
+  // Feasible, tailored recommendations for provincial open-air gyms ("bakal gyms")
   const savingOpportunities: CostSavingPlaybook[] = [
     {
-      id: 'playbook-energy',
-      title: 'HVAC & Power Automation Protocol',
+      id: 'playbook-fans-lighting',
+      title: 'Industrial Fan & Lighting Schedule',
       category: 'Utilities',
-      estimatedMonthlySavings: 4500,
-      estimatedAnnualSavings: 54000,
+      estimatedMonthlySavings: 800,
+      estimatedAnnualSavings: 9600,
       difficulty: 'Easy',
-      timeline: '1-2 Days',
+      timeline: 'Immediate',
       description:
-        'Air conditioning and industrial ventilation represent 45-60% of gym electricity consumption. Implementing zone scheduling during off-peak hours generates immediate cash savings.',
+        'Turn off heavy industrial stand fans during low-traffic midday hours (11 AM – 2:30 PM), rely on natural open-air cross-ventilation, and turn on lights only at dusk.',
       actionChecklist: [
-        'Set main gym floor thermostats to 23°C - 24°C (dropping each degree below 24°C adds ~6-8% power cost)',
-        'Install digital timers on heavy exhaust fans and studio AC units to power down between 10:00 PM and 5:00 AM',
-        'Clean air conditioning condenser filters bi-weekly to boost heat exchange efficiency by up to 15%',
-        'Switch remaining cardio room and locker room lighting to high-lumen commercial LEDs',
+        'Power down 2–3 big industrial fans during midday lull hours when gym is empty',
+        'Maximize natural daylight through open walls; switch on gym lights only at 5:30 PM',
+        'Unplug sound system amplifier and water dispenser heater overnight',
       ],
     },
     {
-      id: 'playbook-preventative-sla',
-      title: 'Preventative Maintenance SLA vs Emergency Calls',
+      id: 'playbook-welder-rust',
+      title: 'Barbell Rust Prevention & Local Welder Repairs',
       category: 'Maintenance',
-      estimatedMonthlySavings: 2800,
-      estimatedAnnualSavings: 33600,
-      difficulty: 'Moderate',
-      timeline: '1 Week',
+      estimatedMonthlySavings: 1200,
+      estimatedAnnualSavings: 14400,
+      difficulty: 'Easy',
+      timeline: 'Weekly',
       description:
-        'Emergency technician calls for snapped treadmill belts and cable crossover pulleys cost 2.5x more than scheduled preventative upkeep while damaging member trust.',
+        'Provincial humidity rusts iron weights quickly. Regular oil wiping prevents plate deterioration, while a trusted local welder can reinforce bench frames at a fraction of replacement cost.',
       actionChecklist: [
-        'Establish weekly staff cable inspection, guide rod lubrication (silicone-only), and bolt-tightening routine',
-        'Negotiate a flat quarterly preventative maintenance contract with a local fitness equipment technician',
-        'Maintain a basic on-site spare parts kit (universal cables, pulleys, carabiners, treadmill lube)',
-        'Track equipment serial numbers and warranty expirations in the maintenance log',
+        'Wipe Olympic barbells and iron plates with WD-40 or light mineral oil twice a month',
+        'Have a neighborhood welder re-weld loose bench joints and barbell collars',
+        'Patch torn bench vinyl leatherette with heavy upholstery cloth before foam rots',
       ],
     },
     {
-      id: 'playbook-supplies-wholesale',
-      title: 'Bulk Sourcing & Sanitation Procurement',
+      id: 'playbook-water-supplies',
+      title: '5-Gallon Water Refill Deal & Bulk Palengke Sourcing',
       category: 'Supplies',
+      estimatedMonthlySavings: 700,
+      estimatedAnnualSavings: 8400,
+      difficulty: 'Easy',
+      timeline: 'Monthly',
+      description:
+        'Partner with a nearby water refilling station for commercial 5-gallon blue container discounts, and buy cleaning detergent and chalk from public market wholesalers.',
+      actionChecklist: [
+        'Negotiate bulk refill rates (₱20–₱25 per 5-gal jug vs standard ₱35 retail)',
+        'Buy powdered detergent, bleach, and mop rags in bulk from public market wholesalers',
+        'Keep gym chalk (magnesium block) in a covered tub to prevent dropping and waste',
+      ],
+    },
+    {
+      id: 'playbook-drinks-wholesale',
+      title: 'Wholesale Cold Drinks & Energy Drinks Sourcing',
+      category: 'Other',
       estimatedMonthlySavings: 1500,
       estimatedAnnualSavings: 18000,
       difficulty: 'Easy',
-      timeline: '3-4 Days',
+      timeline: '1 Day',
       description:
-        'Buying disinfectant spray, microfiber towels, and dispenser tissue from retail grocery or hardware stores incurs a 25-35% price premium.',
+        'Cold drinks (Cobra, Sting, bottled water) are high-margin in open gyms. Buy by the case from wholesale supermarkets rather than buying retail from convenience stores.',
       actionChecklist: [
-        'Open a commercial B2B account with institutional cleaning chemical and paper distributors',
-        'Purchase hospital-grade concentrate sanitizer in 20-liter drums rather than pre-diluted spray bottles',
-        'Order a 90-day supply of dispenser rolls to trigger free freight and volume pricing tier',
-        'Audit member-accessible towel stations to reduce laundering loss and water heating overhead',
+        'Buy energy drinks and bottled water by the 24-case at wholesale prices (earn ₱10–₱15 margin/bottle)',
+        'Keep ice cooler or mini chiller fully stocked before the 4 PM – 8 PM peak crowd',
+        'Track daily drink payments in the log to prevent unrecorded bottle shrinkage',
       ],
     },
     {
-      id: 'playbook-merchant-software',
-      title: 'Vendor Auditing & Software Pruning',
-      category: 'Other',
-      estimatedMonthlySavings: 1200,
-      estimatedAnnualSavings: 14400,
-      difficulty: 'Moderate',
-      timeline: '2 Days',
+      id: 'playbook-wifi-counter',
+      title: 'Affordable Prepaid Wi-Fi & Counter Bandwidth',
+      category: 'Utilities',
+      estimatedMonthlySavings: 800,
+      estimatedAnnualSavings: 9600,
+      difficulty: 'Easy',
+      timeline: '1 Day',
       description:
-        'Audit third-party SaaS subscriptions, POS merchant rates, and recurring service charges to eliminate dead overhead.',
+        'Use an affordable provincial prepaid fiber or basic Wi-Fi plan (₱899–₱1,299/mo) and keep the management counter on a dedicated connection so members do not hog bandwidth.',
       actionChecklist: [
-        'Audit bank statements for auto-renewing software tools (SMS providers, duplicate music licenses, graphic apps)',
-        'Compare QR PH merchant settlement fees to ensure your payment gateway fee is capped under standard rates',
-        'Audit internet and CCTV broadband plans — re-contracting often yields double speed at lower promo rates',
+        'Switch to a cost-effective prepaid fiber or community broadband promo',
+        'Set a separate Wi-Fi password for the gym counter system so the app runs smoothly',
       ],
     },
   ];
 
-  // Calculate total potential monthly savings
-  // Blend direct leak overages + actionable playbook baseline optimizations
+  // Calculate total potential monthly savings (direct leaks + playbook opportunities)
   const playbookMonthlySavings = savingOpportunities.reduce((sum, p) => sum + p.estimatedMonthlySavings, 0);
-  const totalPotentialMonthly = Math.max(directLeakSavings, Math.round(directLeakSavings * 0.75 + playbookMonthlySavings * 0.45));
+  const totalPotentialMonthly = directLeakSavings > 0 ? directLeakSavings + playbookMonthlySavings : playbookMonthlySavings;
   const totalPotentialAnnual = totalPotentialMonthly * 12;
 
   const alertSummary =
     anomalies.length > 0
-      ? `${anomalies.length} spending anomalies flagged in ${evaluatedMonthLabel}. Total potential optimization: ₱${totalPotentialMonthly.toLocaleString()}/mo (₱${totalPotentialAnnual.toLocaleString()}/yr).`
-      : `Operating expenses are tracking within historical norms. AI playbooks identify up to ₱${totalPotentialMonthly.toLocaleString()}/mo in proactive cash-flow savings.`;
+      ? `${anomalies.length} spending ${anomalies.length === 1 ? 'anomaly' : 'anomalies'} flagged in ${evaluatedMonthLabel}. Total potential savings: ₱${totalPotentialMonthly.toLocaleString()}/mo.`
+      : `Operating expenses are tracking within normal limits for an open gym. Following these practical tips can save up to ₱${totalPotentialMonthly.toLocaleString()}/mo.`;
 
   return {
     anomalies,

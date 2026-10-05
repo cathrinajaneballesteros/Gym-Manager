@@ -53,26 +53,24 @@ export const ReportsView: React.FC = () => {
   const lastExp = lastMonthKpis?.totalExpenses || 0;
   const lastProfit = lastMonthKpis?.netProfit || 0;
 
-  const getChangeStats = (current: number, previous: number, invertColors = false) => {
+  const getChangeStats = (current: number, previous: number) => {
     if (previous === 0) {
       if (current === 0) {
         return { label: '0.0%', color: '#64748b' };
       }
-      return { label: '+100.0%', color: invertColors ? '#ef4444' : '#059669' };
+      return { label: '+100.0%', color: '#059669' };
     }
     const diff = ((current - previous) / previous) * 100;
     const isPositive = diff >= 0;
-    const color = invertColors
-      ? (isPositive ? '#ef4444' : '#059669')
-      : (isPositive ? '#059669' : '#ef4444');
+    const color = isPositive ? '#059669' : '#ef4444';
     return {
-      label: `${isPositive ? '+' : ''}${diff.toFixed(1)}%`,
+      label: `${isPositive ? '+' : '-'}${Math.abs(diff).toFixed(1)}%`,
       color,
     };
   };
 
   const revChange = getChangeStats(kpis.totalRevenue, lastRev);
-  const expChange = getChangeStats(kpis.totalExpenses, lastExp, true);
+  const expChange = getChangeStats(kpis.totalExpenses, lastExp);
   const profitChange = getChangeStats(kpis.netProfit, lastProfit);
 
   const handleExportPDF = () => {
@@ -189,8 +187,8 @@ export const ReportsView: React.FC = () => {
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
               Total Revenue
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
-              {currency}{kpis.totalRevenue.toLocaleString()}
+            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#059669', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
+              +{currency}{kpis.totalRevenue.toLocaleString()}
             </div>
             {lastRev > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: revChange.color, fontWeight: 600, marginBottom: '1rem' }}>
@@ -204,11 +202,11 @@ export const ReportsView: React.FC = () => {
                 <AreaChart data={trends}>
                   <defs>
                     <linearGradient id="repRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0284c7" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#0284c7" stopOpacity={0.0} />
+                      <stop offset="5%" stopColor="#059669" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#059669" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <Area type="monotone" dataKey="revenue" stroke="#0284c7" strokeWidth={2.5} fill="url(#repRev)" />
+                  <Area type="monotone" dataKey="revenue" stroke="#059669" strokeWidth={2.5} fill="url(#repRev)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -219,8 +217,8 @@ export const ReportsView: React.FC = () => {
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
               Total Expenses
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
-              {currency}{kpis.totalExpenses.toLocaleString()}
+            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#ef4444', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
+              -{currency}{kpis.totalExpenses.toLocaleString()}
             </div>
             {lastExp > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: expChange.color, fontWeight: 600, marginBottom: '1rem' }}>
@@ -234,11 +232,11 @@ export const ReportsView: React.FC = () => {
                 <AreaChart data={trends}>
                   <defs>
                     <linearGradient id="repExp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#059669" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#059669" stopOpacity={0.0} />
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
-                  <Area type="monotone" dataKey="expenses" stroke="#059669" strokeWidth={2.5} fill="url(#repExp)" />
+                  <Area type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2.5} fill="url(#repExp)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -263,8 +261,8 @@ export const ReportsView: React.FC = () => {
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.35rem' }}>
               Net Profit
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em' }}>
-              {currency}{kpis.netProfit.toLocaleString()}
+            <div style={{ fontSize: '2rem', fontWeight: 700, color: kpis.netProfit >= 0 ? '#059669' : '#ef4444', letterSpacing: '-0.02em' }}>
+              {kpis.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(kpis.netProfit).toLocaleString()}
             </div>
           </div>
 
@@ -314,19 +312,19 @@ export const ReportsView: React.FC = () => {
             <tbody>
               <tr style={{ borderBottom: '1px solid #f8fafc' }}>
                 <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>Revenue</td>
-                <td style={{ padding: '1rem 1.25rem', color: '#334155' }}>{currency}{kpis.totalRevenue.toLocaleString()}</td>
+                <td style={{ padding: '1rem 1.25rem', color: '#059669', fontWeight: 600 }}>+{currency}{kpis.totalRevenue.toLocaleString()}</td>
                 <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastRev.toLocaleString()}</td>
                 <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: revChange.color, fontWeight: 600 }}>{revChange.label}</td>
               </tr>
               <tr style={{ borderBottom: '1px solid #f8fafc' }}>
                 <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>Expenses</td>
-                <td style={{ padding: '1rem 1.25rem', color: '#334155' }}>{currency}{kpis.totalExpenses.toLocaleString()}</td>
+                <td style={{ padding: '1rem 1.25rem', color: '#ef4444', fontWeight: 600 }}>-{currency}{kpis.totalExpenses.toLocaleString()}</td>
                 <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastExp.toLocaleString()}</td>
                 <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: expChange.color, fontWeight: 600 }}>{expChange.label}</td>
               </tr>
               <tr>
                 <td style={{ padding: '1rem 1.5rem', fontWeight: 700, color: '#0f172a' }}>Net Profit</td>
-                <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#059669' }}>{currency}{kpis.netProfit.toLocaleString()}</td>
+                <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: kpis.netProfit >= 0 ? '#059669' : '#ef4444' }}>{kpis.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(kpis.netProfit).toLocaleString()}</td>
                 <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastProfit.toLocaleString()}</td>
                 <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: profitChange.color, fontWeight: 700 }}>{profitChange.label}</td>
               </tr>

@@ -6,6 +6,7 @@ import { LucideIcon, ArrowUpRight, ArrowDownRight, ChevronRight } from 'lucide-r
 interface MetricCardProps {
   title: string;
   value: string | number;
+  valueColor?: string;
   subtitle?: string;
   icon: LucideIcon;
   trend?: {
@@ -22,6 +23,7 @@ interface MetricCardProps {
 export const MetricCard: React.FC<MetricCardProps> = ({
   title,
   value,
+  valueColor,
   subtitle,
   icon: Icon,
   trend,
@@ -144,7 +146,13 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         style={{
           fontSize: '1.9rem',
           fontWeight: 700,
-          color: '#1d1d1f',
+          color:
+            valueColor ||
+            (typeof value === 'string' && value.startsWith('-')
+              ? '#ef4444'
+              : typeof value === 'string' && value.startsWith('+')
+              ? '#059669'
+              : '#1d1d1f'),
           letterSpacing: '-0.025em',
           lineHeight: 1.15,
           marginBottom: '0.55rem',
@@ -159,7 +167,14 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           <span
             style={{
               fontWeight: 600,
-              color: trend.positive ? '#34c759' : '#ff3b30',
+              color:
+                typeof trend.value === 'string' && trend.value.startsWith('-')
+                  ? '#ef4444'
+                  : typeof trend.value === 'string' && trend.value.startsWith('+')
+                  ? '#059669'
+                  : trend.positive
+                  ? '#059669'
+                  : '#ef4444',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.15rem',

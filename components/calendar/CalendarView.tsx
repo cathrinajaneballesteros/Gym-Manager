@@ -292,7 +292,7 @@ export const CalendarView: React.FC = () => {
               <span style={{ fontSize: '0.785rem', color: '#64748b', fontWeight: 600 }}>Revenue Collected</span>
             </div>
             <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#059669' }}>
-              {currency}{monthStats.monthRevenue.toLocaleString()}
+              +{currency}{monthStats.monthRevenue.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px' }}>
               Payments received in {monthName}
@@ -305,7 +305,7 @@ export const CalendarView: React.FC = () => {
               <span style={{ fontSize: '0.785rem', color: '#64748b', fontWeight: 600 }}>Expenses Paid</span>
             </div>
             <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#ef4444' }}>
-              {currency}{monthStats.monthExpenseTotal.toLocaleString()}
+              -{currency}{monthStats.monthExpenseTotal.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px' }}>
               Operational outlays in {monthName}
@@ -314,11 +314,11 @@ export const CalendarView: React.FC = () => {
 
           <div className="card" style={{ padding: '1rem 1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
-              <CreditCard size={16} style={{ color: monthStats.monthNetProfit >= 0 ? '#0284c7' : '#ef4444' }} />
+              <CreditCard size={16} style={{ color: monthStats.monthNetProfit >= 0 ? '#059669' : '#ef4444' }} />
               <span style={{ fontSize: '0.785rem', color: '#64748b', fontWeight: 600 }}>Net Month Profit</span>
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: monthStats.monthNetProfit >= 0 ? '#0284c7' : '#ef4444' }}>
-              {currency}{monthStats.monthNetProfit.toLocaleString()}
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: monthStats.monthNetProfit >= 0 ? '#059669' : '#ef4444' }}>
+              {monthStats.monthNetProfit >= 0 ? '+' : '-'}{currency}{Math.abs(monthStats.monthNetProfit).toLocaleString()}
             </div>
             <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px' }}>
               Cash balance for {monthName}

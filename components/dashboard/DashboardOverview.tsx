@@ -117,37 +117,47 @@ export const DashboardOverview: React.FC = () => {
 
   const revenueTrend = lastMonthKpis && lastMonthKpis.totalRevenue > 0
     ? {
-        value: `${Math.abs(Math.round(((kpis.totalRevenue - lastMonthKpis.totalRevenue) / lastMonthKpis.totalRevenue) * 100))}%`,
+        value: `${kpis.totalRevenue >= lastMonthKpis.totalRevenue ? '+' : '-'}${Math.abs(Math.round(((kpis.totalRevenue - lastMonthKpis.totalRevenue) / lastMonthKpis.totalRevenue) * 100))}%`,
         positive: kpis.totalRevenue >= lastMonthKpis.totalRevenue,
-        direction: kpis.totalRevenue > lastMonthKpis.totalRevenue ? ('up' as const) : ('down' as const),
+        direction: kpis.totalRevenue >= lastMonthKpis.totalRevenue ? ('up' as const) : ('down' as const),
         label: 'from last month',
       }
     : undefined;
 
   const expenseTrend = lastMonthKpis && lastMonthKpis.totalExpenses > 0
-    ? {
-        value: `${Math.abs(Math.round(((kpis.totalExpenses - lastMonthKpis.totalExpenses) / lastMonthKpis.totalExpenses) * 100))}%`,
-        positive: kpis.totalExpenses <= lastMonthKpis.totalExpenses,
-        direction: kpis.totalExpenses > lastMonthKpis.totalExpenses ? ('up' as const) : ('down' as const),
-        label: 'from last month',
-      }
+    ? (() => {
+        const expenseDiff = kpis.totalExpenses - lastMonthKpis.totalExpenses;
+        return {
+          value: `${expenseDiff >= 0 ? '+' : '-'}${Math.abs(Math.round((expenseDiff / lastMonthKpis.totalExpenses) * 100))}%`,
+          positive: expenseDiff >= 0,
+          direction: expenseDiff >= 0 ? ('up' as const) : ('down' as const),
+          label: 'from last month',
+        };
+      })()
     : undefined;
 
   const profitTrend = lastMonthKpis && lastMonthKpis.netProfit !== 0
-    ? {
-        value: `${Math.abs(Math.round(((kpis.netProfit - lastMonthKpis.netProfit) / Math.abs(lastMonthKpis.netProfit)) * 100))}%`,
-        positive: kpis.netProfit >= lastMonthKpis.netProfit,
-        direction: kpis.netProfit > lastMonthKpis.netProfit ? ('up' as const) : ('down' as const),
-        label: 'from last month',
-      }
+    ? (() => {
+        const profitDiff = kpis.netProfit - lastMonthKpis.netProfit;
+        return {
+          value: `${profitDiff >= 0 ? '+' : '-'}${Math.abs(Math.round((profitDiff / Math.abs(lastMonthKpis.netProfit)) * 100))}%`,
+          positive: profitDiff >= 0,
+          direction: profitDiff >= 0 ? ('up' as const) : ('down' as const),
+          label: 'from last month',
+        };
+      })()
     : undefined;
 
   const memberTrend = lastMonthKpis && lastMonthKpis.activeMembers > 0
-    ? {
-        value: `${Math.abs(Math.round(((kpis.activeMembers - lastMonthKpis.activeMembers) / lastMonthKpis.activeMembers) * 100))}%`,
-        positive: kpis.activeMembers >= lastMonthKpis.activeMembers,
-        label: 'from last month',
-      }
+    ? (() => {
+        const memberDiff = kpis.activeMembers - lastMonthKpis.activeMembers;
+        return {
+          value: `${memberDiff >= 0 ? '+' : '-'}${Math.abs(Math.round((memberDiff / lastMonthKpis.activeMembers) * 100))}%`,
+          positive: memberDiff >= 0,
+          direction: memberDiff >= 0 ? ('up' as const) : ('down' as const),
+          label: 'from last month',
+        };
+      })()
     : undefined;
 
   // Derived data for breakdown modals
@@ -293,30 +303,33 @@ export const DashboardOverview: React.FC = () => {
         <div className="grid grid-cols-4 gap-4">
           <MetricCard
             title="Total Revenue"
-            value={`${currency}${kpis.totalRevenue.toLocaleString()}`}
+            value={`+${currency}${kpis.totalRevenue.toLocaleString()}`}
             icon={TrendingUp}
             trend={revenueTrend}
             variant="emerald"
+            valueColor="#059669"
             onClick={() => setActiveBreakdown('revenue')}
             clickableHint="Breakdown"
           />
 
           <MetricCard
             title="Total Expenses"
-            value={`${currency}${kpis.totalExpenses.toLocaleString()}`}
+            value={`-${currency}${kpis.totalExpenses.toLocaleString()}`}
             icon={Receipt}
             trend={expenseTrend}
             variant="rose"
+            valueColor="#ef4444"
             onClick={() => setActiveBreakdown('expenses')}
             clickableHint="Breakdown"
           />
 
           <MetricCard
             title="Net Profit"
-            value={`${currency}${kpis.netProfit.toLocaleString()}`}
+            value={`${kpis.netProfit >= 0 ? '+' : '-'}${currency}${Math.abs(kpis.netProfit).toLocaleString()}`}
             icon={CreditCard}
             trend={profitTrend}
-            variant="blue"
+            variant={kpis.netProfit >= 0 ? 'emerald' : 'rose'}
+            valueColor={kpis.netProfit >= 0 ? '#059669' : '#ef4444'}
             onClick={() => setActiveBreakdown('profit')}
             clickableHint="Breakdown"
           />
@@ -669,11 +682,21 @@ export const DashboardOverview: React.FC = () => {
                 )}
 
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.65rem', flexWrap: 'wrap' }}>
-                  <h3 style={{ fontSize: '2.1rem', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-                    {activeBreakdown === 'revenue' && `${currency}${kpis.totalRevenue.toLocaleString()}`}
-                    {activeBreakdown === 'expenses' && `${currency}${kpis.totalExpenses.toLocaleString()}`}
-                    {activeBreakdown === 'profit' && `${currency}${kpis.netProfit.toLocaleString()}`}
-                    {activeBreakdown === 'members' && `${kpis.activeMembers} Members`}
+                  <h3 style={{ fontSize: '2.1rem', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
+                    {activeBreakdown === 'revenue' && (
+                      <span style={{ color: '#059669' }}>+{currency}{kpis.totalRevenue.toLocaleString()}</span>
+                    )}
+                    {activeBreakdown === 'expenses' && (
+                      <span style={{ color: '#ef4444' }}>-{currency}{kpis.totalExpenses.toLocaleString()}</span>
+                    )}
+                    {activeBreakdown === 'profit' && (
+                      <span style={{ color: kpis.netProfit >= 0 ? '#059669' : '#ef4444' }}>
+                        {kpis.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(kpis.netProfit).toLocaleString()}
+                      </span>
+                    )}
+                    {activeBreakdown === 'members' && (
+                      <span style={{ color: '#0f172a' }}>{kpis.activeMembers} Members</span>
+                    )}
                   </h3>
                   {activeBreakdown === 'profit' && (
                     <span style={{ fontSize: '0.85rem', fontWeight: 700, color: kpis.profitMargin >= 20 ? '#059669' : '#e11d48', backgroundColor: kpis.profitMargin >= 20 ? '#ecfdf5' : '#fff1f2', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>
@@ -1124,7 +1147,7 @@ export const DashboardOverview: React.FC = () => {
                           </div>
                           <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>(-) Operating Facility Overhead</span>
                         </div>
-                        <strong style={{ fontSize: '1.05rem', color: '#e11d48' }}>-{currency}{kpis.totalExpenses.toLocaleString()}</strong>
+                        <strong style={{ fontSize: '1.05rem', color: '#ef4444' }}>-{currency}{kpis.totalExpenses.toLocaleString()}</strong>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.25rem' }}>
@@ -1132,8 +1155,8 @@ export const DashboardOverview: React.FC = () => {
                           <span style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>(=) Net Operating Profit</span>
                           <span style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>Post-expense net retained earnings</span>
                         </div>
-                        <strong style={{ fontSize: '1.45rem', fontWeight: 800, color: kpis.netProfit >= 0 ? '#0284c7' : '#e11d48' }}>
-                          {currency}{kpis.netProfit.toLocaleString()}
+                        <strong style={{ fontSize: '1.45rem', fontWeight: 800, color: kpis.netProfit >= 0 ? '#059669' : '#ef4444' }}>
+                          {kpis.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(kpis.netProfit).toLocaleString()}
                         </strong>
                       </div>
                     </div>

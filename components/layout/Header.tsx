@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, Search, Calendar, Bell, ChevronDown } from 'lucide-react';
+import { Menu, Bell } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
-import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
 
 interface HeaderProps {
   onToggleMobileMenu?: () => void;
@@ -47,8 +46,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
         zIndex: 30,
       }}
     >
-      {/* Left: Mobile Toggle + Apple-style Search Bar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flex: 1, maxWidth: '420px' }}>
+      {/* Left: Mobile Toggle */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
         <button
           onClick={onToggleMobileMenu}
           style={{
@@ -63,61 +62,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
         >
           <Menu size={17} />
         </button>
-
-        {/* macOS Search Pill */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            backgroundColor: 'rgba(118, 118, 128, 0.08)',
-            borderRadius: '8px',
-            padding: '0.35rem 0.75rem',
-            width: '100%',
-            maxWidth: '300px',
-            transition: 'background-color 0.15s ease',
-          }}
-        >
-          <Search size={14} color="#8e8e93" />
-          <input
-            type="text"
-            placeholder="Search"
-            style={{
-              border: 'none',
-              background: 'transparent',
-              outline: 'none',
-              fontSize: '0.825rem',
-              color: '#1d1d1f',
-              width: '100%',
-              padding: 0,
-            }}
-          />
-        </div>
       </div>
 
-      {/* Right: Date Picker Pill + Notifications + Profile Avatar */}
+      {/* Right: Notifications + Profile Avatar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-        {/* Apple Segmented Date Pill */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.45rem',
-            padding: '0.35rem 0.75rem',
-            borderRadius: '8px',
-            backgroundColor: 'rgba(118, 118, 128, 0.08)',
-            fontSize: '0.785rem',
-            color: '#3a3a3c',
-            fontWeight: 500,
-            cursor: 'pointer',
-          }}
-          className="header-date-pill"
-        >
-          <Calendar size={13} color="#636366" />
-          <span>{getCurrentMonthRangeLabel()}</span>
-          <ChevronDown size={12} color="#8e8e93" />
-        </div>
-
         {/* Notification Bell */}
         <button
           onClick={() => setHasUnread(false)}
@@ -182,14 +130,6 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
           </div>
         </Link>
       </div>
-
-      <style jsx>{`
-        @media (max-width: 768px) {
-          .header-date-pill {
-            display: none !important;
-          }
-        }
-      `}</style>
     </header>
   );
 };

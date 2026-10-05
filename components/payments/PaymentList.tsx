@@ -494,8 +494,8 @@ export const PaymentList: React.FC = () => {
                       </td>
 
                       {/* Amount */}
-                      <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#0f172a' }}>
-                        {currency}{Number(p.amount).toLocaleString()}
+                      <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#059669' }}>
+                        +{currency}{Number(p.amount).toLocaleString()}
                       </td>
 
                       {/* Method & Ref */}

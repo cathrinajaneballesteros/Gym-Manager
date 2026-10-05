@@ -206,8 +206,8 @@ export const ExpenseList: React.FC = () => {
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
               {timeframeFilter === 'all' ? 'Total Historical Outlay' : 'Selected Period Outlay'}
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
-              {currency}{periodExpensesTotal.toLocaleString()}
+            <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#ef4444', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
+              -{currency}{periodExpensesTotal.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
               {timeframeFilter === 'all'
@@ -221,16 +221,22 @@ export const ExpenseList: React.FC = () => {
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
               This Month ({now.toLocaleString('en-US', { month: 'short' })})
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
-              {currency}{thisMonthExpenses.toLocaleString()}
+            <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#ef4444', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
+              -{currency}{thisMonthExpenses.toLocaleString()}
             </div>
             {lastMonthExpenses > 0 ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: thisMonthExpenses <= lastMonthExpenses ? '#059669' : '#ef4444', fontWeight: 600 }}>
-                {thisMonthExpenses <= lastMonthExpenses ? <ArrowDownRight size={14} /> : <ArrowUpRight size={14} />}
-                <span>
-                  {Math.abs(Math.round(((thisMonthExpenses - lastMonthExpenses) / lastMonthExpenses) * 100))}% vs last month ({currency}{lastMonthExpenses.toLocaleString()})
-                </span>
-              </div>
+              (() => {
+                const diff = thisMonthExpenses - lastMonthExpenses;
+                const isPos = diff >= 0;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: isPos ? '#059669' : '#ef4444', fontWeight: 600 }}>
+                    {isPos ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                    <span>
+                      {isPos ? '+' : '-'}{Math.abs(Math.round((diff / lastMonthExpenses) * 100))}% vs last month ({currency}{lastMonthExpenses.toLocaleString()})
+                    </span>
+                  </div>
+                );
+              })()
             ) : (
               <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
                 First month on record
@@ -243,8 +249,8 @@ export const ExpenseList: React.FC = () => {
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
               Monthly Baseline Average
             </div>
-            <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
-              {currency}{historicalSummary.overallMonthlyAverage.toLocaleString()}
+            <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#ef4444', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
+              -{currency}{historicalSummary.overallMonthlyAverage.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
               Average across {historicalSummary.monthlyTotals.length} recorded months
@@ -635,8 +641,8 @@ export const ExpenseList: React.FC = () => {
                       )}
                     </td>
 
-                    <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#0f172a' }}>
-                      {currency}{Number(exp.amount).toLocaleString()}
+                    <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#ef4444' }}>
+                      -{currency}{Number(exp.amount).toLocaleString()}
                     </td>
 
                     <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
