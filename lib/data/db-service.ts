@@ -97,6 +97,19 @@ function getRecentMonthBuckets(count: number): { month: string; monthKey: string
   return buckets;
 }
 
+// Format a Date as a local YYYY-MM-DD string (avoids UTC shifting a day).
+function formatDateLocal(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Count members whose membership was active at any point within [start, end] (inclusive).
+function countMembersActiveInWindow(members: Member[], start: string, end: string): number {
+  return members.filter((m) => {
+    if (!m.start_date || !m.end_date) return false;
+    return m.start_date <= end && m.end_date >= start;
+  }).length;
+}
+
 export class DBService {
   // 1. Profile / Settings
   static getProfile(): UserProfile {
@@ -659,7 +672,28 @@ export class DBService {
     const netProfit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? Math.round((netProfit / totalRevenue) * 100) : 0;
 
-    const activeMembers = members.filter((m) => m.status === 'active').length;
+    // The headline "Active Members" count always reflects the current roster so
+    // it matches the Members page. For past/rolling windows we count members
+    // whose membership was active during that window instead — this is what
+    // makes the month-over-month trend arrow meaningful.
+    const currentActiveMembers = members.filter((m) => m.status === 'active').length;
+    let activeMembers = currentActiveMembers;
+    if (timeframe === 'last-month') {
+      const start = formatDateLocal(new Date(currentYear, currentMonth - 1, 1));
+      const end = formatDateLocal(new Date(currentYear, currentMonth, 0));
+      activeMembers = countMembersActiveInWindow(members, start, end);
+    } else if (timeframe === 'last-3-months' || timeframe === 'last-6-months') {
+      const count = timeframe === 'last-3-months' ? 3 : 6;
+      const start = formatDateLocal(new Date(currentYear, currentMonth - (count - 1), 1));
+      const end = formatDateLocal(new Date(currentYear, currentMonth + 1, 0));
+      activeMembers = countMembersActiveInWindow(members, start, end);
+    } else if (timeframe === 'this-year') {
+      activeMembers = countMembersActiveInWindow(
+        members,
+        `${currentYear}-01-01`,
+        formatDateLocal(now)
+      );
+    }
     const expiringMemberships = members.filter((m) => m.status === 'expiring').length;
     const expiredMemberships = members.filter((m) => m.status === 'expired').length;
     const inactiveMembers = members.filter((m) => m.status === 'inactive').length;
