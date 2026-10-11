@@ -53,10 +53,15 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   initialMember,
 }) => {
   const plans: MembershipPlan[] = DBService.getPlans();
+  // Only active plans can be chosen, but always keep the member's current plan
+  // in the list so editing someone on a deactivated plan does not drop it.
+  const selectablePlans = plans.filter(
+    (p) => p.is_active || p.id === initialMember?.membership_plan_id
+  );
   const todayStr = new Date().toISOString().split('T')[0];
 
   const buildDefaultValues = (): MemberFormData => {
-    const defaultPlanId = initialMember?.membership_plan_id || plans[0]?.id || '';
+    const defaultPlanId = initialMember?.membership_plan_id || selectablePlans[0]?.id || '';
     const defaultStartDate = initialMember?.start_date || todayStr;
     const selectedPlan = plans.find((p) => p.id === defaultPlanId);
     const duration = selectedPlan?.duration_months || 1;
@@ -246,7 +251,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
             {...register('membership_plan_id')}
             style={{ width: '100%' }}
           >
-            {plans.map((p) => (
+            {selectablePlans.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name} — ₱{p.price.toLocaleString()} ({p.duration_months} mo)
               </option>
