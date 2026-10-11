@@ -2,13 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  FileBarChart2,
   Calendar,
   FileText,
   FileSpreadsheet,
   ArrowUpRight,
   ArrowDownRight,
-  TrendingUp,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { DashboardKPIs, MonthlyTrendData, Expense, Member, Payment, UserProfile } from '@/types/database';
@@ -23,10 +21,32 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showError } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
 
+type ReportTab = 'revenue' | 'expenses' | 'profit-loss' | 'monthly' | 'annual';
+
+const TH: React.CSSProperties = {
+  padding: '0.75rem 1.25rem',
+  fontSize: '0.72rem',
+  fontWeight: 700,
+  color: '#64748b',
+  textTransform: 'uppercase',
+  letterSpacing: '0.04em',
+  textAlign: 'left',
+  borderBottom: '1px solid #f1f5f9',
+};
+
+const TD: React.CSSProperties = {
+  padding: '0.8rem 1.25rem',
+  fontSize: '0.875rem',
+  color: '#0f172a',
+  borderBottom: '1px solid #f8fafc',
+};
+
 export const ReportsView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'revenue' | 'expenses' | 'profit-loss' | 'monthly' | 'annual'>('revenue');
+  const [activeTab, setActiveTab] = useState<ReportTab>('revenue');
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
   const [lastMonthKpis, setLastMonthKpis] = useState<DashboardKPIs | null>(null);
+  const [sixMonthKpis, setSixMonthKpis] = useState<DashboardKPIs | null>(null);
+  const [annualKpis, setAnnualKpis] = useState<DashboardKPIs | null>(null);
   const [trends, setTrends] = useState<MonthlyTrendData[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -37,6 +57,8 @@ export const ReportsView: React.FC = () => {
   useEffect(() => {
     setKpis(DBService.getDashboardKPIs('this-month'));
     setLastMonthKpis(DBService.getDashboardKPIs('last-month'));
+    setSixMonthKpis(DBService.getDashboardKPIs('last-6-months'));
+    setAnnualKpis(DBService.getDashboardKPIs('this-year'));
     setTrends(DBService.getMonthlyTrends());
     setExpenses(DBService.getExpenses());
     setMembers(DBService.getMembers());
@@ -73,14 +95,88 @@ export const ReportsView: React.FC = () => {
   const expChange = getChangeStats(kpis.totalExpenses, lastExp);
   const profitChange = getChangeStats(kpis.netProfit, lastProfit);
 
+  // The header cards follow the selected report's period.
+  const isPeriodTab = activeTab === 'monthly' || activeTab === 'annual';
+  const display = (activeTab === 'annual' ? annualKpis : activeTab === 'monthly' ? sixMonthKpis : kpis) || kpis;
+
+  const rangeLabel =
+    activeTab === 'annual'
+      ? `${new Date().getFullYear()} Year to Date`
+      : activeTab === 'monthly'
+      ? 'Last 6 Months'
+      : getCurrentMonthRangeLabel();
+
+  const tabs: { key: ReportTab; label: string }[] = [
+    { key: 'revenue', label: 'Revenue' },
+    { key: 'expenses', label: 'Expenses' },
+    { key: 'profit-loss', label: 'Profit & Loss' },
+    { key: 'monthly', label: 'Monthly' },
+    { key: 'annual', label: 'Annual' },
+  ];
+
+  // ---- Derived data for the tab bodies ----
+  const now = new Date();
+  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+  const monthPayments = payments.filter(
+    (p) => p.payment_status === 'completed' && (p.payment_date || '').startsWith(monthKey)
+  );
+  const monthExpenses = expenses.filter((e) => (e.expense_date || '').startsWith(monthKey));
+
+  const monthRevenueTotal = monthPayments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const monthExpenseTotal = monthExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+  const paymentsByMethod = monthPayments.reduce<Record<string, { total: number; count: number }>>((acc, p) => {
+    const method = p.payment_method || 'Other';
+    if (!acc[method]) acc[method] = { total: 0, count: 0 };
+    acc[method].total += Number(p.amount);
+    acc[method].count += 1;
+    return acc;
+  }, {});
+
+  const paymentsByPlan = monthPayments.reduce<Record<string, { total: number; count: number }>>((acc, p) => {
+    const planName = p.plan?.name || 'Standard Pass';
+    if (!acc[planName]) acc[planName] = { total: 0, count: 0 };
+    acc[planName].total += Number(p.amount);
+    acc[planName].count += 1;
+    return acc;
+  }, {});
+
+  const expensesByCategory = monthExpenses.reduce<Record<string, { total: number; count: number }>>((acc, e) => {
+    if (!acc[e.category]) acc[e.category] = { total: 0, count: 0 };
+    acc[e.category].total += Number(e.amount);
+    acc[e.category].count += 1;
+    return acc;
+  }, {});
+
+  const topExpenses = [...monthExpenses]
+    .sort((a, b) => Number(b.amount) - Number(a.amount))
+    .slice(0, 5);
+
+  const annualMonths = Array.from({ length: now.getMonth() + 1 }, (_, m) => {
+    const key = `${now.getFullYear()}-${String(m + 1).padStart(2, '0')}`;
+    const revenue = payments
+      .filter((p) => p.payment_status === 'completed' && (p.payment_date || '').startsWith(key))
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+    const expense = expenses
+      .filter((e) => (e.expense_date || '').startsWith(key))
+      .reduce((sum, e) => sum + Number(e.amount), 0);
+    return {
+      label: new Date(now.getFullYear(), m, 1).toLocaleString('en-US', { month: 'short' }),
+      revenue,
+      expenses: expense,
+      profit: revenue - expense,
+    };
+  });
+
   const handleExportPDF = () => {
     setIsExporting(true);
     try {
       generateFinancialPDFReport({
         gymName,
         currency,
-        reportPeriod: kpis.periodLabel,
-        kpis,
+        reportPeriod: display.periodLabel,
+        kpis: display,
         trends,
         expenses,
       });
@@ -98,8 +194,8 @@ export const ReportsView: React.FC = () => {
       generateFinancialExcelReport({
         gymName,
         currency,
-        reportPeriod: kpis.periodLabel,
-        kpis,
+        reportPeriod: display.periodLabel,
+        kpis: display,
         trends,
         expenses,
         members,
@@ -143,7 +239,7 @@ export const ReportsView: React.FC = () => {
             }}
           >
             <Calendar size={14} color="#64748b" />
-            <span>{getCurrentMonthRangeLabel()}</span>
+            <span>{rangeLabel}</span>
           </div>
         </div>
       </ScrollReveal>
@@ -151,16 +247,10 @@ export const ReportsView: React.FC = () => {
       {/* 2. Apple macOS/iOS Segmented Navigation Controls */}
       <ScrollReveal delay={40}>
         <div style={{ display: 'inline-flex', backgroundColor: 'rgba(118, 118, 128, 0.12)', padding: '3px', borderRadius: '10px', gap: '2px', width: 'fit-content' }}>
-          {[
-            { key: 'revenue', label: 'Revenue' },
-            { key: 'expenses', label: 'Expenses' },
-            { key: 'profit-loss', label: 'Profit & Loss' },
-            { key: 'monthly', label: 'Monthly' },
-            { key: 'annual', label: 'Annual' },
-          ].map((tab) => (
+          {tabs.map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
+              onClick={() => setActiveTab(tab.key)}
               style={{
                 padding: '0.4rem 1rem',
                 borderRadius: '8px',
@@ -188,9 +278,9 @@ export const ReportsView: React.FC = () => {
               Total Revenue
             </div>
             <div style={{ fontSize: '2rem', fontWeight: 700, color: '#059669', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
-              +{currency}{kpis.totalRevenue.toLocaleString()}
+              +{currency}{display.totalRevenue.toLocaleString()}
             </div>
-            {lastRev > 0 && (
+            {!isPeriodTab && lastRev > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: revChange.color, fontWeight: 600, marginBottom: '1rem' }}>
                 <ArrowUpRight size={14} />
                 <span>{revChange.label} from last month</span>
@@ -218,9 +308,9 @@ export const ReportsView: React.FC = () => {
               Total Expenses
             </div>
             <div style={{ fontSize: '2rem', fontWeight: 700, color: '#ef4444', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
-              -{currency}{kpis.totalExpenses.toLocaleString()}
+              -{currency}{display.totalExpenses.toLocaleString()}
             </div>
-            {lastExp > 0 && (
+            {!isPeriodTab && lastExp > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: expChange.color, fontWeight: 600, marginBottom: '1rem' }}>
                 <ArrowDownRight size={14} />
                 <span>{expChange.label} from last month</span>
@@ -261,8 +351,8 @@ export const ReportsView: React.FC = () => {
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.35rem' }}>
               Net Profit
             </div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: kpis.netProfit >= 0 ? '#059669' : '#ef4444', letterSpacing: '-0.02em' }}>
-              {kpis.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(kpis.netProfit).toLocaleString()}
+            <div style={{ fontSize: '2rem', fontWeight: 700, color: display.netProfit >= 0 ? '#059669' : '#ef4444', letterSpacing: '-0.02em' }}>
+              {display.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(display.netProfit).toLocaleString()}
             </div>
           </div>
 
@@ -290,49 +380,347 @@ export const ReportsView: React.FC = () => {
         </div>
       </ScrollReveal>
 
-      {/* 5. Financial Summary Table */}
-      <ScrollReveal delay={130}>
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>
-              Financial Summary
-            </h2>
-          </div>
+      {/* 5. Tab-specific report body */}
+      {activeTab === 'revenue' && (
+        <ScrollReveal delay={130}>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Collections by Payment Method</h2>
+                <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                  {monthPayments.length} payment{monthPayments.length === 1 ? '' : 's'} recorded this month
+                </p>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={TH}>Method</th>
+                      <th style={TH}>Payments</th>
+                      <th style={{ ...TH, textAlign: 'right' }}>Total</th>
+                      <th style={{ ...TH, textAlign: 'right' }}>Share</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(paymentsByMethod).map(([method, data]) => {
+                      const pct = monthRevenueTotal > 0 ? Math.round((data.total / monthRevenueTotal) * 100) : 0;
+                      return (
+                        <tr key={method}>
+                          <td style={TD}><strong>{method}</strong></td>
+                          <td style={TD}>{data.count}</td>
+                          <td style={{ ...TD, textAlign: 'right', color: '#059669', fontWeight: 600 }}>
+                            +{currency}{data.total.toLocaleString()}
+                          </td>
+                          <td style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{pct}%</td>
+                        </tr>
+                      );
+                    })}
+                    {Object.keys(paymentsByMethod).length === 0 && (
+                      <tr>
+                        <td style={{ ...TD, color: '#94a3b8' }} colSpan={4}>No payments recorded this month.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
 
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase' }}>
-                <th style={{ padding: '0.9rem 1.5rem' }}>Category</th>
-                <th style={{ padding: '0.9rem 1.25rem' }}>This Month</th>
-                <th style={{ padding: '0.9rem 1.25rem' }}>Last Month</th>
-                <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Change</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr style={{ borderBottom: '1px solid #f8fafc' }}>
-                <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>Revenue</td>
-                <td style={{ padding: '1rem 1.25rem', color: '#059669', fontWeight: 600 }}>+{currency}{kpis.totalRevenue.toLocaleString()}</td>
-                <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastRev.toLocaleString()}</td>
-                <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: revChange.color, fontWeight: 600 }}>{revChange.label}</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f8fafc' }}>
-                <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>Expenses</td>
-                <td style={{ padding: '1rem 1.25rem', color: '#ef4444', fontWeight: 600 }}>-{currency}{kpis.totalExpenses.toLocaleString()}</td>
-                <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastExp.toLocaleString()}</td>
-                <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: expChange.color, fontWeight: 600 }}>{expChange.label}</td>
-              </tr>
-              <tr>
-                <td style={{ padding: '1rem 1.5rem', fontWeight: 700, color: '#0f172a' }}>Net Profit</td>
-                <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: kpis.netProfit >= 0 ? '#059669' : '#ef4444' }}>{kpis.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(kpis.netProfit).toLocaleString()}</td>
-                <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastProfit.toLocaleString()}</td>
-                <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: profitChange.color, fontWeight: 700 }}>{profitChange.label}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-      </ScrollReveal>
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Revenue by Membership Tier</h2>
+                <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                  Subscription tiers performance this month
+                </p>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={TH}>Plan</th>
+                      <th style={TH}>Subs</th>
+                      <th style={{ ...TH, textAlign: 'right' }}>Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(paymentsByPlan).map(([planName, data]) => (
+                      <tr key={planName}>
+                        <td style={TD}><strong>{planName}</strong></td>
+                        <td style={TD}>{data.count}</td>
+                        <td style={{ ...TD, textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>
+                          {currency}{data.total.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                    {Object.keys(paymentsByPlan).length === 0 && (
+                      <tr>
+                        <td style={{ ...TD, color: '#94a3b8' }} colSpan={3}>No tier revenue recorded this month.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+      )}
+
+      {activeTab === 'expenses' && (
+        <ScrollReveal delay={130}>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Outlays by Category</h2>
+                <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                  Share of this month&apos;s overhead
+                </p>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={TH}>Category</th>
+                      <th style={TH}>Items</th>
+                      <th style={{ ...TH, textAlign: 'right' }}>Total</th>
+                      <th style={{ ...TH, textAlign: 'right' }}>Share</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(expensesByCategory).map(([category, data]) => {
+                      const pct = monthExpenseTotal > 0 ? Math.round((data.total / monthExpenseTotal) * 100) : 0;
+                      return (
+                        <tr key={category}>
+                          <td style={TD}><strong>{category}</strong></td>
+                          <td style={TD}>{data.count}</td>
+                          <td style={{ ...TD, textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>
+                            -{currency}{data.total.toLocaleString()}
+                          </td>
+                          <td style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{pct}%</td>
+                        </tr>
+                      );
+                    })}
+                    {Object.keys(expensesByCategory).length === 0 && (
+                      <tr>
+                        <td style={{ ...TD, color: '#94a3b8' }} colSpan={4}>No expenses recorded this month.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Top Expense Line Items</h2>
+                <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                  Ranked by amount this month
+                </p>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={TH}>Item</th>
+                      <th style={TH}>Category</th>
+                      <th style={{ ...TH, textAlign: 'right' }}>Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {topExpenses.map((e) => (
+                      <tr key={e.id}>
+                        <td style={TD}><strong>{e.title}</strong></td>
+                        <td style={{ ...TD, color: '#64748b' }}>{e.category}</td>
+                        <td style={{ ...TD, textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>
+                          -{currency}{Number(e.amount).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                    {topExpenses.length === 0 && (
+                      <tr>
+                        <td style={{ ...TD, color: '#94a3b8' }} colSpan={3}>No expenses recorded this month.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+      )}
+
+      {activeTab === 'profit-loss' && (
+        <ScrollReveal delay={130}>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div
+              style={{
+                padding: '1.25rem 1.5rem',
+                borderBottom: '1px solid #f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '1rem',
+                flexWrap: 'wrap',
+              }}
+            >
+              <div>
+                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Profit &amp; Loss Statement</h2>
+                <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                  This month compared with last month
+                </p>
+              </div>
+              <div
+                style={{
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  padding: '0.25rem 0.7rem',
+                  borderRadius: '6px',
+                  color: kpis.profitMargin >= 20 ? '#059669' : '#e11d48',
+                  backgroundColor: kpis.profitMargin >= 20 ? '#ecfdf5' : '#fff1f2',
+                }}
+              >
+                {kpis.profitMargin}% Net Margin
+              </div>
+            </div>
+
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase' }}>
+                    <th style={{ padding: '0.9rem 1.5rem' }}>Category</th>
+                    <th style={{ padding: '0.9rem 1.25rem' }}>This Month</th>
+                    <th style={{ padding: '0.9rem 1.25rem' }}>Last Month</th>
+                    <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Change</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>Revenue</td>
+                    <td style={{ padding: '1rem 1.25rem', color: '#059669', fontWeight: 600 }}>+{currency}{kpis.totalRevenue.toLocaleString()}</td>
+                    <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastRev.toLocaleString()}</td>
+                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: revChange.color, fontWeight: 600 }}>{revChange.label}</td>
+                  </tr>
+                  <tr style={{ borderBottom: '1px solid #f8fafc' }}>
+                    <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>Expenses</td>
+                    <td style={{ padding: '1rem 1.25rem', color: '#ef4444', fontWeight: 600 }}>-{currency}{kpis.totalExpenses.toLocaleString()}</td>
+                    <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastExp.toLocaleString()}</td>
+                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: expChange.color, fontWeight: 600 }}>{expChange.label}</td>
+                  </tr>
+                  <tr>
+                    <td style={{ padding: '1rem 1.5rem', fontWeight: 700, color: '#0f172a' }}>Net Profit</td>
+                    <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: kpis.netProfit >= 0 ? '#059669' : '#ef4444' }}>{kpis.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(kpis.netProfit).toLocaleString()}</td>
+                    <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastProfit.toLocaleString()}</td>
+                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: profitChange.color, fontWeight: 700 }}>{profitChange.label}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </ScrollReveal>
+      )}
+
+      {activeTab === 'monthly' && (
+        <ScrollReveal delay={130}>
+          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+            <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+              <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Monthly Performance</h2>
+              <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                Revenue, expenses and net profit over the last 6 months
+              </p>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr>
+                    <th style={TH}>Month</th>
+                    <th style={{ ...TH, textAlign: 'right' }}>Revenue</th>
+                    <th style={{ ...TH, textAlign: 'right' }}>Expenses</th>
+                    <th style={{ ...TH, textAlign: 'right' }}>Net Profit</th>
+                    <th style={{ ...TH, textAlign: 'right' }}>Margin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {trends.map((pt) => {
+                    const margin = pt.revenue > 0 ? Math.round((pt.profit / pt.revenue) * 100) : 0;
+                    return (
+                      <tr key={pt.monthKey}>
+                        <td style={TD}><strong>{pt.month}</strong></td>
+                        <td style={{ ...TD, textAlign: 'right', color: '#059669' }}>+{currency}{pt.revenue.toLocaleString()}</td>
+                        <td style={{ ...TD, textAlign: 'right', color: '#ef4444' }}>-{currency}{pt.expenses.toLocaleString()}</td>
+                        <td style={{ ...TD, textAlign: 'right', fontWeight: 600, color: pt.profit >= 0 ? '#0f172a' : '#ef4444' }}>
+                          {pt.profit >= 0 ? '+' : '-'}{currency}{Math.abs(pt.profit).toLocaleString()}
+                        </td>
+                        <td style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{margin}%</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </ScrollReveal>
+      )}
+
+      {activeTab === 'annual' && (
+        <ScrollReveal delay={130}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="card" style={{ padding: '1.35rem 1.5rem' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+                  YTD Revenue
+                </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#059669', letterSpacing: '-0.02em' }}>
+                  +{currency}{display.totalRevenue.toLocaleString()}
+                </div>
+              </div>
+              <div className="card" style={{ padding: '1.35rem 1.5rem' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+                  YTD Expenses
+                </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: '#ef4444', letterSpacing: '-0.02em' }}>
+                  -{currency}{display.totalExpenses.toLocaleString()}
+                </div>
+              </div>
+              <div className="card" style={{ padding: '1.35rem 1.5rem' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.5rem' }}>
+                  YTD Net Profit
+                </div>
+                <div style={{ fontSize: '1.6rem', fontWeight: 700, color: display.netProfit >= 0 ? '#059669' : '#ef4444', letterSpacing: '-0.02em' }}>
+                  {display.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(display.netProfit).toLocaleString()}
+                </div>
+              </div>
+            </div>
+
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Month-by-Month ({now.getFullYear()})</h2>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      <th style={TH}>Month</th>
+                      <th style={{ ...TH, textAlign: 'right' }}>Revenue</th>
+                      <th style={{ ...TH, textAlign: 'right' }}>Expenses</th>
+                      <th style={{ ...TH, textAlign: 'right' }}>Net Profit</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {annualMonths.map((row) => (
+                      <tr key={row.label}>
+                        <td style={TD}><strong>{row.label}</strong></td>
+                        <td style={{ ...TD, textAlign: 'right', color: '#059669' }}>+{currency}{row.revenue.toLocaleString()}</td>
+                        <td style={{ ...TD, textAlign: 'right', color: '#ef4444' }}>-{currency}{row.expenses.toLocaleString()}</td>
+                        <td style={{ ...TD, textAlign: 'right', fontWeight: 600, color: row.profit >= 0 ? '#0f172a' : '#ef4444' }}>
+                          {row.profit >= 0 ? '+' : '-'}{currency}{Math.abs(row.profit).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+      )}
     </div>
   );
 };
