@@ -97,11 +97,12 @@ export class SmsService {
           sentAt: new Date().toISOString(),
         };
       } catch (err: any) {
-        console.warn('Real SMS sending encountered error, falling back to simulated delivery:', err.message);
+        // A real key is set, so report the failure instead of pretending it was sent.
+        throw new Error(`SMS was not sent: ${err.message}`);
       }
     }
 
-    // Default simulation for development and testing
+    // No SMS key configured: simulate delivery for development and testing
     return {
       success: true,
       simulated: true,
