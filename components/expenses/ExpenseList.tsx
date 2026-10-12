@@ -27,6 +27,7 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showToast } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
 import { escapeHtml } from '@/lib/ui/escape';
+import { getPageWindow } from '@/lib/ui/pagination';
 
 export const ExpenseList: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -123,6 +124,8 @@ export const ExpenseList: React.FC = () => {
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
   const totalPages = Math.ceil(filteredExpenses.length / pageSize) || 1;
+  // After a delete the last page can disappear; go back to the last page that still exists.
+  if (currentPage > totalPages) setCurrentPage(totalPages);
   const paginated = filteredExpenses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const exportHistoricalCSV = () => {
@@ -727,7 +730,7 @@ export const ExpenseList: React.FC = () => {
                 <ChevronLeft size={14} />
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 5).map((page) => (
+              {getPageWindow(currentPage, totalPages).map((page) => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}

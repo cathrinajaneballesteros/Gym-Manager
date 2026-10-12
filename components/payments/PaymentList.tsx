@@ -22,6 +22,7 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showSuccess, showToast, showConfirm } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
 import { Bell, CheckCircle2, Clock, AlertTriangle, FileText, Edit } from 'lucide-react';
+import { getPageWindow } from '@/lib/ui/pagination';
 
 export const PaymentList: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -77,6 +78,8 @@ export const PaymentList: React.FC = () => {
   }, [payments, searchQuery, memberFilter, statusFilter, receiptFilter]);
 
   const totalPages = Math.ceil(filteredPayments.length / pageSize) || 1;
+  // After a delete the last page can disappear; go back to the last page that still exists.
+  if (currentPage > totalPages) setCurrentPage(totalPages);
   const paginated = filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const formatDate = (dateStr: string) => {
@@ -739,7 +742,7 @@ export const PaymentList: React.FC = () => {
                 <ChevronLeft size={14} />
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 5).map((page) => (
+              {getPageWindow(currentPage, totalPages).map((page) => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}

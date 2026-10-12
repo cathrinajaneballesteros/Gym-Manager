@@ -17,6 +17,7 @@ import { AuditAction, AuditEntityType, AuditLogEntry } from '@/types/database';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { Modal } from '@/components/ui/Modal';
 import { showToast } from '@/lib/ui/swal';
+import { getPageWindow } from '@/lib/ui/pagination';
 
 const AUDIT_STORAGE_KEY = 'sgfm_audit_log_clean';
 
@@ -132,6 +133,8 @@ export const AuditLogView: React.FC = () => {
   }, [entries, searchQuery, actionFilter, entityFilter]);
 
   const totalPages = Math.ceil(filteredEntries.length / pageSize) || 1;
+  // After a delete the last page can disappear; go back to the last page that still exists.
+  if (currentPage > totalPages) setCurrentPage(totalPages);
   const paginated = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const todayKey = new Date().toISOString().split('T')[0];
@@ -438,7 +441,7 @@ export const AuditLogView: React.FC = () => {
                   <ChevronLeft size={14} />
                 </button>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 5).map((page) => (
+                {getPageWindow(currentPage, totalPages).map((page) => (
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}

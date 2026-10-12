@@ -47,11 +47,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
 
     window.addEventListener('sgfm_profile_updated', handleProfileUpdate);
     window.addEventListener('sgfm_data_updated', updatePendingCount);
+    // Every save writes an audit entry, so this also fires after any data change.
+    window.addEventListener('sgfm_audit_updated', updatePendingCount);
     window.addEventListener('storage', handleProfileUpdate);
     window.addEventListener('storage', updatePendingCount);
     return () => {
       window.removeEventListener('sgfm_profile_updated', handleProfileUpdate);
       window.removeEventListener('sgfm_data_updated', updatePendingCount);
+      window.removeEventListener('sgfm_audit_updated', updatePendingCount);
       window.removeEventListener('storage', handleProfileUpdate);
       window.removeEventListener('storage', updatePendingCount);
     };

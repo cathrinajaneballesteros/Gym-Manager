@@ -26,12 +26,17 @@ import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showToast } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
+import { getPageWindow } from '@/lib/ui/pagination';
 
-export const MemberList: React.FC = () => {
+interface MemberListProps {
+  initialStatus?: string;
+}
+
+export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' }) => {
   const [members, setMembers] = useState<Member[]>([]);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [planFilter, setPlanFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'end_date' | 'created_at'>('end_date');
   const [currentPage, setCurrentPage] = useState(1);
@@ -133,6 +138,8 @@ export const MemberList: React.FC = () => {
   }, [members, searchQuery, statusFilter, planFilter, sortBy]);
 
   const totalPages = Math.ceil(filteredMembers.length / pageSize) || 1;
+  // After a delete the last page can disappear; go back to the last page that still exists.
+  if (currentPage > totalPages) setCurrentPage(totalPages);
   const paginatedMembers = filteredMembers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleDeleteMember = async (id: string, name: string) => {
@@ -535,7 +542,7 @@ export const MemberList: React.FC = () => {
                 <ChevronLeft size={14} />
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 5).map((page) => (
+              {getPageWindow(currentPage, totalPages).map((page) => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
