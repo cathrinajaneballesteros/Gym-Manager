@@ -146,7 +146,7 @@ export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' })
   const handleDeleteMember = async (id: string, name: string) => {
     const confirmed = await showConfirm(
       'Remove Member?',
-      `Are you sure you want to remove member ${name}? This action cannot be undone.`,
+      `Are you sure you want to remove member ${name}? Their payments stay in your records and reports. This action cannot be undone.`,
       'Yes, remove',
       '#ef4444'
     );
@@ -160,7 +160,7 @@ export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' })
 
   const getPlanName = (planId: string) => {
     const plan = plans.find((p) => p.id === planId);
-    return plan?.name || 'Standard';
+    return plan?.name || 'Unknown plan';
   };
 
   return (

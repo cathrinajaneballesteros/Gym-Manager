@@ -16,6 +16,7 @@ import {
 import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Member, Payment, UserProfile } from '@/types/database';
+import { getPaymentMemberName } from '@/lib/ui/format';
 import { showToast, showAlert, showError } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
 
@@ -81,7 +82,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
   const memberFullName = member
     ? `${member.first_name} ${member.last_name}`
     : payment?.member
-    ? `${payment.member.first_name} ${payment.member.last_name}`
+    ? getPaymentMemberName(payment)
     : 'Valued Member';
 
   const smsPreview = `[${gymName}] Hi ${memberFullName.split(' ')[0]}! Friendly reminder that your ${planName} renewal (${currency}${Number(amount || 0).toLocaleString()}) is due on ${dueDate}.${customNote ? ` Note: ${customNote}` : ''} Please renew at the front desk (Cash) or via GCash. Stay strong!`;

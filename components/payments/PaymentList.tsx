@@ -21,6 +21,7 @@ import { PaymentReminderModal } from './PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showSuccess, showToast, showConfirm } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel, formatDisplayDate } from '@/lib/ui/date';
+import { getPaymentMemberName } from '@/lib/ui/format';
 import { Bell, CheckCircle2, Clock, AlertTriangle, FileText, Edit } from 'lucide-react';
 import { getPageWindow } from '@/lib/ui/pagination';
 
@@ -62,7 +63,7 @@ export const PaymentList: React.FC = () => {
 
   const filteredPayments = useMemo(() => {
     return payments.filter((p) => {
-      const memberName = p.member ? `${p.member.first_name} ${p.member.last_name}` : '';
+      const memberName = getPaymentMemberName(p);
       const matchesSearch =
         memberName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (p.reference_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -83,7 +84,7 @@ export const PaymentList: React.FC = () => {
   const paginated = filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleMarkAsPaid = async (p: Payment) => {
-    const memberName = p.member ? `${p.member.first_name} ${p.member.last_name}` : 'Member';
+    const memberName = getPaymentMemberName(p);
     const confirmed = await showConfirm(
       'Mark as Paid?',
       `Confirm that payment of ${currency}${Number(p.amount).toLocaleString()} for ${memberName} has been received.`,
@@ -436,8 +437,10 @@ export const PaymentList: React.FC = () => {
               </thead>
               <tbody>
                 {paginated.map((p) => {
-                  const memberName = p.member ? `${p.member.first_name} ${p.member.last_name}` : 'Direct Guest';
-                  const initials = p.member ? `${p.member.first_name[0]}${p.member.last_name[0]}` : 'DG';
+                  const memberName = getPaymentMemberName(p);
+                  const initials = p.member
+                    ? `${p.member.first_name[0]}${p.member.last_name[0]}`
+                    : (p.member_name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
                   return (
                     <tr
@@ -613,6 +616,7 @@ export const PaymentList: React.FC = () => {
                             </button>
                           )}
 
+                          {p.member && (
                           <button
                             onClick={() => setRemindingPayment(p)}
                             title="Send Payment Reminder (SMS/Email)"
@@ -633,6 +637,7 @@ export const PaymentList: React.FC = () => {
                             <Bell size={13} />
                             <span>Remind</span>
                           </button>
+                          )}
 
                           <button
                             onClick={() => setCheckingPayment(p)}

@@ -46,7 +46,7 @@ import { PaymentModal } from '@/components/payments/PaymentModal';
 import { ExpenseModal } from '@/components/expenses/ExpenseModal';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { formatCompactAmount } from '@/lib/ui/format';
+import { formatCompactAmount, getPaymentMemberName } from '@/lib/ui/format';
 
 export const DashboardOverview: React.FC = () => {
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
@@ -547,7 +547,7 @@ export const DashboardOverview: React.FC = () => {
                       Payment received • {currency}{Number(p.amount).toLocaleString()}
                     </div>
                     <div style={{ color: '#86868b', fontSize: '0.75rem', marginTop: '2px' }}>
-                      {p.member?.first_name} {p.member?.last_name} • {p.payment_method} • {formatTimeAgo(p.created_at)}
+                      {getPaymentMemberName(p)} • {p.payment_method} • {formatTimeAgo(p.created_at)}
                     </div>
                   </div>
                 ))}

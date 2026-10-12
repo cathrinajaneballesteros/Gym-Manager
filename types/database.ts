@@ -57,6 +57,8 @@ export interface Payment {
   admin_id: string;
   member_id: string;
   member?: Member;
+  /** The member's name, saved when the member is deleted so their payments still show who paid. */
+  member_name?: string;
   membership_plan_id?: string;
   plan?: MembershipPlan;
   amount: number;

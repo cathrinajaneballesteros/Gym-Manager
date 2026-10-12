@@ -21,6 +21,7 @@ import { DBService } from '@/lib/data/db-service';
 import { Payment, UserProfile } from '@/types/database';
 import { showToast, showConfirm, showError, showAlert } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
+import { getPaymentMemberName } from '@/lib/ui/format';
 
 interface ReceiptCheckerModalProps {
   isOpen: boolean;
@@ -57,7 +58,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   const profile = DBService.getProfile();
   const currency = profile.currency || '₱';
   const member = payment.member || (payment.member_id ? DBService.getMemberById(payment.member_id) : undefined);
-  const memberName = member ? `${member.first_name} ${member.last_name}` : 'Direct Guest';
+  const memberName = getPaymentMemberName({ ...payment, member });
   const planName = payment.plan?.name || 'Membership Plan';
 
   // Automated Fraud / Sanity Verification Checks

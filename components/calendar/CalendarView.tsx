@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { Member, Payment, Expense, UserProfile } from '@/types/database';
+import { getPaymentMemberName } from '@/lib/ui/format';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
@@ -756,6 +757,7 @@ export const CalendarView: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {selectedDayData.payments.map((p) => {
                     const member = members.find((m) => m.id === p.member_id);
+                    const memberName = getPaymentMemberName({ ...p, member });
                     return (
                       <div
                         key={p.id}
@@ -772,7 +774,7 @@ export const CalendarView: React.FC = () => {
                       >
                         <div>
                           <strong style={{ color: '#0f172a' }}>
-                            {member ? `${member.first_name} ${member.last_name}` : 'Unknown Member'}
+                            {memberName}
                           </strong>
                           <div style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '1px' }}>
                             {p.payment_method} {p.reference_number ? `• Ref: #${p.reference_number}` : ''}

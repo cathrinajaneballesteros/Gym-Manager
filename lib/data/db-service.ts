@@ -14,11 +14,12 @@ import {
 } from '@/types/database';
 import {
   INITIAL_PROFILE,
-  INITIAL_PLANS,
+  LEGACY_SAMPLE_PLANS,
   INITIAL_MEMBERS,
   INITIAL_PAYMENTS,
   INITIAL_EXPENSES,
 } from './mock-data';
+import { getPaymentMemberName } from '@/lib/ui/format';
 
 /** Only Cash and GCash are supported; anything else (legacy data) is treated as Cash. */
 const normalizeMethod = (method: string | undefined): PaymentMethod =>
@@ -205,7 +206,14 @@ export class DBService {
 
   // 2. Membership Plans
   static getPlans(): MembershipPlan[] {
-    return getStoredItem<MembershipPlan[]>(STORAGE_KEYS.PLANS, INITIAL_PLANS);
+    const stored = getStoredItem<MembershipPlan[] | null>(STORAGE_KEYS.PLANS, null);
+    if (stored) return stored;
+    // Nothing saved yet: start empty, except for sample plans that existing members or payments still use.
+    const usedPlanIds = new Set([
+      ...getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, []).map((m) => m.membership_plan_id),
+      ...getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, []).map((p) => p.membership_plan_id),
+    ]);
+    return LEGACY_SAMPLE_PLANS.filter((p) => usedPlanIds.has(p.id));
   }
 
   static addPlan(plan: Omit<MembershipPlan, 'id' | 'admin_id' | 'created_at'>): MembershipPlan {
@@ -284,7 +292,8 @@ export class DBService {
     const planMap = new Map(plans.map((p) => [p.id, p]));
 
     // Check expiration and payment presence dynamically
-    const todayStr = new Date().toISOString().split('T')[0];
+    // Local date (not UTC), parsed the same way as end_date so the day difference is exact.
+    const todayStr = formatDateLocal(new Date());
     const today = new Date(todayStr);
 
     const rawPayments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
@@ -293,12 +302,15 @@ export class DBService {
         !['pay_101', 'pay_102', 'pay_103', 'pay_104', 'pay_105'].includes(p.id) &&
         !p.reference_number?.startsWith('REG-')
     );
-    const memberIdsWithPayments = new Set(validPayments.map((p) => p.member_id));
+    // Only completed payments count; a pending, rejected, or refunded payment doesn't make a member active.
+    const memberIdsWithPayments = new Set(
+      validPayments.filter((p) => p.payment_status === 'completed').map((p) => p.member_id)
+    );
 
     return members.map((m) => {
       let status: MemberStatus = m.status;
 
-      // If the member is not on the payment list yet, mark as pending (waiting to get listed on payments)
+      // Members with no completed payment yet stay pending until one is recorded.
       if (!memberIdsWithPayments.has(m.id)) {
         status = 'pending';
       } else if (m.end_date) {
@@ -389,10 +401,15 @@ export class DBService {
     const filtered = members.filter((m) => m.id !== id);
     setStoredItem(STORAGE_KEYS.MEMBERS, filtered);
 
-    // Clean up payments for this deleted member
+    // Keep this member's payments so past revenue stays correct; save their name on each one.
     const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
-    const remainingPayments = payments.filter((p) => p.member_id !== id);
-    setStoredItem(STORAGE_KEYS.PAYMENTS, remainingPayments);
+    let paymentsKept = 0;
+    const keptPayments = payments.map((p) => {
+      if (p.member_id !== id) return p;
+      paymentsKept += 1;
+      return { ...p, member_name: this.memberLabel(member) };
+    });
+    setStoredItem(STORAGE_KEYS.PAYMENTS, keptPayments);
 
     this.recordAudit({
       action: 'member.delete',
@@ -405,7 +422,7 @@ export class DBService {
         plan_id: member?.membership_plan_id || null,
         start_date: member?.start_date || null,
         end_date: member?.end_date || null,
-        payments_removed: payments.length - remainingPayments.length,
+        payments_kept: paymentsKept,
       },
     });
   }
@@ -527,7 +544,7 @@ export class DBService {
       action: 'payment.receipt_verify',
       entity_type: 'payment',
       entity_id: id,
-      entity_label: `${this.memberLabel(member)} · ${currency}${Number(updatedPayment.amount).toLocaleString()}`,
+      entity_label: `${getPaymentMemberName({ ...updatedPayment, member })} · ${currency}${Number(updatedPayment.amount).toLocaleString()}`,
       metadata: {
         receipt_status: 'verified',
         reference_number: updatedPayment.reference_number || '',
@@ -564,7 +581,7 @@ export class DBService {
       action: 'payment.receipt_reject',
       entity_type: 'payment',
       entity_id: id,
-      entity_label: `${this.memberLabel(member)} · ${currency}${Number(updatedPayment.amount).toLocaleString()}`,
+      entity_label: `${getPaymentMemberName({ ...updatedPayment, member })} · ${currency}${Number(updatedPayment.amount).toLocaleString()}`,
       metadata: {
         receipt_status: 'rejected',
         payment_status: 'pending',

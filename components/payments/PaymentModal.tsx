@@ -9,7 +9,8 @@ import { DBService } from '@/lib/data/db-service';
 import { Payment, Member, MembershipPlan } from '@/types/database';
 import { showError } from '@/lib/ui/swal';
 import { MemberPicker } from './MemberPicker';
-import { getTodayKey } from '@/lib/ui/date';
+import { addMonthsToDateKey, getTodayKey } from '@/lib/ui/date';
+import { getPaymentMemberName } from '@/lib/ui/format';
 
 const paymentSchema = z.object({
   member_id: z.string().min(1, 'Please select a member'),
@@ -43,6 +44,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const plans: MembershipPlan[] = DBService.getPlans();
   const currency = DBService.getProfile().currency || '₱';
   const todayStr = getTodayKey();
+  // Editing a payment whose member was deleted: keep it attached to them instead of offering the picker.
+  const deletedMemberPayment =
+    initialPayment && !members.some((m) => m.id === initialPayment.member_id) ? initialPayment : null;
 
   const defaultMember = preselectedMemberId
     ? members.find((m) => m.id === preselectedMemberId)
@@ -143,10 +147,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
           // Only extend if renewing (prior payment exists) or reactivating an expired membership
           if (priorPayments.length > 0 || isExpired) {
-            const baseDate = new Date(member.end_date > todayStr ? member.end_date : todayStr);
-            baseDate.setMonth(baseDate.getMonth() + plan.duration_months);
+            const baseDate = member.end_date > todayStr ? member.end_date : todayStr;
             DBService.updateMember(member.id, {
-              end_date: baseDate.toISOString().split('T')[0],
+              end_date: addMonthsToDateKey(baseDate, plan.duration_months),
               status: 'active',
               membership_plan_id: plan.id,
             });
@@ -179,7 +182,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
             Member *
           </label>
-          {members.length === 0 ? (
+          {deletedMemberPayment ? (
+            <>
+              <input type="hidden" {...register('member_id')} />
+              <div style={{ padding: '0.65rem 0.85rem', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#64748b', fontSize: '0.825rem' }}>
+                {getPaymentMemberName(deletedMemberPayment)}
+              </div>
+            </>
+          ) : members.length === 0 ? (
             <div style={{ padding: '0.65rem 0.85rem', backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', color: '#92400e', fontSize: '0.825rem', lineHeight: 1.4 }}>
               ⚠️ No members registered yet. Please add a member in the <strong>Members</strong> tab before recording a payment.
             </div>

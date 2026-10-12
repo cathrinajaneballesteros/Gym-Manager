@@ -17,8 +17,9 @@ export const INITIAL_PROFILE: UserProfile = {
   created_at: new Date().toISOString(),
 };
 
-// Standard initial plans so fresh installations can create members immediately
-export const INITIAL_PLANS: MembershipPlan[] = [
+// Sample plans older versions showed before the owner made any. New gyms start with no plans;
+// these are only kept for members and payments that already use them.
+export const LEGACY_SAMPLE_PLANS: MembershipPlan[] = [
   {
     id: 'plan_monthly',
     admin_id: '',

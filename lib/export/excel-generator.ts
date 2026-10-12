@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { DashboardKPIs, MonthlyTrendData, Expense, Member, Payment } from '@/types/database';
+import { getPaymentMemberName } from '@/lib/ui/format';
 import { getTodayKey } from '@/lib/ui/date';
 
 interface ExcelReportOptions {
@@ -65,10 +66,11 @@ export function generateFinancialExcelReport(options: ExcelReportOptions): void 
   XLSX.utils.book_append_sheet(workbook, expenseSheet, 'Expenses');
 
   // 4. Membership Payments Sheet
-  const paymentHeaders = ['Payment ID', 'Member ID', 'Date', 'Amount', 'Method', 'Status', 'Ref No.', 'Notes'];
+  const paymentHeaders = ['Payment ID', 'Member ID', 'Member', 'Date', 'Amount', 'Method', 'Status', 'Ref No.', 'Notes'];
   const paymentRows = payments.map((p) => [
     p.id,
     p.member_id,
+    getPaymentMemberName(p),
     p.payment_date,
     Number(p.amount),
     p.payment_method,

@@ -54,13 +54,13 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
 
   if (!member) return null;
 
-  const currentPlan = plans.find((p) => p.id === member.membership_plan_id) || plans[0];
+  const currentPlan = plans.find((p) => p.id === member.membership_plan_id);
   const currency = DBService.getProfile()?.currency || '₱';
 
   const handleDelete = async () => {
     const confirmed = await showConfirm(
       'Remove Member?',
-      `Are you sure you want to remove ${member.first_name} ${member.last_name}? This action cannot be undone.`,
+      `Are you sure you want to remove ${member.first_name} ${member.last_name}? Their payments stay in your records and reports. This action cannot be undone.`,
       'Yes, remove',
       '#ef4444'
     );
@@ -159,7 +159,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
               Membership Plan
             </div>
             <div style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginTop: '2px' }}>
-              {currentPlan?.name || 'Standard'}
+              {currentPlan?.name || 'Unknown plan'}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
               {currentPlan
@@ -217,7 +217,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', borderBottom: '1px solid #f8fafc', paddingBottom: '0.75rem' }}>
                   <span style={{ color: '#64748b' }}>Plan</span>
-                  <span style={{ fontWeight: 600, color: '#0f172a' }}>{currentPlan?.name || 'Standard'}</span>
+                  <span style={{ fontWeight: 600, color: '#0f172a' }}>{currentPlan?.name || 'Unknown plan'}</span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', borderBottom: '1px solid #f8fafc', paddingBottom: '0.75rem' }}>
@@ -417,7 +417,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
           </h2>
           <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
             {activeTab === 'history'
-              ? `Member initially subscribed on ${formatDisplayDate(member.created_at)} under ${currentPlan?.name}. Renewal status is verified.`
+              ? `Member initially subscribed on ${formatDisplayDate(member.created_at)} under ${currentPlan?.name || 'an unknown plan'}. Renewal status is verified.`
               : member.notes || 'No confidential staff notes recorded for this member.'}
           </p>
         </div>

@@ -4,6 +4,20 @@ export function toDateKey(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+// Adds whole months to a YYYY-MM-DD date, e.g. a membership's start date plus its plan length.
+// Month ends are clamped: Jan 31 + 1 month is Feb 28, not Mar 3.
+export function addMonthsToDateKey(startDateStr: string, durationMonths: number): string {
+  if (!startDateStr || !durationMonths) return '';
+  const parts = startDateStr.split('-').map(Number);
+  if (parts.length !== 3 || parts.some(isNaN)) return '';
+  const [year, month, day] = parts;
+  const target = new Date(year, month - 1 + durationMonths, day);
+  if (target.getDate() !== day) {
+    target.setDate(0);
+  }
+  return toDateKey(target);
+}
+
 // Today's date as YYYY-MM-DD in the user's local time.
 export function getTodayKey(): string {
   return toDateKey(new Date());

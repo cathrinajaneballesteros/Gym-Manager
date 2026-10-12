@@ -1,5 +1,6 @@
 import { ChurnPredictionResult, ChurnPredictionMember, ChurnRiskLevel } from '@/types/ai';
 import { DBService } from '@/lib/data/db-service';
+import { getTodayKey } from '@/lib/ui/date';
 
 /**
  * AI Membership Churn Prediction Module
@@ -8,8 +9,8 @@ import { DBService } from '@/lib/data/db-service';
  */
 export function predictMemberChurn(requireMinMembers: number = 3): ChurnPredictionResult {
   const members = DBService.getMembers();
-  const todayStr = new Date().toISOString().split('T')[0];
-  const today = new Date(todayStr); // UTC midnight of the current date
+  const todayStr = getTodayKey();
+  const today = new Date(todayStr); // Today's local date, read as UTC midnight like the stored dates
 
   if (members.length < requireMinMembers) {
     return {

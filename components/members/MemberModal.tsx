@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -8,7 +9,7 @@ import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Member, MembershipPlan } from '@/types/database';
 import { showError } from '@/lib/ui/swal';
-import { getTodayKey } from '@/lib/ui/date';
+import { addMonthsToDateKey, getTodayKey } from '@/lib/ui/date';
 
 const memberSchema = z.object({
   first_name: z.string().min(2, 'First name must be at least 2 characters'),
@@ -31,22 +32,6 @@ interface MemberModalProps {
   initialMember?: Member | null;
 }
 
-function calculateExpirationDate(startDateStr: string, durationMonths: number): string {
-  if (!startDateStr || !durationMonths) return '';
-  const parts = startDateStr.split('-').map(Number);
-  if (parts.length !== 3 || parts.some(isNaN)) return '';
-  const [year, month, day] = parts;
-  const target = new Date(year, month - 1 + durationMonths, day);
-  // Prevent end-of-month rollover (e.g. Jan 31 + 1 month)
-  if (target.getDate() !== day) {
-    target.setDate(0);
-  }
-  const y = target.getFullYear();
-  const m = String(target.getMonth() + 1).padStart(2, '0');
-  const d = String(target.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
-}
-
 export const MemberModal: React.FC<MemberModalProps> = ({
   isOpen,
   onClose,
@@ -66,7 +51,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
     const defaultStartDate = initialMember?.start_date || todayStr;
     const selectedPlan = plans.find((p) => p.id === defaultPlanId);
     const duration = selectedPlan?.duration_months || 1;
-    const computedEndDate = calculateExpirationDate(defaultStartDate, duration);
+    const computedEndDate = addMonthsToDateKey(defaultStartDate, duration);
 
     return initialMember
       ? {
@@ -110,7 +95,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   const recalculateEndDate = () => {
     const selectedPlan = plans.find((p) => p.id === getValues('membership_plan_id'));
     if (!selectedPlan) return;
-    const computed = calculateExpirationDate(getValues('start_date'), selectedPlan.duration_months);
+    const computed = addMonthsToDateKey(getValues('start_date'), selectedPlan.duration_months);
     if (computed) {
       setValue('end_date', computed, { shouldValidate: true });
     }
@@ -243,16 +228,25 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
             Membership Plan *
           </label>
-          <select
-            {...register('membership_plan_id', { onChange: recalculateEndDate })}
-            style={{ width: '100%' }}
-          >
-            {selectablePlans.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} — ₱{p.price.toLocaleString()} ({p.duration_months} mo)
-              </option>
-            ))}
-          </select>
+          {selectablePlans.length === 0 ? (
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '0.6rem 0.75rem', border: '1px dashed #e2e8f0', borderRadius: '8px' }}>
+              No active membership plans yet.{' '}
+              <Link href="/plans" onClick={onClose} style={{ color: '#0071e3', fontWeight: 600 }}>
+                Create a membership plan first
+              </Link>
+            </div>
+          ) : (
+            <select
+              {...register('membership_plan_id', { onChange: recalculateEndDate })}
+              style={{ width: '100%' }}
+            >
+              {selectablePlans.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} — ₱{p.price.toLocaleString()} ({p.duration_months} mo)
+                </option>
+              ))}
+            </select>
+          )}
           {errors.membership_plan_id && (
             <span style={{ fontSize: '0.725rem', color: 'var(--danger)', marginTop: '0.2rem', display: 'block' }}>
               {errors.membership_plan_id.message}
@@ -330,7 +324,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>
             Cancel
           </button>
-          <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+          <button type="submit" className="btn btn-primary" disabled={isSubmitting || selectablePlans.length === 0}>
             {isSubmitting ? 'Saving...' : initialMember ? 'Update Member' : 'Register & Activate'}
           </button>
         </div>
