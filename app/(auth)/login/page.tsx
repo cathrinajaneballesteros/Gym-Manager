@@ -80,14 +80,14 @@ export default function LoginPage() {
                 gym_name: prof.gym_name || 'My Fitness Gym',
                 currency: prof.currency || '₱',
                 phone: prof.phone || '',
-              });
+              }, { audit: false });
             } else {
               DBService.updateProfile({
                 id: data.user.id,
                 email: data.user.email || '',
                 full_name: 'Gym Administrator',
                 gym_name: 'My Fitness Gym',
-              });
+              }, { audit: false });
             }
           } catch (pErr) {
             console.warn('Profile fetch note:', pErr);
@@ -133,7 +133,7 @@ export default function LoginPage() {
               full_name: fullName.trim() || 'Gym Administrator',
               gym_name: gymName.trim() || 'My Fitness Gym',
               currency: '₱',
-            });
+            }, { audit: false });
           } catch (pErr) {
             console.warn('Profile setup note:', pErr);
           }

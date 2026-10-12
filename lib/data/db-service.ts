@@ -110,6 +110,33 @@ function countMembersActiveInWindow(members: Member[], start: string, end: strin
   }).length;
 }
 
+// Field names in `updates` whose value differs from `previous`; empty, null and undefined count as the same.
+function changedFields(previous: object, updates: object): string[] {
+  const before = previous as Record<string, unknown>;
+  const norm = (v: unknown) => (v === undefined || v === null ? '' : v);
+  return Object.entries(updates)
+    .filter(([key, value]) => norm(before[key]) !== norm(value))
+    .map(([key]) => key);
+}
+
+type AuditMetadata = NonNullable<AuditLogEntry['metadata']>;
+
+const toAuditValue = (v: unknown): string | number | boolean | null =>
+  v === undefined || v === null ? null : typeof v === 'object' ? JSON.stringify(v) : (v as string | number | boolean);
+
+// Audit metadata listing each changed field with its old and new value.
+function diffMetadata(previous: object, updates: object): AuditMetadata {
+  const before = previous as Record<string, unknown>;
+  const after = updates as Record<string, unknown>;
+  const fields = changedFields(previous, updates);
+  const metadata: AuditMetadata = { changed: fields.join(', ') || 'none' };
+  fields.forEach((field) => {
+    metadata[`${field}.from`] = toAuditValue(before[field]);
+    metadata[`${field}.to`] = toAuditValue(after[field]);
+  });
+  return metadata;
+}
+
 export class DBService {
   // 1. Profile / Settings
   static getProfile(): UserProfile {
@@ -130,42 +157,28 @@ export class DBService {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
-  static updateProfile(updates: Partial<UserProfile>): UserProfile {
+  /** Pass `{ audit: false }` when syncing from Supabase, so only real Settings edits are logged. */
+  static updateProfile(updates: Partial<UserProfile>, { audit = true }: { audit?: boolean } = {}): UserProfile {
     const current = this.getProfile();
     const updated = { ...current, ...updates, updated_at: new Date().toISOString() };
     setStoredItem(STORAGE_KEYS.PROFILE, updated);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('sgfm_profile_updated', { detail: updated }));
     }
-    const changed = Object.keys(updates).filter(
-      (k) => (current as unknown as Record<string, unknown>)[k] !== (updates as Record<string, unknown>)[k]
-    );
-    if (changed.length > 0) {
+    const changed = changedFields(current, updates);
+    if (audit && changed.length > 0) {
       this.recordAudit({
         action: 'settings.update',
         entity_type: 'settings',
         entity_id: updated.id,
         entity_label: updated.gym_name || updated.email || 'Settings',
-        metadata: { changed: changed.join(', ') },
+        metadata: diffMetadata(current, updates),
       });
     }
     return updated;
   }
 
   // 1b. User Audit Trail
-  static getAuditLogs(): AuditLogEntry[] {
-    const rawLogs = getStoredItem<AuditLogEntry[]>(STORAGE_KEYS.AUDIT, []);
-    const logs = rawLogs.filter(
-      (l) =>
-        !l.entity_id ||
-        !['mem_1', 'mem_2', 'mem_3', 'mem_4', 'mem_5', 'pay_101', 'pay_102', 'pay_103', 'pay_104', 'pay_105'].includes(l.entity_id)
-    );
-    if (logs.length !== rawLogs.length) {
-      setStoredItem(STORAGE_KEYS.AUDIT, logs);
-    }
-    return logs;
-  }
-
   static recordAudit(
     input: Omit<AuditLogEntry, 'id' | 'admin_id' | 'actor_email' | 'created_at'>
   ): AuditLogEntry {
@@ -206,7 +219,7 @@ export class DBService {
     const updated = [...plans, newPlan];
     setStoredItem(STORAGE_KEYS.PLANS, updated);
 
-    const currency = this.getProfile().currency || '';
+    const currency = this.getProfile().currency || '₱';
     this.recordAudit({
       action: 'plan.create',
       entity_type: 'plan',
@@ -235,17 +248,23 @@ export class DBService {
     updated[index] = updatedPlan;
     setStoredItem(STORAGE_KEYS.PLANS, updated);
 
-    const changed = Object.keys(updates).filter(
-      (key) =>
-        (previous as unknown as Record<string, unknown>)[key] !==
-        (updates as Record<string, unknown>)[key]
-    );
+    const changed = changedFields(previous, updates);
+    if (changed.length === 1 && changed[0] === 'is_active') {
+      this.recordAudit({
+        action: updatedPlan.is_active ? 'plan.activate' : 'plan.deactivate',
+        entity_type: 'plan',
+        entity_id: id,
+        entity_label: updatedPlan.name || id,
+      });
+      return updatedPlan;
+    }
+    const currency = this.getProfile().currency || '₱';
     this.recordAudit({
       action: 'plan.update',
       entity_type: 'plan',
       entity_id: id,
-      entity_label: updatedPlan.name || id,
-      metadata: { changed: changed.join(', ') || 'none' },
+      entity_label: `${updatedPlan.name || id} · ${currency}${Number(updatedPlan.price).toLocaleString()}`,
+      metadata: diffMetadata(previous, updates),
     });
 
     return updatedPlan;
@@ -353,17 +372,12 @@ export class DBService {
     members[index] = updatedMember;
     setStoredItem(STORAGE_KEYS.MEMBERS, members);
 
-    const changed = Object.keys(updates).filter(
-      (key) =>
-        (previous as unknown as Record<string, unknown>)[key] !==
-        (updates as Record<string, unknown>)[key]
-    );
     this.recordAudit({
       action: 'member.update',
       entity_type: 'member',
       entity_id: id,
       entity_label: this.memberLabel(updatedMember),
-      metadata: { changed: changed.join(', ') || 'none' },
+      metadata: diffMetadata(previous, updates),
     });
 
     return updatedMember;
@@ -385,6 +399,14 @@ export class DBService {
       entity_type: 'member',
       entity_id: id,
       entity_label: this.memberLabel(member),
+      metadata: {
+        email: member?.email || null,
+        phone: member?.phone || null,
+        plan_id: member?.membership_plan_id || null,
+        start_date: member?.start_date || null,
+        end_date: member?.end_date || null,
+        payments_removed: payments.length - remainingPayments.length,
+      },
     });
   }
 
@@ -433,7 +455,7 @@ export class DBService {
     setStoredItem(STORAGE_KEYS.PAYMENTS, updated);
 
     const member = this.getMemberById(newPayment.member_id);
-    const currency = this.getProfile().currency || '';
+    const currency = this.getProfile().currency || '₱';
     this.recordAudit({
       action: 'payment.create',
       entity_type: 'payment',
@@ -470,6 +492,7 @@ export class DBService {
       entity_id: id,
       entity_label: `Payment #${updatedPayment.reference_number || id}`,
       metadata: {
+        ...diffMetadata(previous, updates),
         payment_status: updatedPayment.payment_status,
         amount: Number(updatedPayment.amount),
         receipt_status: updatedPayment.receipt_status || 'unverified',
@@ -565,7 +588,13 @@ export class DBService {
       entity_type: 'payment',
       entity_id: id,
       entity_label: `Payment #${payment?.reference_number || id}`,
-      metadata: { amount: payment?.amount || 0 },
+      metadata: {
+        amount: Number(payment?.amount || 0),
+        payment_date: payment?.payment_date || null,
+        method: payment?.payment_method || null,
+        status: payment?.payment_status || null,
+        member_id: payment?.member_id || null,
+      },
     });
   }
 
@@ -598,7 +627,7 @@ export class DBService {
     const updated = [newExpense, ...expenses];
     setStoredItem(STORAGE_KEYS.EXPENSES, updated);
 
-    const currency = this.getProfile().currency || '';
+    const currency = this.getProfile().currency || '₱';
     this.recordAudit({
       action: 'expense.create',
       entity_type: 'expense',
@@ -627,17 +656,12 @@ export class DBService {
     expenses[index] = updatedExpense;
     setStoredItem(STORAGE_KEYS.EXPENSES, expenses);
 
-    const changed = Object.keys(updates).filter(
-      (key) =>
-        (previous as unknown as Record<string, unknown>)[key] !==
-        (updates as Record<string, unknown>)[key]
-    );
     this.recordAudit({
       action: 'expense.update',
       entity_type: 'expense',
       entity_id: id,
       entity_label: updatedExpense.title || id,
-      metadata: { changed: changed.join(', ') || 'none' },
+      metadata: diffMetadata(previous, updates),
     });
 
     return updatedExpense;
@@ -654,6 +678,12 @@ export class DBService {
       entity_type: 'expense',
       entity_id: id,
       entity_label: expense?.title || id,
+      metadata: {
+        amount: Number(expense?.amount || 0),
+        category: expense?.category || null,
+        expense_date: expense?.expense_date || null,
+        method: expense?.payment_method || null,
+      },
     });
   }
 

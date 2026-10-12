@@ -48,7 +48,7 @@ export const SettingsView: React.FC = () => {
           if (user?.email) {
             setEmail(user.email);
             if (!current.email) {
-              DBService.updateProfile({ email: user.email });
+              DBService.updateProfile({ email: user.email }, { audit: false });
             }
           }
         });

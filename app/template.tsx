@@ -31,7 +31,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
           full_name: profile.full_name || meta.full_name || meta.name || 'Gym Administrator',
           gym_name: profile.gym_name || meta.gym_name || 'My Fitness Gym',
           currency: profile.currency || '₱',
-        });
+        }, { audit: false });
         recordLoginOnce(session.user.email);
       }
     });
@@ -49,7 +49,7 @@ export default function Template({ children }: { children: React.ReactNode }) {
             full_name: profile.full_name || meta.full_name || meta.name || 'Gym Administrator',
             gym_name: profile.gym_name || meta.gym_name || 'My Fitness Gym',
             currency: profile.currency || '₱',
-          });
+          }, { audit: false });
           if (event === 'SIGNED_IN') {
             recordLoginOnce(session.user.email);
           }

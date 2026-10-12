@@ -123,6 +123,8 @@ export type AuditAction =
   | 'expense.delete'
   | 'plan.create'
   | 'plan.update'
+  | 'plan.activate'
+  | 'plan.deactivate'
   | 'settings.update';
 
 export type AuditEntityType = 'auth' | 'member' | 'payment' | 'expense' | 'plan' | 'settings';
