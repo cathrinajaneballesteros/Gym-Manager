@@ -41,6 +41,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 }) => {
   const members: Member[] = DBService.getMembers();
   const plans: MembershipPlan[] = DBService.getPlans();
+  const currency = DBService.getProfile().currency || '₱';
   const todayStr = getTodayKey();
 
   const defaultMember = preselectedMemberId
@@ -218,7 +219,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             >
               {selectablePlans.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {p.name} — {currency}{p.price.toLocaleString()} ({p.duration_months} mo)
                 </option>
               ))}
             </select>

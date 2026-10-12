@@ -205,7 +205,50 @@ export class DBService {
     };
     const updated = [...plans, newPlan];
     setStoredItem(STORAGE_KEYS.PLANS, updated);
+
+    const currency = this.getProfile().currency || '';
+    this.recordAudit({
+      action: 'plan.create',
+      entity_type: 'plan',
+      entity_id: newPlan.id,
+      entity_label: `${newPlan.name} · ${currency}${Number(newPlan.price).toLocaleString()}`,
+      metadata: {
+        price: Number(newPlan.price),
+        duration_months: newPlan.duration_months,
+      },
+    });
+
     return newPlan;
+  }
+
+  static updatePlan(
+    id: string,
+    updates: Partial<Omit<MembershipPlan, 'id' | 'admin_id' | 'created_at'>>
+  ): MembershipPlan {
+    const plans = this.getPlans();
+    const index = plans.findIndex((p) => p.id === id);
+    if (index === -1) throw new Error('Plan not found');
+
+    const previous = plans[index];
+    const updatedPlan: MembershipPlan = { ...previous, ...updates };
+    const updated = [...plans];
+    updated[index] = updatedPlan;
+    setStoredItem(STORAGE_KEYS.PLANS, updated);
+
+    const changed = Object.keys(updates).filter(
+      (key) =>
+        (previous as unknown as Record<string, unknown>)[key] !==
+        (updates as Record<string, unknown>)[key]
+    );
+    this.recordAudit({
+      action: 'plan.update',
+      entity_type: 'plan',
+      entity_id: id,
+      entity_label: updatedPlan.name || id,
+      metadata: { changed: changed.join(', ') || 'none' },
+    });
+
+    return updatedPlan;
   }
 
   // 3. Members

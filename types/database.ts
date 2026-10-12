@@ -121,9 +121,11 @@ export type AuditAction =
   | 'expense.create'
   | 'expense.update'
   | 'expense.delete'
+  | 'plan.create'
+  | 'plan.update'
   | 'settings.update';
 
-export type AuditEntityType = 'auth' | 'member' | 'payment' | 'expense' | 'settings';
+export type AuditEntityType = 'auth' | 'member' | 'payment' | 'expense' | 'plan' | 'settings';
 
 export interface AuditLogEntry {
   id: string;

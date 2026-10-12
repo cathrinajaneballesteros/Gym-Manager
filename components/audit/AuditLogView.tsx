@@ -62,6 +62,8 @@ const ACTION_META: Record<AuditAction, ActionMeta> = {
   'expense.create': { label: 'Expense added', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
   'expense.update': { label: 'Expense updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
   'expense.delete': { label: 'Expense deleted', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
+  'plan.create': { label: 'Plan created', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
+  'plan.update': { label: 'Plan updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
   'settings.update': { label: 'Settings updated', color: '#4b5563', background: '#f3f4f6', border: '#e5e7eb' },
 };
 
@@ -70,6 +72,7 @@ const ENTITY_LABEL: Record<AuditEntityType, string> = {
   member: 'Member',
   payment: 'Payment',
   expense: 'Expense',
+  plan: 'Plan',
   settings: 'Settings',
 };
 
@@ -321,6 +324,7 @@ export const AuditLogView: React.FC = () => {
               <option value="member">Members</option>
               <option value="payment">Payments</option>
               <option value="expense">Expenses</option>
+              <option value="plan">Plans</option>
               <option value="auth">Authentication</option>
             </select>
           </div>

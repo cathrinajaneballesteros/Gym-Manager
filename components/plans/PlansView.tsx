@@ -1,19 +1,21 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Plus, Layers, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Layers, Clock, CheckCircle2, XCircle, Pencil, Power } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { MembershipPlan, UserProfile } from '@/types/database';
 import { Modal } from '@/components/ui/Modal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { showToast, showError } from '@/lib/ui/swal';
+import { showToast, showError, showConfirm } from '@/lib/ui/swal';
 
 export const PlansView: React.FC = () => {
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  // The plan being edited, or null when adding a new one.
+  const [editingPlan, setEditingPlan] = useState<MembershipPlan | null>(null);
 
-  // Add-plan form state
+  // Plan form state
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
   const [duration, setDuration] = useState('1');
@@ -34,15 +36,16 @@ export const PlansView: React.FC = () => {
 
   const currency = profile?.currency || '₱';
 
-  const openModal = () => {
-    setName('');
-    setPrice('');
-    setDuration('1');
-    setDescription('');
+  const openModal = (plan?: MembershipPlan) => {
+    setEditingPlan(plan || null);
+    setName(plan?.name || '');
+    setPrice(plan ? String(plan.price) : '');
+    setDuration(plan ? String(plan.duration_months) : '1');
+    setDescription(plan?.description || '');
     setIsModalOpen(true);
   };
 
-  const handleAddPlan = (e: React.FormEvent) => {
+  const handleSavePlan = (e: React.FormEvent) => {
     e.preventDefault();
 
     const parsedPrice = Number(price);
@@ -56,24 +59,65 @@ export const PlansView: React.FC = () => {
       showError('Invalid price', 'Enter a price greater than 0.');
       return;
     }
-    if (!Number.isInteger(parsedDuration) || parsedDuration <= 0) {
-      showError('Invalid duration', 'Enter a whole number of months (at least 1).');
+    if (!Number.isInteger(parsedDuration) || parsedDuration <= 0 || parsedDuration > 120) {
+      showError('Invalid duration', 'Enter a whole number of months from 1 to 120.');
+      return;
+    }
+    // Two plans with the same name can't be told apart in the plan dropdowns.
+    const normalizedName = name.trim().replace(/\s+/g, ' ').toLowerCase();
+    const duplicate = plans.find(
+      (p) => p.id !== editingPlan?.id && p.name.trim().replace(/\s+/g, ' ').toLowerCase() === normalizedName
+    );
+    if (duplicate) {
+      showError('Name already used', 'Another plan already has this name. Please choose a different name.');
       return;
     }
 
     try {
-      DBService.addPlan({
+      const fields = {
         name: name.trim(),
         price: parsedPrice,
         duration_months: parsedDuration,
         description: description.trim(),
-        is_active: true,
-      });
+      };
+      if (editingPlan) {
+        DBService.updatePlan(editingPlan.id, fields);
+      } else {
+        DBService.addPlan({ ...fields, is_active: true });
+      }
       load();
       setIsModalOpen(false);
-      showToast('Membership plan added');
+      showToast(editingPlan ? 'Membership plan updated' : 'Membership plan added');
     } catch (err) {
-      showError('Save Failed', err instanceof Error ? err.message : 'Could not add the plan.');
+      showError('Save Failed', err instanceof Error ? err.message : 'Could not save the plan.');
+    }
+  };
+
+  const handleToggleActive = async (plan: MembershipPlan) => {
+    const deactivating = plan.is_active;
+    let text: string;
+    if (deactivating) {
+      const memberCount = DBService.getMembers().filter((m) => m.membership_plan_id === plan.id).length;
+      text =
+        memberCount > 0
+          ? `${memberCount} ${memberCount === 1 ? 'member is' : 'members are'} on "${plan.name}". They keep it, but it can't be picked for new members or payments.`
+          : `"${plan.name}" will no longer be available for new members or payments.`;
+    } else {
+      text = `"${plan.name}" will be available again for new members and payments.`;
+    }
+    const confirmed = await showConfirm(
+      deactivating ? 'Deactivate plan?' : 'Activate plan?',
+      text,
+      deactivating ? 'Yes, deactivate' : 'Yes, activate',
+      deactivating ? '#ef4444' : '#059669'
+    );
+    if (!confirmed) return;
+    try {
+      DBService.updatePlan(plan.id, { is_active: !plan.is_active });
+      load();
+      showToast(deactivating ? 'Plan deactivated' : 'Plan activated');
+    } catch (err) {
+      showError('Save Failed', err instanceof Error ? err.message : 'Could not update the plan.');
     }
   };
 
@@ -91,7 +135,7 @@ export const PlansView: React.FC = () => {
             </p>
           </div>
 
-          <button onClick={openModal} className="btn btn-primary btn-sm">
+          <button onClick={() => openModal()} className="btn btn-primary btn-sm">
             <Plus size={14} />
             <span>Add Plan</span>
           </button>
@@ -172,7 +216,8 @@ export const PlansView: React.FC = () => {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.35rem',
+                    justifyContent: 'space-between',
+                    gap: '0.5rem',
                     fontSize: '0.75rem',
                     color: '#86868b',
                     marginTop: 'auto',
@@ -180,8 +225,37 @@ export const PlansView: React.FC = () => {
                     borderTop: '1px solid #f1f5f9',
                   }}
                 >
-                  <Clock size={13} />
-                  <span>{plan.duration_months} {plan.duration_months === 1 ? 'month term' : 'month term'}</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <Clock size={13} />
+                    <span>{plan.duration_months} month term</span>
+                  </span>
+                  <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => openModal(plan)}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}
+                    >
+                      <Pencil size={12} />
+                      <span>Edit</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleActive(plan)}
+                      className="btn btn-secondary btn-sm"
+                      style={{
+                        fontSize: '0.75rem',
+                        padding: '0.3rem 0.65rem',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.3rem',
+                        color: plan.is_active ? '#ef4444' : '#059669',
+                      }}
+                    >
+                      <Power size={12} />
+                      <span>{plan.is_active ? 'Deactivate' : 'Activate'}</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -218,7 +292,7 @@ export const PlansView: React.FC = () => {
             <p style={{ fontSize: '0.85rem', color: '#86868b', maxWidth: '360px' }}>
               Add your first plan so you can register members and record payments against it.
             </p>
-            <button onClick={openModal} className="btn btn-primary btn-sm" style={{ marginTop: '0.35rem' }}>
+            <button onClick={() => openModal()} className="btn btn-primary btn-sm" style={{ marginTop: '0.35rem' }}>
               <Plus size={14} />
               <span>Add Plan</span>
             </button>
@@ -226,14 +300,19 @@ export const PlansView: React.FC = () => {
         )}
       </ScrollReveal>
 
-      {/* 3. Add Plan Modal */}
+      {/* 3. Add / Edit Plan Modal */}
       <Modal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        title="Add Membership Plan"
-        subtitle="Define a new membership tier for your gym."
+        title={editingPlan ? 'Edit Membership Plan' : 'Add Membership Plan'}
+        subtitle={editingPlan ? 'Update the details of this membership tier.' : 'Define a new membership tier for your gym.'}
       >
-        <form onSubmit={handleAddPlan} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <form onSubmit={handleSavePlan} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {editingPlan && (
+            <div style={{ padding: '0.65rem 0.85rem', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '8px', color: '#1e40af', fontSize: '0.8rem', lineHeight: 1.4 }}>
+              Changes apply to new payments and renewals only. Past payments and current expiration dates stay the same.
+            </div>
+          )}
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
               Plan Name *
@@ -254,7 +333,7 @@ export const PlansView: React.FC = () => {
               </label>
               <input
                 type="number"
-                min="0"
+                min="0.01"
                 step="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
@@ -270,6 +349,7 @@ export const PlansView: React.FC = () => {
               <input
                 type="number"
                 min="1"
+                max="120"
                 step="1"
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
@@ -297,7 +377,7 @@ export const PlansView: React.FC = () => {
               Cancel
             </button>
             <button type="submit" className="btn btn-primary">
-              Add Plan
+              {editingPlan ? 'Save Changes' : 'Add Plan'}
             </button>
           </div>
         </form>
