@@ -75,24 +75,24 @@ export const ReportsView: React.FC = () => {
   const lastExp = lastMonthKpis?.totalExpenses || 0;
   const lastProfit = lastMonthKpis?.netProfit || 0;
 
-  const getChangeStats = (current: number, previous: number) => {
-    if (previous === 0) {
-      if (current === 0) {
-        return { label: '0.0%', color: '#64748b' };
-      }
-      return { label: '+100.0%', color: '#059669' };
+  // lowerIsBetter: for expenses, going down is good news (green).
+  const getChangeStats = (current: number, previous: number, lowerIsBetter = false) => {
+    if (current === previous) {
+      return { label: '0.0%', color: '#64748b', isUp: true };
     }
-    const diff = ((current - previous) / previous) * 100;
-    const isPositive = diff >= 0;
-    const color = isPositive ? '#059669' : '#ef4444';
+    const isUp = current > previous;
+    // Divide by the size of the old value so a loss getting smaller counts as going up.
+    const pct = previous === 0 ? 100 : (Math.abs(current - previous) / Math.abs(previous)) * 100;
+    const isGood = lowerIsBetter ? !isUp : isUp;
     return {
-      label: `${isPositive ? '+' : '-'}${Math.abs(diff).toFixed(1)}%`,
-      color,
+      label: `${isUp ? '+' : '-'}${pct.toFixed(1)}%`,
+      color: isGood ? '#059669' : '#ef4444',
+      isUp,
     };
   };
 
   const revChange = getChangeStats(kpis.totalRevenue, lastRev);
-  const expChange = getChangeStats(kpis.totalExpenses, lastExp);
+  const expChange = getChangeStats(kpis.totalExpenses, lastExp, true);
   const profitChange = getChangeStats(kpis.netProfit, lastProfit);
 
   // The header cards follow the selected report's period.
@@ -282,7 +282,7 @@ export const ReportsView: React.FC = () => {
             </div>
             {!isPeriodTab && lastRev > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: revChange.color, fontWeight: 600, marginBottom: '1rem' }}>
-                <ArrowUpRight size={14} />
+                {revChange.isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                 <span>{revChange.label} from last month</span>
               </div>
             )}
@@ -312,7 +312,7 @@ export const ReportsView: React.FC = () => {
             </div>
             {!isPeriodTab && lastExp > 0 && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: expChange.color, fontWeight: 600, marginBottom: '1rem' }}>
-                <ArrowDownRight size={14} />
+                {expChange.isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                 <span>{expChange.label} from last month</span>
               </div>
             )}

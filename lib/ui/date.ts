@@ -7,3 +7,18 @@ export function getCurrentMonthRangeLabel(): string {
   const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', year: 'numeric' };
   return `${first.toLocaleDateString('en-US', opts)} - ${last.toLocaleDateString('en-US', opts)}`;
 }
+
+// Short "how long ago" label for a timestamp, e.g. "Just now", "5m ago",
+// "3h ago", "2d ago", or the date for anything older than a week.
+export function formatTimeAgo(iso: string): string {
+  const then = new Date(iso);
+  if (isNaN(then.getTime())) return '';
+  const minutes = Math.floor((Date.now() - then.getTime()) / 60000);
+  if (minutes < 1) return 'Just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return then.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}

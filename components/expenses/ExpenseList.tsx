@@ -229,7 +229,7 @@ export const ExpenseList: React.FC = () => {
                 const diff = thisMonthExpenses - lastMonthExpenses;
                 const isPos = diff >= 0;
                 return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: isPos ? '#059669' : '#ef4444', fontWeight: 600 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: isPos ? '#ef4444' : '#059669', fontWeight: 600 }}>
                     {isPos ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                     <span>
                       {isPos ? '+' : '-'}{Math.abs(Math.round((diff / lastMonthExpenses) * 100))}% vs last month ({currency}{lastMonthExpenses.toLocaleString()})
@@ -253,7 +253,11 @@ export const ExpenseList: React.FC = () => {
               -{currency}{historicalSummary.overallMonthlyAverage.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-              Average across {historicalSummary.monthlyTotals.length} recorded months
+              {(() => {
+                // Same months the average is divided by: months in the window that have expenses.
+                const recorded = historicalSummary.monthlyTotals.filter((m) => m.total > 0).length;
+                return `Average across ${recorded} recorded ${recorded === 1 ? 'month' : 'months'}`;
+              })()}
             </div>
           </div>
         </div>

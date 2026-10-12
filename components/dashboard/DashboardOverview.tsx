@@ -35,6 +35,8 @@ import {
   Percent,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { formatTimeAgo } from '@/lib/ui/date';
+import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
 import { DashboardKPIs, MonthlyTrendData, Member, UserProfile, Payment, Expense } from '@/types/database';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { RevenueExpenseChart } from '@/components/charts/RevenueExpenseChart';
@@ -44,6 +46,7 @@ import { PaymentModal } from '@/components/payments/PaymentModal';
 import { ExpenseModal } from '@/components/expenses/ExpenseModal';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { formatCompactAmount } from '@/lib/ui/format';
 
 export const DashboardOverview: React.FC = () => {
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
@@ -113,7 +116,10 @@ export const DashboardOverview: React.FC = () => {
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good morning' : currentHour < 18 ? 'Good afternoon' : 'Good evening';
   const expiringMembers = members.filter((m) => m.status === 'expiring');
-  const recentPayments = payments.slice(0, 2);
+  const recentPayments = payments
+    .filter((p) => p.payment_status === 'completed')
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    .slice(0, 2);
 
   const revenueTrend = lastMonthKpis && lastMonthKpis.totalRevenue > 0
     ? {
@@ -541,7 +547,7 @@ export const DashboardOverview: React.FC = () => {
                       Payment received • {currency}{Number(p.amount).toLocaleString()}
                     </div>
                     <div style={{ color: '#86868b', fontSize: '0.75rem', marginTop: '2px' }}>
-                      {p.member?.first_name} {p.member?.last_name} • {p.payment_method} • Just now
+                      {p.member?.first_name} {p.member?.last_name} • {p.payment_method} • {formatTimeAgo(p.created_at)}
                     </div>
                   </div>
                 ))}
@@ -1187,7 +1193,7 @@ export const DashboardOverview: React.FC = () => {
                         >
                           <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', display: 'block' }}>{t.month}</span>
                           <strong style={{ fontSize: '0.95rem', color: t.profit >= 0 ? '#059669' : '#e11d48', display: 'block', marginTop: '4px' }}>
-                            {currency}{(t.profit / 1000).toFixed(0)}k
+                            {formatCompactAmount(t.profit, currency)}
                           </strong>
                         </div>
                       ))}
@@ -1210,7 +1216,16 @@ export const DashboardOverview: React.FC = () => {
                       <Sparkles size={18} />
                     </div>
                     <div style={{ fontSize: '0.825rem', color: '#166534', lineHeight: 1.45 }}>
-                      <strong>AI Profit Maximizer:</strong> Your current operating margin is <strong>{kpis.profitMargin}%</strong>. Implementing HVAC automation and bulk supply procurement can immediately trim expenses by up to <strong>₱10,000/mo</strong>.
+                      <strong>AI Profit Maximizer:</strong> Your current operating margin is <strong>{kpis.profitMargin}%</strong>.{' '}
+                      {(() => {
+                        // Same estimate the AI Insights widget and Analytics page show.
+                        const savings = detectExpenseLeaks().potentialMonthlySavings;
+                        return savings > 0 ? (
+                          <>Following the cost-saving tips on the Analytics page could trim expenses by up to <strong>{currency}{savings.toLocaleString()}/mo</strong>.</>
+                        ) : (
+                          <>Record your expenses to get cost-saving tips.</>
+                        );
+                      })()}
                     </div>
                   </div>
                 </>

@@ -170,7 +170,11 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
               {currentPlan?.name || 'Standard'}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-              {currency}{currentPlan?.price ? Number(currentPlan.price).toLocaleString() : '2,500'} / month
+              {currentPlan
+                ? `${currency}${Number(currentPlan.price).toLocaleString()} / ${
+                    currentPlan.duration_months === 1 ? 'month' : `${currentPlan.duration_months} months`
+                  }`
+                : '—'}
             </div>
           </div>
 

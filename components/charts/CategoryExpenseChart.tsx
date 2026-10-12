@@ -9,6 +9,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { Expense } from '@/types/database';
+import { formatCompactAmount } from '@/lib/ui/format';
 
 interface CategoryExpenseChartProps {
   expenses: Expense[];
@@ -107,7 +108,7 @@ export const CategoryExpenseChart: React.FC<CategoryExpenseChartProps> = ({
           }}
         >
           <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a', lineHeight: 1.15 }}>
-            {currency}{totalExpenses >= 1000 ? `${(totalExpenses / 1000).toFixed(0)}k` : totalExpenses}
+            {formatCompactAmount(totalExpenses, currency)}
           </div>
           <div style={{ fontSize: '0.65rem', color: '#64748b', fontWeight: 500, marginTop: '2px' }}>
             Total Expenses

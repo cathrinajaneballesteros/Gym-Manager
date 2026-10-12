@@ -46,9 +46,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     ? members.find((m) => m.id === preselectedMemberId)
     : members.find((m) => m.status === 'pending') || members[0];
 
+  const firstActivePlan = plans.find((p) => p.is_active);
   const defaultPlan = defaultMember
-    ? plans.find((p) => p.id === defaultMember.membership_plan_id) || plans[0]
-    : plans[0];
+    ? plans.find((p) => p.id === defaultMember.membership_plan_id) || firstActivePlan
+    : firstActivePlan;
 
   const buildDefaultValues = (): PaymentFormData => {
     if (initialPayment) {
@@ -66,7 +67,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     return {
       member_id: defaultMember?.id || '',
       membership_plan_id: defaultPlan?.id || '',
-      amount: defaultPlan?.price || 1500,
+      amount: defaultPlan?.price || 0,
       payment_date: todayStr,
       payment_method: 'Cash',
       payment_status: 'completed',
@@ -86,6 +87,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     resolver: zodResolver(paymentSchema),
     defaultValues: buildDefaultValues(),
   });
+
+  // Only active plans can be chosen, but keep the plan already on this payment
+  // or on the selected member so it does not drop out of the list.
+  const selectedMemberPlanId = members.find((m) => m.id === watch('member_id'))?.membership_plan_id;
+  const selectablePlans = plans.filter(
+    (p) => p.is_active || p.id === initialPayment?.membership_plan_id || p.id === selectedMemberPlanId
+  );
 
   // Refill the form with the correct values every time the modal opens or the target payment/member changes.
   useEffect(() => {
@@ -207,7 +215,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               }}
               style={{ width: '100%' }}
             >
-              {plans.map((p) => (
+              {selectablePlans.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>

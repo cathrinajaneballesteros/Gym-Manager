@@ -22,11 +22,12 @@ import {
 import { calculateRevenueForecast } from '@/lib/ai/forecasting';
 import { predictMemberChurn } from '@/lib/ai/churn-detector';
 import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
-import { RevenueForecastResult, ChurnPredictionResult, ExpenseLeakResult, CostSavingPlaybook } from '@/types/ai';
+import { RevenueForecastResult, ChurnPredictionResult, ChurnPredictionMember, ExpenseLeakResult, CostSavingPlaybook } from '@/types/ai';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
 import { showAlert, showToast, showError } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
+import { formatCompactAmount } from '@/lib/ui/format';
 import {
   ResponsiveContainer,
   LineChart,
@@ -156,7 +157,7 @@ export const AnalyticsView: React.FC = () => {
         }
       });
     } catch (err: any) {
-      handleContactMember(member.memberId);
+      handleContactMember(member);
     }
   };
 
@@ -243,10 +244,20 @@ export const AnalyticsView: React.FC = () => {
           { month: 'Sep', historical: null, forecast: 0 },
         ];
 
-  const handleContactMember = (memberId: string) => {
-    setContactedMemberId(memberId);
-    showToast('Message copied to clipboard!');
-    setTimeout(() => setContactedMemberId(null), 3000);
+  const handleContactMember = async (member: ChurnPredictionMember) => {
+    const gymName = profile?.gym_name || 'our gym';
+    const message =
+      member.daysUntilExpiration < 0
+        ? `Hi ${member.memberName}, we miss you at ${gymName}! Your membership ended on ${member.expirationDate}. Come back and renew anytime.`
+        : `Hi ${member.memberName}, this is ${gymName}. Your membership ends on ${member.expirationDate}. Renew early so you don't miss a session!`;
+    try {
+      await navigator.clipboard.writeText(message);
+      setContactedMemberId(member.memberId);
+      showToast('Message copied to clipboard!');
+      setTimeout(() => setContactedMemberId(null), 3000);
+    } catch {
+      showError('Copy Failed', 'Could not copy the message. Please check your browser permissions.');
+    }
   };
 
   const handleViewForecastDetails = () => {
@@ -286,10 +297,7 @@ export const AnalyticsView: React.FC = () => {
         ? Math.max(...forecastPoints.map((p) => p.upperConfidence))
         : Math.round(forecast.forecastedNextMonthRevenue * 1.1);
 
-    const formatVal = (val: number) => {
-      if (val >= 1000) return `${currency}${(val / 1000).toFixed(0)}k`;
-      return `${currency}${val.toLocaleString()}`;
-    };
+    const formatVal = (val: number) => formatCompactAmount(val, currency);
 
     showAlert({
       icon: 'info',
@@ -567,7 +575,7 @@ export const AnalyticsView: React.FC = () => {
                             <span>AI Draft</span>
                           </button>
                           <button
-                            onClick={() => handleContactMember(m.memberId)}
+                            onClick={() => handleContactMember(m)}
                             className="btn btn-secondary btn-sm"
                             style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
                           >
