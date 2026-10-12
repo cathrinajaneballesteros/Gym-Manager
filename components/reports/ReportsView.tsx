@@ -61,6 +61,54 @@ const formatMonthRange = (monthKeys: string[]): string => {
   return first === last ? first : `${first} - ${last}`;
 };
 
+interface SummaryCardProps {
+  label: string;
+  value: string;
+  color: string;
+  change: { label: string; color: string; isUp: boolean } | null;
+  trends: MonthlyTrendData[];
+  dataKey: 'revenue' | 'expenses';
+}
+
+// This month's total with the change from last month and a 6-month sparkline.
+const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, color, change, trends, dataKey }) => (
+  <div className="card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
+    <div style={{ minWidth: '200px' }}>
+      <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
+        {label}
+      </div>
+      <div style={{ fontSize: '2rem', fontWeight: 700, color, letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
+        {value}
+      </div>
+      {change && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: change.color, fontWeight: 600 }}>
+          {change.isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+          <span>{change.label} from last month</span>
+        </div>
+      )}
+    </div>
+
+    <div style={{ flex: 1, minWidth: '220px' }}>
+      <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 600, textAlign: 'right', marginBottom: '0.25rem' }}>
+        Last 6 months
+      </div>
+      <div style={{ width: '100%', height: 80 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={trends}>
+            <defs>
+              <linearGradient id={`rep-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor={color} stopOpacity={0.2} />
+                <stop offset="95%" stopColor={color} stopOpacity={0.0} />
+              </linearGradient>
+            </defs>
+            <Area type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2.5} fill={`url(#rep-${dataKey})`} />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  </div>
+);
+
 export const ReportsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ReportTab>('revenue');
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
@@ -121,8 +169,7 @@ export const ReportsView: React.FC = () => {
   const expChange = getChangeStats(kpis.totalExpenses, lastExp, true);
   const profitChange = getChangeStats(kpis.netProfit, lastProfit);
 
-  // The header cards follow the selected report's period.
-  const isPeriodTab = activeTab === 'monthly' || activeTab === 'annual';
+  // Exports follow the selected report's period.
   const display = (activeTab === 'annual' ? annualKpis : activeTab === 'monthly' ? sixMonthKpis : kpis) || kpis;
 
   const rangeLabel =
@@ -247,23 +294,45 @@ export const ReportsView: React.FC = () => {
             </p>
           </div>
 
-          {/* Date Filter Pill */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '0.5rem 0.85rem',
-              fontSize: '0.825rem',
-              color: '#475569',
-              fontWeight: 500,
-            }}
-          >
-            <Calendar size={14} color="#64748b" />
-            <span>{rangeLabel}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            {/* Date Filter Pill */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.45rem',
+                backgroundColor: '#ffffff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                padding: '0.5rem 0.85rem',
+                fontSize: '0.825rem',
+                color: '#475569',
+                fontWeight: 500,
+              }}
+            >
+              <Calendar size={14} color="#64748b" />
+              <span>{rangeLabel}</span>
+            </div>
+
+            <button
+              onClick={handleExportPDF}
+              disabled={isExporting}
+              className="btn btn-outline btn-sm"
+              style={{ backgroundColor: '#ffffff', color: '#0f172a', border: '1px solid #0f172a' }}
+            >
+              <FileText size={15} />
+              <span>{isExporting ? 'Generating...' : 'Export PDF'}</span>
+            </button>
+
+            <button
+              onClick={handleExportExcel}
+              disabled={isExporting}
+              className="btn btn-outline btn-sm"
+              style={{ backgroundColor: '#0f172a', color: '#ffffff', border: '1px solid #0f172a' }}
+            >
+              <FileSpreadsheet size={15} />
+              <span>{isExporting ? 'Generating...' : 'Export Excel'}</span>
+            </button>
           </div>
         </div>
       </ScrollReveal>
@@ -293,195 +362,94 @@ export const ReportsView: React.FC = () => {
         </div>
       </ScrollReveal>
 
-      {/* 3. Top 2 Metric Cards with Sparklines */}
-      <ScrollReveal delay={70}>
-        <div className="grid grid-cols-2 gap-4">
-          {/* Total Revenue Card with Mini Chart */}
-          <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
-              Total Revenue
-            </div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#059669', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
-              +{currency}{display.totalRevenue.toLocaleString()}
-            </div>
-            {!isPeriodTab && lastRev > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: revChange.color, fontWeight: 600, marginBottom: '1rem' }}>
-                {revChange.isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                <span>{revChange.label} from last month</span>
-              </div>
-            )}
-
-            <div style={{ width: '100%', height: 100, marginTop: 'auto' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trends}>
-                  <defs>
-                    <linearGradient id="repRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#059669" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#059669" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <Area type="monotone" dataKey="revenue" stroke="#059669" strokeWidth={2.5} fill="url(#repRev)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Total Expenses Card with Mini Chart */}
-          <div className="card" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
-              Total Expenses
-            </div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#ef4444', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
-              -{currency}{display.totalExpenses.toLocaleString()}
-            </div>
-            {!isPeriodTab && lastExp > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: expChange.color, fontWeight: 600, marginBottom: '1rem' }}>
-                {expChange.isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                <span>{expChange.label} from last month</span>
-              </div>
-            )}
-
-            <div style={{ width: '100%', height: 100, marginTop: 'auto' }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={trends}>
-                  <defs>
-                    <linearGradient id="repExp" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <Area type="monotone" dataKey="expenses" stroke="#ef4444" strokeWidth={2.5} fill="url(#repExp)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-      </ScrollReveal>
-
-      {/* 4. Net Profit Card + Export Action Buttons */}
-      <ScrollReveal delay={100}>
-        <div
-          className="card"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            flexWrap: 'wrap',
-            gap: '1.5rem',
-            padding: '1.5rem 1.75rem',
-          }}
-        >
-          <div>
-            <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.35rem' }}>
-              Net Profit
-            </div>
-            <div style={{ fontSize: '2rem', fontWeight: 700, color: display.netProfit >= 0 ? '#059669' : '#ef4444', letterSpacing: '-0.02em' }}>
-              {display.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(display.netProfit).toLocaleString()}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={handleExportPDF}
-              disabled={isExporting}
-              className="btn btn-outline"
-              style={{ backgroundColor: '#ffffff', color: '#0f172a', border: '1px solid #0f172a' }}
-            >
-              <FileText size={16} />
-              <span>{isExporting ? 'Generating...' : 'Export PDF'}</span>
-            </button>
-
-            <button
-              onClick={handleExportExcel}
-              disabled={isExporting}
-              className="btn btn-outline"
-              style={{ backgroundColor: '#0f172a', color: '#ffffff', border: '1px solid #0f172a' }}
-            >
-              <FileSpreadsheet size={16} />
-              <span>{isExporting ? 'Generating...' : 'Export Excel'}</span>
-            </button>
-          </div>
-        </div>
-      </ScrollReveal>
-
-      {/* 5. Tab-specific report body */}
+      {/* 3. Tab-specific report body */}
       {activeTab === 'revenue' && (
-        <ScrollReveal delay={130}>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Collections by Payment Method</h2>
-                <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
-                  {monthPayments.length} payment{monthPayments.length === 1 ? '' : 's'} recorded this month
-                </p>
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={TH}>Method</th>
-                      <th style={TH}>Payments</th>
-                      <th style={{ ...TH, textAlign: 'right' }}>Total</th>
-                      <th style={{ ...TH, textAlign: 'right' }}>Share</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(paymentsByMethod).map(([method, data]) => {
-                      const pct = monthRevenueTotal > 0 ? Math.round((data.total / monthRevenueTotal) * 100) : 0;
-                      return (
-                        <tr key={method}>
-                          <td style={TD}><strong>{method}</strong></td>
-                          <td style={TD}>{data.count}</td>
-                          <td style={{ ...TD, textAlign: 'right', color: '#059669', fontWeight: 600 }}>
-                            +{currency}{data.total.toLocaleString()}
-                          </td>
-                          <td style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{pct}%</td>
+        <ScrollReveal delay={70}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <SummaryCard
+              label="Total Revenue this month"
+              value={`+${currency}${kpis.totalRevenue.toLocaleString()}`}
+              color="#059669"
+              change={lastRev > 0 ? revChange : null}
+              trends={trends}
+              dataKey="revenue"
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Collections by Payment Method</h2>
+                  <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    {monthPayments.length} payment{monthPayments.length === 1 ? '' : 's'} recorded this month
+                  </p>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th style={TH}>Method</th>
+                        <th style={TH}>Payments</th>
+                        <th style={{ ...TH, textAlign: 'right' }}>Total</th>
+                        <th style={{ ...TH, textAlign: 'right' }}>Share</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(paymentsByMethod).map(([method, data]) => {
+                        const pct = monthRevenueTotal > 0 ? Math.round((data.total / monthRevenueTotal) * 100) : 0;
+                        return (
+                          <tr key={method}>
+                            <td style={TD}><strong>{method}</strong></td>
+                            <td style={TD}>{data.count}</td>
+                            <td style={{ ...TD, textAlign: 'right', color: '#059669', fontWeight: 600 }}>
+                              +{currency}{data.total.toLocaleString()}
+                            </td>
+                            <td style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{pct}%</td>
+                          </tr>
+                        );
+                      })}
+                      {Object.keys(paymentsByMethod).length === 0 && (
+                        <tr>
+                          <td style={{ ...TD, color: '#94a3b8' }} colSpan={4}>No payments recorded this month.</td>
                         </tr>
-                      );
-                    })}
-                    {Object.keys(paymentsByMethod).length === 0 && (
-                      <tr>
-                        <td style={{ ...TD, color: '#94a3b8' }} colSpan={4}>No payments recorded this month.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Revenue by Membership Tier</h2>
-                <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
-                  Subscription tiers performance this month
-                </p>
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={TH}>Plan</th>
-                      <th style={TH}>Subs</th>
-                      <th style={{ ...TH, textAlign: 'right' }}>Revenue</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(paymentsByPlan).map(([planName, data]) => (
-                      <tr key={planName}>
-                        <td style={TD}><strong>{planName}</strong></td>
-                        <td style={TD}>{data.count}</td>
-                        <td style={{ ...TD, textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>
-                          {currency}{data.total.toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                    {Object.keys(paymentsByPlan).length === 0 && (
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Revenue by Membership Tier</h2>
+                  <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    Subscription tiers performance this month
+                  </p>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
                       <tr>
-                        <td style={{ ...TD, color: '#94a3b8' }} colSpan={3}>No tier revenue recorded this month.</td>
+                        <th style={TH}>Plan</th>
+                        <th style={TH}>Subs</th>
+                        <th style={{ ...TH, textAlign: 'right' }}>Revenue</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {Object.entries(paymentsByPlan).map(([planName, data]) => (
+                        <tr key={planName}>
+                          <td style={TD}><strong>{planName}</strong></td>
+                          <td style={TD}>{data.count}</td>
+                          <td style={{ ...TD, textAlign: 'right', color: '#0f172a', fontWeight: 600 }}>
+                            {currency}{data.total.toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                      {Object.keys(paymentsByPlan).length === 0 && (
+                        <tr>
+                          <td style={{ ...TD, color: '#94a3b8' }} colSpan={3}>No tier revenue recorded this month.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -489,82 +457,92 @@ export const ReportsView: React.FC = () => {
       )}
 
       {activeTab === 'expenses' && (
-        <ScrollReveal delay={130}>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Outlays by Category</h2>
-                <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
-                  Share of this month&apos;s overhead
-                </p>
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={TH}>Category</th>
-                      <th style={TH}>Items</th>
-                      <th style={{ ...TH, textAlign: 'right' }}>Total</th>
-                      <th style={{ ...TH, textAlign: 'right' }}>Share</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(expensesByCategory).map(([category, data]) => {
-                      const pct = monthExpenseTotal > 0 ? Math.round((data.total / monthExpenseTotal) * 100) : 0;
-                      return (
-                        <tr key={category}>
-                          <td style={TD}><strong>{category}</strong></td>
-                          <td style={TD}>{data.count}</td>
-                          <td style={{ ...TD, textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>
-                            -{currency}{data.total.toLocaleString()}
-                          </td>
-                          <td style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{pct}%</td>
+        <ScrollReveal delay={70}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <SummaryCard
+              label="Total Expenses this month"
+              value={`-${currency}${kpis.totalExpenses.toLocaleString()}`}
+              color="#ef4444"
+              change={lastExp > 0 ? expChange : null}
+              trends={trends}
+              dataKey="expenses"
+            />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Outlays by Category</h2>
+                  <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    Share of this month&apos;s overhead
+                  </p>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr>
+                        <th style={TH}>Category</th>
+                        <th style={TH}>Items</th>
+                        <th style={{ ...TH, textAlign: 'right' }}>Total</th>
+                        <th style={{ ...TH, textAlign: 'right' }}>Share</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Object.entries(expensesByCategory).map(([category, data]) => {
+                        const pct = monthExpenseTotal > 0 ? Math.round((data.total / monthExpenseTotal) * 100) : 0;
+                        return (
+                          <tr key={category}>
+                            <td style={TD}><strong>{category}</strong></td>
+                            <td style={TD}>{data.count}</td>
+                            <td style={{ ...TD, textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>
+                              -{currency}{data.total.toLocaleString()}
+                            </td>
+                            <td style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{pct}%</td>
+                          </tr>
+                        );
+                      })}
+                      {Object.keys(expensesByCategory).length === 0 && (
+                        <tr>
+                          <td style={{ ...TD, color: '#94a3b8' }} colSpan={4}>No expenses recorded this month.</td>
                         </tr>
-                      );
-                    })}
-                    {Object.keys(expensesByCategory).length === 0 && (
-                      <tr>
-                        <td style={{ ...TD, color: '#94a3b8' }} colSpan={4}>No expenses recorded this month.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
 
-            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Top Expense Line Items</h2>
-                <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
-                  Ranked by amount this month
-                </p>
-              </div>
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                  <thead>
-                    <tr>
-                      <th style={TH}>Item</th>
-                      <th style={TH}>Category</th>
-                      <th style={{ ...TH, textAlign: 'right' }}>Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {topExpenses.map((e) => (
-                      <tr key={e.id}>
-                        <td style={TD}><strong>{e.title}</strong></td>
-                        <td style={{ ...TD, color: '#64748b' }}>{e.category}</td>
-                        <td style={{ ...TD, textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>
-                          -{currency}{Number(e.amount).toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                    {topExpenses.length === 0 && (
+              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Top Expense Line Items</h2>
+                  <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
+                    Ranked by amount this month
+                  </p>
+                </div>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
                       <tr>
-                        <td style={{ ...TD, color: '#94a3b8' }} colSpan={3}>No expenses recorded this month.</td>
+                        <th style={TH}>Item</th>
+                        <th style={TH}>Category</th>
+                        <th style={{ ...TH, textAlign: 'right' }}>Amount</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {topExpenses.map((e) => (
+                        <tr key={e.id}>
+                          <td style={TD}><strong>{e.title}</strong></td>
+                          <td style={{ ...TD, color: '#64748b' }}>{e.category}</td>
+                          <td style={{ ...TD, textAlign: 'right', color: '#ef4444', fontWeight: 600 }}>
+                            -{currency}{Number(e.amount).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                      {topExpenses.length === 0 && (
+                        <tr>
+                          <td style={{ ...TD, color: '#94a3b8' }} colSpan={3}>No expenses recorded this month.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
@@ -572,7 +550,7 @@ export const ReportsView: React.FC = () => {
       )}
 
       {activeTab === 'profit-loss' && (
-        <ScrollReveal delay={130}>
+        <ScrollReveal delay={70}>
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <div
               style={{
@@ -642,7 +620,7 @@ export const ReportsView: React.FC = () => {
       )}
 
       {activeTab === 'monthly' && (
-        <ScrollReveal delay={130}>
+        <ScrollReveal delay={70}>
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
             <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
               <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Monthly Performance</h2>
@@ -676,6 +654,25 @@ export const ReportsView: React.FC = () => {
                     );
                   })}
                 </tbody>
+                <tfoot>
+                  {(() => {
+                    const totalRevenue = trends.reduce((sum, pt) => sum + pt.revenue, 0);
+                    const totalExpenses = trends.reduce((sum, pt) => sum + pt.expenses, 0);
+                    const totalProfit = totalRevenue - totalExpenses;
+                    const TF: React.CSSProperties = { ...TD, fontWeight: 700, borderTop: '2px solid #e2e8f0', borderBottom: 'none', backgroundColor: '#f8fafc' };
+                    return (
+                      <tr>
+                        <td style={TF}>Total</td>
+                        <td style={{ ...TF, textAlign: 'right', color: '#059669' }}>+{currency}{totalRevenue.toLocaleString()}</td>
+                        <td style={{ ...TF, textAlign: 'right', color: '#ef4444' }}>-{currency}{totalExpenses.toLocaleString()}</td>
+                        <td style={{ ...TF, textAlign: 'right', color: totalProfit >= 0 ? '#0f172a' : '#ef4444' }}>
+                          {formatSigned(totalProfit, currency)}
+                        </td>
+                        <td style={{ ...TF, textAlign: 'right', color: '#64748b' }}>{formatMargin(totalProfit, totalRevenue)}</td>
+                      </tr>
+                    );
+                  })()}
+                </tfoot>
               </table>
             </div>
           </div>
@@ -683,7 +680,7 @@ export const ReportsView: React.FC = () => {
       )}
 
       {activeTab === 'annual' && (
-        <ScrollReveal delay={130}>
+        <ScrollReveal delay={70}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
             <div className="grid grid-cols-3 gap-4">
               <div className="card" style={{ padding: '1.35rem 1.5rem' }}>
