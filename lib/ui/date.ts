@@ -18,6 +18,15 @@ export function addMonthsToDateKey(startDateStr: string, durationMonths: number)
   return toDateKey(target);
 }
 
+// The last `count` months as YYYY-MM keys, oldest first, ending with the current month (local time).
+export function getRecentMonthKeys(count: number): string[] {
+  const now = new Date();
+  return Array.from({ length: count }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (count - 1 - i), 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+}
+
 // Today's date as YYYY-MM-DD in the user's local time.
 export function getTodayKey(): string {
   return toDateKey(new Date());

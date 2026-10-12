@@ -20,6 +20,7 @@ import {
   INITIAL_EXPENSES,
 } from './mock-data';
 import { getPaymentMemberName } from '@/lib/ui/format';
+import { getRecentMonthKeys } from '@/lib/ui/date';
 
 /** Only Cash and GCash are supported; anything else (legacy data) is treated as Cash. */
 const normalizeMethod = (method: string | undefined): PaymentMethod =>
@@ -86,16 +87,10 @@ function setStoredItem<T>(key: string, value: T): void {
 
 // Derive the most recent N month buckets, ending with the current month.
 function getRecentMonthBuckets(count: number): { month: string; monthKey: string }[] {
-  const now = new Date();
-  const buckets: { month: string; monthKey: string }[] = [];
-  for (let i = count - 1; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    buckets.push({
-      month: d.toLocaleString('en-US', { month: 'short' }),
-      monthKey: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
-    });
-  }
-  return buckets;
+  return getRecentMonthKeys(count).map((monthKey) => {
+    const [y, m] = monthKey.split('-').map(Number);
+    return { month: new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'short' }), monthKey };
+  });
 }
 
 // Format a Date as a local YYYY-MM-DD string (avoids UTC shifting a day).
@@ -873,7 +868,8 @@ export class DBService {
   } {
     const expenses = this.getExpenses();
     const months = this.getExpenseHistoryMonths();
-    const monthKeys = months.map((m) => m.monthKey).slice(0, 6);
+    // The last 6 calendar months, newest first; future-dated expenses don't push out a real past month.
+    const monthKeys = getRecentMonthKeys(6).reverse();
 
     const monthlyTotals = monthKeys.map((key) => {
       const match = months.find((m) => m.monthKey === key);
@@ -912,9 +908,11 @@ export class DBService {
         };
       });
 
+      // Average only the spending inside the 6-month window, over the same months as the divisor.
+      const windowTotal = recentMonths.reduce((sum, m) => sum + m.amount, 0);
       categories[cat] = {
         total,
-        monthlyAvg: Math.round(total / divisor),
+        monthlyAvg: Math.round(windowTotal / divisor),
         count: catExpenses.length,
         recentMonths,
       };

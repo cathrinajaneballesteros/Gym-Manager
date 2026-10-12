@@ -25,7 +25,8 @@ import { CategoryExpenseChart } from '@/components/charts/CategoryExpenseChart';
 import { ExpenseModal } from './ExpenseModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showToast } from '@/lib/ui/swal';
-import { getCurrentMonthRangeLabel, getTodayKey, formatDisplayDate } from '@/lib/ui/date';
+import { getCurrentMonthRangeLabel, getRecentMonthKeys, getTodayKey, formatDisplayDate } from '@/lib/ui/date';
+import { downloadCSV } from '@/lib/ui/csv';
 import { escapeHtml } from '@/lib/ui/escape';
 import { getPageWindow } from '@/lib/ui/pagination';
 
@@ -84,18 +85,22 @@ export const ExpenseList: React.FC = () => {
       } else if (timeframeFilter === 'last-month') {
         matchesTime = (e.expense_date || '').startsWith(lastMonthKey);
       } else if (timeframeFilter === 'last-3-months') {
-        const last3Keys = historyMonths.slice(0, 3).map((m) => m.monthKey);
-        matchesTime = last3Keys.some((k) => (e.expense_date || '').startsWith(k));
+        matchesTime = getRecentMonthKeys(3).includes((e.expense_date || '').slice(0, 7));
       } else if (timeframeFilter === 'last-6-months') {
-        const last6Keys = historyMonths.slice(0, 6).map((m) => m.monthKey);
-        matchesTime = last6Keys.some((k) => (e.expense_date || '').startsWith(k));
+        matchesTime = getRecentMonthKeys(6).includes((e.expense_date || '').slice(0, 7));
       } else if (timeframeFilter !== 'all') {
         matchesTime = (e.expense_date || '').startsWith(timeframeFilter);
       }
 
       return matchesSearch && matchesCategory && matchesMethod && matchesTime;
-    });
-  }, [expenses, searchQuery, categoryFilter, methodFilter, timeframeFilter, thisMonthKey, lastMonthKey, historyMonths]);
+    })
+    // Newest expense date first; same-day entries by when they were added.
+    .sort(
+      (a, b) =>
+        (b.expense_date || '').localeCompare(a.expense_date || '') ||
+        (b.created_at || '').localeCompare(a.created_at || '')
+    );
+  }, [expenses, searchQuery, categoryFilter, methodFilter, timeframeFilter, thisMonthKey, lastMonthKey]);
 
   const periodExpensesTotal = filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const allTimeExpensesTotal = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -130,25 +135,17 @@ export const ExpenseList: React.FC = () => {
 
   const exportHistoricalCSV = () => {
     const headers = ['ID', 'Date', 'Category', 'Title', 'Amount', 'Payment Method', 'Description'];
-    const rows = expenses.map((e) => [
+    const rows = filteredExpenses.map((e) => [
       e.id,
       e.expense_date,
       e.category,
-      `"${e.title.replace(/"/g, '""')}"`,
-      e.amount,
+      e.title,
+      Number(e.amount),
       e.payment_method,
-      `"${(e.description || '').replace(/"/g, '""')}"`,
+      e.description,
     ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Gym_Expenses_History_${getTodayKey()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Historical expenses CSV exported successfully!');
+    downloadCSV(`Gym_Expenses_${getTodayKey()}.csv`, [headers, ...rows]);
+    showToast('Expenses CSV exported successfully!');
   };
 
   const handleDelete = async (id: string, title: string) => {
@@ -233,7 +230,7 @@ export const ExpenseList: React.FC = () => {
               })()
             ) : (
               <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                First month on record
+                No expenses last month
               </div>
             )}
           </div>
@@ -331,7 +328,7 @@ export const ExpenseList: React.FC = () => {
             }}
           >
             <Download size={14} />
-            <span>Export Historical Ledger CSV</span>
+            <span>Export CSV</span>
           </button>
         </div>
       </ScrollReveal>

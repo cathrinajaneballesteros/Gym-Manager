@@ -19,6 +19,7 @@ import { Modal } from '@/components/ui/Modal';
 import { showToast } from '@/lib/ui/swal';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { getTodayKey, toDateKey } from '@/lib/ui/date';
+import { downloadCSV } from '@/lib/ui/csv';
 
 const AUDIT_STORAGE_KEY = 'sgfm_audit_log_clean';
 
@@ -37,8 +38,6 @@ const getAuditSnapshot = (): string => {
 };
 
 const getAuditServerSnapshot = (): string => '[]';
-
-const csvCell = (value: string | undefined): string => `"${(value || '').replace(/"/g, '""')}"`;
 
 type MetadataValue = string | number | boolean | null;
 
@@ -167,16 +166,7 @@ export const AuditLogView: React.FC = () => {
       e.entity_label,
       JSON.stringify(e.metadata || {}),
     ]);
-    const csvContent = [headers, ...rows].map((r) => r.map(csvCell).join(',')).join('\n');
-    // A Blob URL keeps characters like '#' intact; a data: URI would cut the file off there.
-    const url = URL.createObjectURL(new Blob([csvContent], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `User_Audit_Trail_${getTodayKey()}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadCSV(`User_Audit_Trail_${getTodayKey()}.csv`, [headers, ...rows]);
     showToast('Audit trail exported successfully!');
   };
 
