@@ -41,6 +41,26 @@ const TD: React.CSSProperties = {
   borderBottom: '1px solid #f8fafc',
 };
 
+// "+₱1,500" / "-₱1,500": the sign goes before the currency symbol.
+const formatSigned = (value: number, currency: string, alwaysSign = true): string =>
+  `${value < 0 ? '-' : alwaysSign ? '+' : ''}${currency}${Math.abs(value).toLocaleString()}`;
+
+// Margin only means something when there was revenue; otherwise show a dash.
+const formatMargin = (profit: number, revenue: number): string =>
+  revenue > 0 ? `${Math.round((profit / revenue) * 100)}%` : '—';
+
+// Names a report period by its months, e.g. "October 2026" or "May 2026 - October 2026".
+const formatMonthRange = (monthKeys: string[]): string => {
+  const toLabel = (key: string) => {
+    const [y, m] = key.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  };
+  if (monthKeys.length === 0) return '';
+  const first = toLabel(monthKeys[0]);
+  const last = toLabel(monthKeys[monthKeys.length - 1]);
+  return first === last ? first : `${first} - ${last}`;
+};
+
 export const ReportsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ReportTab>('revenue');
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
@@ -48,6 +68,7 @@ export const ReportsView: React.FC = () => {
   const [sixMonthKpis, setSixMonthKpis] = useState<DashboardKPIs | null>(null);
   const [annualKpis, setAnnualKpis] = useState<DashboardKPIs | null>(null);
   const [trends, setTrends] = useState<MonthlyTrendData[]>([]);
+  const [ytdTrends, setYtdTrends] = useState<MonthlyTrendData[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -60,6 +81,7 @@ export const ReportsView: React.FC = () => {
     setSixMonthKpis(DBService.getDashboardKPIs('last-6-months'));
     setAnnualKpis(DBService.getDashboardKPIs('this-year'));
     setTrends(DBService.getMonthlyTrends());
+    setYtdTrends(DBService.getMonthlyTrends(new Date().getMonth() + 1));
     setExpenses(DBService.getExpenses());
     setMembers(DBService.getMembers());
     setPayments(DBService.getPayments());
@@ -80,9 +102,13 @@ export const ReportsView: React.FC = () => {
     if (current === previous) {
       return { label: '0.0%', color: '#64748b', isUp: true };
     }
+    if (previous === 0) {
+      // Nothing to compare against, so a percentage would be made up.
+      return { label: '—', color: '#64748b', isUp: current > 0 };
+    }
     const isUp = current > previous;
     // Divide by the size of the old value so a loss getting smaller counts as going up.
-    const pct = previous === 0 ? 100 : (Math.abs(current - previous) / Math.abs(previous)) * 100;
+    const pct = (Math.abs(current - previous) / Math.abs(previous)) * 100;
     const isGood = lowerIsBetter ? !isUp : isUp;
     return {
       label: `${isUp ? '+' : '-'}${pct.toFixed(1)}%`,
@@ -135,7 +161,7 @@ export const ReportsView: React.FC = () => {
   }, {});
 
   const paymentsByPlan = monthPayments.reduce<Record<string, { total: number; count: number }>>((acc, p) => {
-    const planName = p.plan?.name || 'Standard Pass';
+    const planName = p.plan?.name || (p.membership_plan_id ? 'Unknown plan' : 'No plan');
     if (!acc[planName]) acc[planName] = { total: 0, count: 0 };
     acc[planName].total += Number(p.amount);
     acc[planName].count += 1;
@@ -153,21 +179,19 @@ export const ReportsView: React.FC = () => {
     .sort((a, b) => Number(b.amount) - Number(a.amount))
     .slice(0, 5);
 
-  const annualMonths = Array.from({ length: now.getMonth() + 1 }, (_, m) => {
-    const key = `${now.getFullYear()}-${String(m + 1).padStart(2, '0')}`;
-    const revenue = payments
-      .filter((p) => p.payment_status === 'completed' && (p.payment_date || '').startsWith(key))
-      .reduce((sum, p) => sum + Number(p.amount), 0);
-    const expense = expenses
-      .filter((e) => (e.expense_date || '').startsWith(key))
-      .reduce((sum, e) => sum + Number(e.amount), 0);
-    return {
-      label: new Date(now.getFullYear(), m, 1).toLocaleString('en-US', { month: 'short' }),
-      revenue,
-      expenses: expense,
-      profit: revenue - expense,
-    };
-  });
+  // Months the selected report covers, used for the export period name and the exported records.
+  const periodTrends = activeTab === 'annual' ? ytdTrends : activeTab === 'monthly' ? trends : trends.slice(-1);
+  const periodMonthKeys = periodTrends.map((t) => t.monthKey);
+  const inPeriod = (date: string | undefined) => periodMonthKeys.includes((date || '').slice(0, 7));
+  const periodName = `${formatMonthRange(periodMonthKeys)}${activeTab === 'annual' ? ' (Year to Date)' : ''}`;
+  const periodExpenses = expenses
+    .filter((e) => inPeriod(e.expense_date))
+    .sort((a, b) => (b.expense_date || '').localeCompare(a.expense_date || ''));
+  const periodPayments = payments
+    .filter((p) => inPeriod(p.payment_date))
+    .sort((a, b) => (b.payment_date || '').localeCompare(a.payment_date || ''));
+  // Monthly and Annual exports list their own months; the single-month tabs show the last 6 for context.
+  const exportTrends = activeTab === 'annual' ? ytdTrends : trends;
 
   const handleExportPDF = () => {
     setIsExporting(true);
@@ -175,10 +199,10 @@ export const ReportsView: React.FC = () => {
       generateFinancialPDFReport({
         gymName,
         currency,
-        reportPeriod: display.periodLabel,
+        reportPeriod: periodName,
         kpis: display,
-        trends,
-        expenses,
+        trends: exportTrends,
+        expenses: periodExpenses,
       });
     } catch (err) {
       console.error('PDF export error:', err);
@@ -194,12 +218,12 @@ export const ReportsView: React.FC = () => {
       generateFinancialExcelReport({
         gymName,
         currency,
-        reportPeriod: display.periodLabel,
+        reportPeriod: periodName,
         kpis: display,
-        trends,
-        expenses,
+        trends: exportTrends,
+        expenses: periodExpenses,
         members,
-        payments,
+        payments: periodPayments,
       });
     } catch (err) {
       console.error('Excel export error:', err);
@@ -573,11 +597,11 @@ export const ReportsView: React.FC = () => {
                   fontWeight: 700,
                   padding: '0.25rem 0.7rem',
                   borderRadius: '6px',
-                  color: kpis.profitMargin >= 20 ? '#059669' : '#e11d48',
-                  backgroundColor: kpis.profitMargin >= 20 ? '#ecfdf5' : '#fff1f2',
+                  color: kpis.totalRevenue === 0 ? '#64748b' : kpis.profitMargin >= 20 ? '#059669' : '#e11d48',
+                  backgroundColor: kpis.totalRevenue === 0 ? '#f1f5f9' : kpis.profitMargin >= 20 ? '#ecfdf5' : '#fff1f2',
                 }}
               >
-                {kpis.profitMargin}% Net Margin
+                {formatMargin(kpis.netProfit, kpis.totalRevenue)} Net Margin
               </div>
             </div>
 
@@ -606,8 +630,8 @@ export const ReportsView: React.FC = () => {
                   </tr>
                   <tr>
                     <td style={{ padding: '1rem 1.5rem', fontWeight: 700, color: '#0f172a' }}>Net Profit</td>
-                    <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: kpis.netProfit >= 0 ? '#059669' : '#ef4444' }}>{kpis.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(kpis.netProfit).toLocaleString()}</td>
-                    <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{currency}{lastProfit.toLocaleString()}</td>
+                    <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: kpis.netProfit >= 0 ? '#059669' : '#ef4444' }}>{formatSigned(kpis.netProfit, currency)}</td>
+                    <td style={{ padding: '1rem 1.25rem', color: '#64748b' }}>{formatSigned(lastProfit, currency, false)}</td>
                     <td style={{ padding: '1rem 1.5rem', textAlign: 'right', color: profitChange.color, fontWeight: 700 }}>{profitChange.label}</td>
                   </tr>
                 </tbody>
@@ -639,7 +663,6 @@ export const ReportsView: React.FC = () => {
                 </thead>
                 <tbody>
                   {trends.map((pt) => {
-                    const margin = pt.revenue > 0 ? Math.round((pt.profit / pt.revenue) * 100) : 0;
                     return (
                       <tr key={pt.monthKey}>
                         <td style={TD}><strong>{pt.month}</strong></td>
@@ -648,7 +671,7 @@ export const ReportsView: React.FC = () => {
                         <td style={{ ...TD, textAlign: 'right', fontWeight: 600, color: pt.profit >= 0 ? '#0f172a' : '#ef4444' }}>
                           {pt.profit >= 0 ? '+' : '-'}{currency}{Math.abs(pt.profit).toLocaleString()}
                         </td>
-                        <td style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{margin}%</td>
+                        <td style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{formatMargin(pt.profit, pt.revenue)}</td>
                       </tr>
                     );
                   })}
@@ -704,9 +727,9 @@ export const ReportsView: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {annualMonths.map((row) => (
-                      <tr key={row.label}>
-                        <td style={TD}><strong>{row.label}</strong></td>
+                    {ytdTrends.map((row) => (
+                      <tr key={row.monthKey}>
+                        <td style={TD}><strong>{row.month}</strong></td>
                         <td style={{ ...TD, textAlign: 'right', color: '#059669' }}>+{currency}{row.revenue.toLocaleString()}</td>
                         <td style={{ ...TD, textAlign: 'right', color: '#ef4444' }}>-{currency}{row.expenses.toLocaleString()}</td>
                         <td style={{ ...TD, textAlign: 'right', fontWeight: 600, color: row.profit >= 0 ? '#0f172a' : '#ef4444' }}>

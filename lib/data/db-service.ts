@@ -753,8 +753,11 @@ export class DBService {
       );
     } else if (timeframe === 'this-year') {
       label = 'Year to Date';
-      filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(`${currentYear}-`));
-      filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(`${currentYear}-`));
+      // Stop at the end of this month, so entries dated later in the year (e.g. rent entered early) don't count yet.
+      const inYearToDate = (date: string | undefined) =>
+        (date || '').startsWith(`${currentYear}-`) && (date || '').slice(0, 7) <= thisMonthKey;
+      filteredPayments = filteredPayments.filter((p) => inYearToDate(p.payment_date));
+      filteredExpenses = filteredExpenses.filter((e) => inYearToDate(e.expense_date));
     }
 
     const totalRevenue = filteredPayments.reduce((sum, p) => sum + Number(p.amount), 0);
@@ -805,12 +808,12 @@ export class DBService {
   }
 
   // 8. Monthly Trends for Charts
-  static getMonthlyTrends(): MonthlyTrendData[] {
+  static getMonthlyTrends(months = 6): MonthlyTrendData[] {
     const payments = this.getPayments();
     const expenses = this.getExpenses();
     const members = this.getMembers();
 
-    const buckets = getRecentMonthBuckets(6);
+    const buckets = getRecentMonthBuckets(months);
 
     return buckets.map(({ month, monthKey }) => {
       const key = monthKey;

@@ -39,13 +39,13 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
 
   // Report Period Badge
   doc.setFillColor(37, 99, 235); // blue-600
-  doc.roundedRect(pageWidth - 65, 12, 51, 16, 2, 2, 'F');
+  doc.roundedRect(pageWidth - 75, 12, 61, 16, 2, 2, 'F');
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text('REPORTING PERIOD', pageWidth - 60, 18);
-  doc.setFontSize(9);
-  doc.text(reportPeriod, pageWidth - 60, 24);
+  doc.text('REPORTING PERIOD', pageWidth - 71, 18);
+  doc.setFontSize(reportPeriod.length > 24 ? 6.5 : 9);
+  doc.text(reportPeriod, pageWidth - 71, 24);
 
   // 2. Executive KPI Summary Cards
   doc.setTextColor(15, 23, 42);
@@ -57,10 +57,10 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
     ['Metric', 'Amount / Value', 'Analysis / Status'],
     ['Total Gross Revenue', `${pdfCurrency}${kpis.totalRevenue.toLocaleString()}`, 'All membership collections'],
     ['Total Operating Expenses', `${pdfCurrency}${kpis.totalExpenses.toLocaleString()}`, 'Rent, utilities, staff, upkeep'],
-    ['Net Profit (EBITDA)', `${pdfCurrency}${kpis.netProfit.toLocaleString()}`, kpis.netProfit >= 0 ? 'Profitable (Positive Return)' : 'Deficit'],
+    ['Net Profit', `${pdfCurrency}${kpis.netProfit.toLocaleString()}`, kpis.netProfit >= 0 ? 'Profitable (Positive Return)' : 'Deficit'],
     ['Operating Profit Margin', `${kpis.profitMargin}%`, 'Target benchmark > 15%'],
     ['Active Member Community', `${kpis.activeMembers} Members`, `${kpis.renewalRate}% renewal rate`],
-    ['Expiring Memberships', `${kpis.expiringMemberships} Members`, 'Next 7-14 day renewal queue'],
+    ['Expiring Memberships', `${kpis.expiringMemberships} Members`, 'Ending within the next 7 days'],
   ];
 
   autoTable(doc, {
@@ -107,8 +107,9 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text('Recent Operational Expenses', 14, nextY2);
+    doc.text('Latest Expenses in This Period', 14, nextY2);
 
+    // Expenses arrive filtered to the report period and sorted newest first.
     const expenseRows = expenses.slice(0, 5).map((e) => [
       e.expense_date,
       e.category,
@@ -137,6 +138,6 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
   );
 
   // Trigger browser download
-  const filename = `${gymName.toLowerCase().replace(/\s+/g, '-')}-financial-report-${reportPeriod.replace(/\s+/g, '-')}.pdf`;
+  const filename = `${gymName.toLowerCase().replace(/\s+/g, '-')}-financial-report-${reportPeriod.replace(/[^\w]+/g, '-').replace(/-+$/, '')}.pdf`;
   doc.save(filename);
 }

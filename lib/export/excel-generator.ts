@@ -30,10 +30,10 @@ export function generateFinancialExcelReport(options: ExcelReportOptions): void 
     ['KEY PERFORMANCE INDICATORS', 'VALUE', 'REMARKS'],
     ['Total Revenue', kpis.totalRevenue, 'All recorded membership dues and payments'],
     ['Total Expenses', kpis.totalExpenses, 'Operational facilities, staff, and overhead'],
-    ['Net Profit (EBITDA)', kpis.netProfit, kpis.netProfit >= 0 ? 'Surplus' : 'Deficit'],
+    ['Net Profit', kpis.netProfit, kpis.netProfit >= 0 ? 'Surplus' : 'Deficit'],
     ['Profit Margin (%)', `${kpis.profitMargin}%`, 'Operating efficiency ratio'],
     ['Active Memberships', kpis.activeMembers, 'Current active subscribers'],
-    ['Expiring Memberships', kpis.expiringMemberships, 'Due for renewal within 7-14 days'],
+    ['Expiring Memberships', kpis.expiringMemberships, 'Ending within the next 7 days'],
     ['Expired Memberships', kpis.expiredMemberships, 'Lapsed subscriptions'],
     ['Renewal Retention Rate (%)', `${kpis.renewalRate}%`, 'Percentage of members renewing'],
   ];
@@ -41,7 +41,7 @@ export function generateFinancialExcelReport(options: ExcelReportOptions): void 
   XLSX.utils.book_append_sheet(workbook, summarySheet, 'Executive Summary');
 
   // 2. Monthly P&L Trend Sheet
-  const pnlHeaders = ['Month / Period', 'Revenue', 'Operating Expenses', 'Net Profit', 'Active Members'];
+  const pnlHeaders = ['Month / Period', 'Revenue', 'Operating Expenses', 'Net Profit', 'Total Members'];
   const pnlRows = trends.map((t) => [
     t.monthKey,
     t.revenue,
@@ -62,7 +62,14 @@ export function generateFinancialExcelReport(options: ExcelReportOptions): void 
     Number(e.amount),
     e.payment_method,
   ]);
-  const expenseSheet = XLSX.utils.aoa_to_sheet([expenseHeaders, ...expenseRows]);
+  // Expenses and payments arrive filtered to the report period, so these totals match the summary sheet.
+  const expenseTotal = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+  const expenseSheet = XLSX.utils.aoa_to_sheet([
+    expenseHeaders,
+    ...expenseRows,
+    [],
+    ['', '', '', 'Total Expenses', expenseTotal],
+  ]);
   XLSX.utils.book_append_sheet(workbook, expenseSheet, 'Expenses');
 
   // 4. Membership Payments Sheet
@@ -78,7 +85,16 @@ export function generateFinancialExcelReport(options: ExcelReportOptions): void 
     p.reference_number || 'N/A',
     p.notes || '',
   ]);
-  const paymentSheet = XLSX.utils.aoa_to_sheet([paymentHeaders, ...paymentRows]);
+  // Only completed payments count as revenue; pending and refunded ones are listed but not totalled.
+  const completedTotal = payments
+    .filter((p) => p.payment_status === 'completed')
+    .reduce((sum, p) => sum + Number(p.amount), 0);
+  const paymentSheet = XLSX.utils.aoa_to_sheet([
+    paymentHeaders,
+    ...paymentRows,
+    [],
+    ['', '', '', 'Total Revenue (completed only)', completedTotal],
+  ]);
   XLSX.utils.book_append_sheet(workbook, paymentSheet, 'Payments');
 
   // 5. Active & Expiring Members Sheet
@@ -98,6 +114,6 @@ export function generateFinancialExcelReport(options: ExcelReportOptions): void 
   XLSX.utils.book_append_sheet(workbook, memberSheet, 'Member Directory');
 
   // Write file
-  const filename = `${gymName.toLowerCase().replace(/\s+/g, '-')}-finance-${reportPeriod.replace(/\s+/g, '-')}.xlsx`;
+  const filename = `${gymName.toLowerCase().replace(/\s+/g, '-')}-finance-${reportPeriod.replace(/[^\w]+/g, '-').replace(/-+$/, '')}.xlsx`;
   XLSX.writeFile(workbook, filename);
 }
