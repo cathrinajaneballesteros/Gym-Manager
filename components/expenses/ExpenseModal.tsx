@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Expense } from '@/types/database';
 import { showError } from '@/lib/ui/swal';
+import { getTodayKey } from '@/lib/ui/date';
 
 const expenseSchema = z.object({
   category: z.enum([
@@ -42,7 +43,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
   onSuccess,
   initialExpense,
 }) => {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayKey();
 
   const buildDefaultValues = (): ExpenseFormData =>
     initialExpense

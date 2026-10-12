@@ -20,7 +20,7 @@ import { ReceiptCheckerModal } from './ReceiptCheckerModal';
 import { PaymentReminderModal } from './PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showSuccess, showToast, showConfirm } from '@/lib/ui/swal';
-import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
+import { getCurrentMonthRangeLabel, formatDisplayDate } from '@/lib/ui/date';
 import { Bell, CheckCircle2, Clock, AlertTriangle, FileText, Edit } from 'lucide-react';
 import { getPageWindow } from '@/lib/ui/pagination';
 
@@ -81,15 +81,6 @@ export const PaymentList: React.FC = () => {
   // After a delete the last page can disappear; go back to the last page that still exists.
   if (currentPage > totalPages) setCurrentPage(totalPages);
   const paginated = filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
-
-  const formatDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
-  };
 
   const handleMarkAsPaid = async (p: Payment) => {
     const memberName = p.member ? `${p.member.first_name} ${p.member.last_name}` : 'Member';
@@ -593,7 +584,7 @@ export const PaymentList: React.FC = () => {
 
                       {/* Date */}
                       <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
-                        {formatDate(p.payment_date)}
+                        {formatDisplayDate(p.payment_date)}
                       </td>
 
                       {/* Actions */}

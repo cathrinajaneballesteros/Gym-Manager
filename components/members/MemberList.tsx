@@ -27,6 +27,7 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showToast } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
 import { getPageWindow } from '@/lib/ui/pagination';
+import { formatDisplayDate } from '@/lib/ui/date';
 
 interface MemberListProps {
   initialStatus?: string;
@@ -160,15 +161,6 @@ export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' })
   const getPlanName = (planId: string) => {
     const plan = plans.find((p) => p.id === planId);
     return plan?.name || 'Standard';
-  };
-
-  const formatDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
   };
 
   return (
@@ -460,7 +452,7 @@ export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' })
 
                       {/* Expiration Date */}
                       <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
-                        {formatDate(member.end_date)}
+                        {formatDisplayDate(member.end_date)}
                       </td>
 
                       {/* Actions Menu Trigger */}

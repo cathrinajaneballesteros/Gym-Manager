@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { DashboardKPIs, MonthlyTrendData, Expense, Member, Payment } from '@/types/database';
+import { getTodayKey } from '@/lib/ui/date';
 
 interface ExcelReportOptions {
   gymName: string;
@@ -22,7 +23,7 @@ export function generateFinancialExcelReport(options: ExcelReportOptions): void 
     ['SMART GYM FINANCE MANAGER - EXECUTIVE SUMMARY'],
     ['Gym Name', gymName],
     ['Report Period', reportPeriod],
-    ['Generated On', new Date().toISOString().split('T')[0]],
+    ['Generated On', getTodayKey()],
     ['Currency', currency],
     [],
     ['KEY PERFORMANCE INDICATORS', 'VALUE', 'REMARKS'],

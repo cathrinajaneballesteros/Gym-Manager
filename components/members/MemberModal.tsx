@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Member, MembershipPlan } from '@/types/database';
 import { showError } from '@/lib/ui/swal';
+import { getTodayKey } from '@/lib/ui/date';
 
 const memberSchema = z.object({
   first_name: z.string().min(2, 'First name must be at least 2 characters'),
@@ -58,7 +59,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   const selectablePlans = plans.filter(
     (p) => p.is_active || p.id === initialMember?.membership_plan_id
   );
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayKey();
 
   const buildDefaultValues = (): MemberFormData => {
     const defaultPlanId = initialMember?.membership_plan_id || selectablePlans[0]?.id || '';
@@ -97,7 +98,6 @@ export const MemberModal: React.FC<MemberModalProps> = ({
     handleSubmit,
     setValue,
     getValues,
-    watch,
     reset,
     formState: { errors, isSubmitting },
   } = useForm<MemberFormData>({
@@ -105,20 +105,16 @@ export const MemberModal: React.FC<MemberModalProps> = ({
     defaultValues: buildDefaultValues(),
   });
 
-  // Watch start_date and membership_plan_id to automatically recalculate expiration date
-  const watchedStartDate = watch('start_date');
-  const watchedPlanId = watch('membership_plan_id');
-
-  useEffect(() => {
-    if (!watchedStartDate || !watchedPlanId) return;
-    const selectedPlan = plans.find((p) => p.id === watchedPlanId);
-    if (selectedPlan) {
-      const computed = calculateExpirationDate(watchedStartDate, selectedPlan.duration_months);
-      if (computed && computed !== getValues('end_date')) {
-        setValue('end_date', computed, { shouldValidate: true });
-      }
+  // Recalculate the expiration date only when the user changes the start date or plan.
+  // (Doing it in an effect also fired on open/re-render and wiped renewed end dates.)
+  const recalculateEndDate = () => {
+    const selectedPlan = plans.find((p) => p.id === getValues('membership_plan_id'));
+    if (!selectedPlan) return;
+    const computed = calculateExpirationDate(getValues('start_date'), selectedPlan.duration_months);
+    if (computed) {
+      setValue('end_date', computed, { shouldValidate: true });
     }
-  }, [watchedStartDate, watchedPlanId, plans, setValue, getValues]);
+  };
 
   // Refill the form with the correct values every time the modal opens or the record changes.
   useEffect(() => {
@@ -248,7 +244,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
             Membership Plan *
           </label>
           <select
-            {...register('membership_plan_id')}
+            {...register('membership_plan_id', { onChange: recalculateEndDate })}
             style={{ width: '100%' }}
           >
             {selectablePlans.map((p) => (
@@ -269,7 +265,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
               Start Date *
             </label>
-            <input type="date" {...register('start_date')} style={{ width: '100%' }} />
+            <input type="date" {...register('start_date', { onChange: recalculateEndDate })} style={{ width: '100%' }} />
             {errors.start_date && (
               <span style={{ fontSize: '0.725rem', color: 'var(--danger)', marginTop: '0.2rem', display: 'block' }}>
                 {errors.start_date.message}

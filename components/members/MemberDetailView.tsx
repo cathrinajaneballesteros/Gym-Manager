@@ -21,6 +21,7 @@ import { Member, Payment, MembershipPlan } from '@/types/database';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { MemberModal } from './MemberModal';
 import { showConfirm } from '@/lib/ui/swal';
+import { formatDisplayDate } from '@/lib/ui/date';
 
 interface MemberDetailViewProps {
   memberId: string;
@@ -55,15 +56,6 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
 
   const currentPlan = plans.find((p) => p.id === member.membership_plan_id) || plans[0];
   const currency = DBService.getProfile()?.currency || '₱';
-
-  const formatDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
-  };
 
   const handleDelete = async () => {
     const confirmed = await showConfirm(
@@ -145,7 +137,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
                 {member.phone}
               </span>
               <span>•</span>
-              <span>Member since {formatDate(member.created_at)}</span>
+              <span>Member since {formatDisplayDate(member.created_at)}</span>
             </div>
           </div>
         </div>
@@ -230,12 +222,12 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', borderBottom: '1px solid #f8fafc', paddingBottom: '0.75rem' }}>
                   <span style={{ color: '#64748b' }}>Start Date</span>
-                  <span style={{ fontWeight: 500, color: '#334155' }}>{formatDate(member.start_date)}</span>
+                  <span style={{ fontWeight: 500, color: '#334155' }}>{formatDisplayDate(member.start_date)}</span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem', borderBottom: '1px solid #f8fafc', paddingBottom: '0.75rem' }}>
                   <span style={{ color: '#64748b' }}>Expiration Date</span>
-                  <span style={{ fontWeight: 500, color: '#334155' }}>{formatDate(member.end_date)}</span>
+                  <span style={{ fontWeight: 500, color: '#334155' }}>{formatDisplayDate(member.end_date)}</span>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem', borderBottom: '1px solid #f8fafc', paddingBottom: '0.75rem' }}>
@@ -338,7 +330,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
                     {payments.slice(0, 5).map((p) => (
                       <tr key={p.id} style={{ borderBottom: '1px solid #f8fafc' }}>
                         <td style={{ padding: '0.75rem', color: '#334155' }}>
-                          {formatDate(p.payment_date)}
+                          {formatDisplayDate(p.payment_date)}
                         </td>
                         <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>
                           {currency}{Number(p.amount).toLocaleString()}
@@ -400,7 +392,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
               <tbody>
                 {payments.map((p) => (
                   <tr key={p.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                    <td style={{ padding: '0.75rem', color: '#334155' }}>{formatDate(p.payment_date)}</td>
+                    <td style={{ padding: '0.75rem', color: '#334155' }}>{formatDisplayDate(p.payment_date)}</td>
                     <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{currency}{Number(p.amount).toLocaleString()}</td>
                     <td style={{ padding: '0.75rem', color: '#64748b' }}>{p.payment_method}</td>
                     <td style={{ padding: '0.75rem', color: '#94a3b8', fontSize: '0.75rem' }}>{p.reference_number || '—'}</td>
@@ -425,7 +417,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
           </h2>
           <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
             {activeTab === 'history'
-              ? `Member initially subscribed on ${formatDate(member.created_at)} under ${currentPlan?.name}. Renewal status is verified.`
+              ? `Member initially subscribed on ${formatDisplayDate(member.created_at)} under ${currentPlan?.name}. Renewal status is verified.`
               : member.notes || 'No confidential staff notes recorded for this member.'}
           </p>
         </div>

@@ -18,6 +18,7 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { Modal } from '@/components/ui/Modal';
 import { showToast } from '@/lib/ui/swal';
 import { getPageWindow } from '@/lib/ui/pagination';
+import { getTodayKey, toDateKey } from '@/lib/ui/date';
 
 const AUDIT_STORAGE_KEY = 'sgfm_audit_log_clean';
 
@@ -104,7 +105,7 @@ export const AuditLogView: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `User_Audit_Trail_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `User_Audit_Trail_${getTodayKey()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -137,8 +138,8 @@ export const AuditLogView: React.FC = () => {
   if (currentPage > totalPages) setCurrentPage(totalPages);
   const paginated = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const todayKey = new Date().toISOString().split('T')[0];
-  const eventsToday = entries.filter((e) => (e.created_at || '').startsWith(todayKey)).length;
+  const todayKey = getTodayKey();
+  const eventsToday = entries.filter((e) => e.created_at && toDateKey(new Date(e.created_at)) === todayKey).length;
   const lastActivity = entries[0]?.created_at;
 
   const formatDateTime = (iso: string) => {

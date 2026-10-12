@@ -9,6 +9,7 @@ import { DBService } from '@/lib/data/db-service';
 import { Payment, Member, MembershipPlan } from '@/types/database';
 import { showError } from '@/lib/ui/swal';
 import { MemberPicker } from './MemberPicker';
+import { getTodayKey } from '@/lib/ui/date';
 
 const paymentSchema = z.object({
   member_id: z.string().min(1, 'Please select a member'),
@@ -40,7 +41,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 }) => {
   const members: Member[] = DBService.getMembers();
   const plans: MembershipPlan[] = DBService.getPlans();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayKey();
 
   const defaultMember = preselectedMemberId
     ? members.find((m) => m.id === preselectedMemberId)

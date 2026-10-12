@@ -25,7 +25,7 @@ import { CategoryExpenseChart } from '@/components/charts/CategoryExpenseChart';
 import { ExpenseModal } from './ExpenseModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showToast } from '@/lib/ui/swal';
-import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
+import { getCurrentMonthRangeLabel, getTodayKey, formatDisplayDate } from '@/lib/ui/date';
 import { escapeHtml } from '@/lib/ui/escape';
 import { getPageWindow } from '@/lib/ui/pagination';
 
@@ -144,7 +144,7 @@ export const ExpenseList: React.FC = () => {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Gym_Expenses_History_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute('download', `Gym_Expenses_History_${getTodayKey()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -162,15 +162,6 @@ export const ExpenseList: React.FC = () => {
       DBService.deleteExpense(id);
       refreshData();
       showToast(`Expense "${escapeHtml(title)}" deleted`);
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch {
-      return dateStr;
     }
   };
 
@@ -622,7 +613,7 @@ export const ExpenseList: React.FC = () => {
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     <td style={{ padding: '1rem 1.5rem', color: '#64748b' }}>
-                      {formatDate(exp.expense_date)}
+                      {formatDisplayDate(exp.expense_date)}
                     </td>
 
                     <td style={{ padding: '1rem 1.25rem' }}>
