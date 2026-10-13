@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
   Search,
   Plus,
@@ -31,15 +32,18 @@ import { getPageWindow } from '@/lib/ui/pagination';
 import { formatDisplayDate } from '@/lib/ui/date';
 import { checkInWithPrompt } from '@/lib/ui/check-in';
 
-interface MemberListProps {
-  initialStatus?: string;
-}
+// Statuses the filter can start on from a link (e.g. the dashboard's /members?status=expiring).
+const STATUS_FILTERS = ['pending', 'active', 'expiring', 'expired'];
 
-export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' }) => {
+export const MemberList: React.FC = () => {
+  // Read in the browser, so the page itself can be prebuilt like the other tabs.
+  const linkedStatus = useSearchParams().get('status');
   const [members, setMembers] = useState<Member[]>([]);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
+  const [statusFilter, setStatusFilter] = useState<string>(() =>
+    linkedStatus && STATUS_FILTERS.includes(linkedStatus) ? linkedStatus : 'all'
+  );
   const [planFilter, setPlanFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'end_date' | 'created_at'>('end_date');
   const [currentPage, setCurrentPage] = useState(1);
