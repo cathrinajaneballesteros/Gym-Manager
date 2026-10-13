@@ -288,6 +288,13 @@ export const BentoFeatures: React.FC = () => {
             grid-template-columns: 1fr !important;
           }
         }
+        @media (max-width: 640px) {
+          .bento-span-8,
+          .bento-span-4,
+          .bento-span-6 {
+            padding: 1.25rem !important;
+          }
+        }
       `}</style>
     </section>
   );

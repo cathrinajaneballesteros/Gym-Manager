@@ -205,6 +205,7 @@ export default function LoginPage() {
 
       {/* Top Back-to-Home Nav */}
       <div
+        className="login-back-link"
         style={{
           position: 'absolute',
           top: '1.75rem',
@@ -238,7 +239,7 @@ export default function LoginPage() {
 
       {/* Centered Card */}
       <div
-        className="apple-glass-card"
+        className="apple-glass-card login-card"
         style={{
           width: '100%',
           maxWidth: '430px',
@@ -583,7 +584,8 @@ export default function LoginPage() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  padding: 0,
+                  padding: '12px',
+                  marginRight: '-12px',
                 }}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -704,6 +706,20 @@ export default function LoginPage() {
       >
         <span>© 2026 Smart Gym Finance Manager. All rights reserved.</span>
       </div>
+
+      <style jsx>{`
+        @media (max-width: 640px) {
+          /* In the page flow above the card, so it can't sit on top of it. */
+          .login-back-link {
+            position: static !important;
+            align-self: flex-start;
+            margin-bottom: 1rem;
+          }
+          .login-card {
+            padding: 1.75rem 1.25rem !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

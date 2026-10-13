@@ -104,7 +104,7 @@ export const InteractiveProductShowcase: React.FC = () => {
         {/* Dynamic Interactive Glass Panel Stage */}
         <ScrollReveal delay={120} direction="up">
           <div
-            className="apple-glass-card"
+            className="apple-glass-card showcase-panel"
             style={{
               padding: '2.5rem',
               backgroundColor: 'rgba(245, 245, 247, 0.65)',
@@ -146,6 +146,7 @@ export const InteractiveProductShowcase: React.FC = () => {
 
                 {/* Simulated Graphic Card */}
                 <div
+                  className="showcase-graphic"
                   style={{
                     backgroundColor: '#ffffff',
                     borderRadius: '20px',
@@ -347,6 +348,14 @@ export const InteractiveProductShowcase: React.FC = () => {
           .showcase-grid {
             grid-template-columns: 1fr !important;
             gap: 2rem !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .showcase-panel {
+            padding: 1.25rem !important;
+          }
+          .showcase-graphic {
+            padding: 1.1rem !important;
           }
         }
       `}</style>

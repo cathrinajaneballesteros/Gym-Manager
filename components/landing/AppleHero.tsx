@@ -215,7 +215,7 @@ export const AppleHero: React.FC = () => {
                   <span style={{ width: '11px', height: '11px', borderRadius: '50%', backgroundColor: '#27c93f', border: '0.5px solid #1aab29', display: 'inline-block' }} />
                 </div>
 
-                <div style={{ fontSize: '0.75rem', color: '#86868b', fontWeight: 500, letterSpacing: '0.01em' }}>
+                <div className="hero-window-title" style={{ fontSize: '0.75rem', color: '#86868b', fontWeight: 500, letterSpacing: '0.01em' }}>
                   Smart Gym Finance Manager • Live Executive View
                 </div>
 
@@ -226,12 +226,12 @@ export const AppleHero: React.FC = () => {
               </div>
 
               {/* Main Window Dashboard Body */}
-              <div style={{ padding: '1.75rem 2rem', backgroundColor: '#fafafc' }}>
+              <div className="hero-window-body" style={{ padding: '1.75rem 2rem', backgroundColor: '#fafafc' }}>
                 {/* 4 Metric Cards Row */}
                 <div
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(4, 1fr)',
+                    gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
                     gap: '1rem',
                     marginBottom: '1.5rem',
                   }}
@@ -247,6 +247,7 @@ export const AppleHero: React.FC = () => {
                     return (
                       <div
                         key={stat.label}
+                        className="hero-kpi-card"
                         style={{
                           backgroundColor: '#ffffff',
                           border: '1px solid rgba(0, 0, 0, 0.06)',
@@ -261,7 +262,7 @@ export const AppleHero: React.FC = () => {
                             <Icon size={14} color={stat.color} />
                           </div>
                         </div>
-                        <div style={{ fontSize: '1.45rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: '0.25rem' }}>
+                        <div className="hero-kpi-value" style={{ fontSize: '1.45rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: '0.25rem' }}>
                           {stat.value}
                         </div>
                         <span style={{ fontSize: '0.725rem', color: '#059669', fontWeight: 600 }}>{stat.change}</span>
@@ -289,7 +290,7 @@ export const AppleHero: React.FC = () => {
                       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.02)',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
                       <div>
                         <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1d1d1f' }}>
                           Cashflow Trajectory & AI Projections
@@ -478,6 +479,23 @@ export const AppleHero: React.FC = () => {
           }
           .floating-glass-chip {
             display: none !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .hero-window-title {
+            display: none;
+          }
+          .hero-window-body {
+            padding: 1rem !important;
+          }
+          .hero-mockup-kpis {
+            gap: 0.6rem !important;
+          }
+          .hero-kpi-card {
+            padding: 0.8rem !important;
+          }
+          .hero-kpi-value {
+            font-size: 1.1rem !important;
           }
         }
       `}</style>
