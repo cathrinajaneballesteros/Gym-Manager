@@ -5,7 +5,7 @@ import { CheckCircle } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { GymDetails } from '@/types/database';
 import { OpeningHoursEditor } from '@/components/gym/OpeningHoursEditor';
-import { CURRENCY_OPTIONS, DEFAULT_OPENING_HOURS, emptyGymDetails, invalidHourDays } from '@/lib/ui/gym';
+import { DEFAULT_OPENING_HOURS, emptyGymDetails, invalidHourDays } from '@/lib/ui/gym';
 import { showError } from '@/lib/ui/swal';
 
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' };
@@ -81,14 +81,6 @@ export const GymSettings: React.FC = () => {
             <label style={labelStyle}>Gym Email</label>
             <input type="email" value={details.email} onChange={(e) => set('email', e.target.value)} style={{ width: '100%' }} />
           </div>
-        </div>
-        <div>
-          <label style={labelStyle}>Currency Symbol</label>
-          <select value={details.currency} onChange={(e) => set('currency', e.target.value)} style={{ width: '100%' }}>
-            {CURRENCY_OPTIONS.map((c) => (
-              <option key={c.value} value={c.value}>{c.label}</option>
-            ))}
-          </select>
         </div>
         <div>
           <label style={labelStyle}>Opening Hours</label>

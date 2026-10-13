@@ -1,12 +1,5 @@
 import { GymDetails, OpeningHours, WEEK_DAYS } from '@/types/database';
 
-export const CURRENCY_OPTIONS = [
-  { value: '₱', label: '₱ (PHP - Philippine Peso)' },
-  { value: '$', label: '$ (USD - US Dollar)' },
-  { value: '€', label: '€ (EUR - Euro)' },
-  { value: '£', label: '£ (GBP - British Pound)' },
-];
-
 /** Mon–Sat 6:00–22:00, closed Sunday. */
 export const DEFAULT_OPENING_HOURS: OpeningHours = Object.fromEntries(
   WEEK_DAYS.map(({ key }) => [key, { open: '06:00', close: '22:00', closed: key === 'sun' }])
@@ -18,6 +11,7 @@ export const emptyGymDetails = (): GymDetails => ({
   city: '',
   phone: '',
   email: '',
+  // The app is for Philippine gyms only.
   currency: '₱',
   opening_hours: DEFAULT_OPENING_HOURS,
 });

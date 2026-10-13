@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { DBService } from '@/lib/data/db-service';
 import { GymDetails } from '@/types/database';
 import { OpeningHoursEditor } from '@/components/gym/OpeningHoursEditor';
-import { CURRENCY_OPTIONS, DEFAULT_OPENING_HOURS, emptyGymDetails, invalidHourDays } from '@/lib/ui/gym';
+import { DEFAULT_OPENING_HOURS, emptyGymDetails, invalidHourDays } from '@/lib/ui/gym';
 import { STAFF_HOME } from '@/lib/ui/roles';
 import { showError, showToast } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
@@ -211,14 +211,6 @@ export default function OnboardingPage() {
             <div>
               <label style={labelStyle}>Gym email</label>
               <input type="email" value={details.email} onChange={(e) => set('email', e.target.value)} style={{ width: '100%' }} />
-            </div>
-            <div>
-              <label style={labelStyle}>Currency</label>
-              <select value={details.currency} onChange={(e) => set('currency', e.target.value)} style={{ width: '100%' }}>
-                {CURRENCY_OPTIONS.map((c) => (
-                  <option key={c.value} value={c.value}>{c.label}</option>
-                ))}
-              </select>
             </div>
           </div>
         )}
