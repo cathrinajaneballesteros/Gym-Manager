@@ -38,6 +38,12 @@ export default function LoginPage() {
       } else {
         setMode('signup');
       }
+
+      // Sent back here by /auth/callback when Google sign-in or an email confirmation link didn't work.
+      if (params.get('error') === 'auth_callback_failed') {
+        const reason = params.get('reason');
+        setError(`Sign-in didn't finish. Please try again.${reason ? ` (${reason})` : ''}`);
+      }
     }
   }, []);
 
@@ -77,6 +83,8 @@ export default function LoginPage() {
           email: email.trim(),
           password,
           options: {
+            // The confirmation link finishes signing them in through the app, not Supabase's default page.
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
             data: {
               full_name: fullName.trim() || 'Gym Administrator',
               // Only used to prefill onboarding; invited staff leave it blank.

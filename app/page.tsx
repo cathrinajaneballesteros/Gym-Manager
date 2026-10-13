@@ -10,13 +10,15 @@ import { BottomCtaSection } from '@/components/landing/BottomCtaSection';
 import { AppleFooter } from '@/components/landing/AppleFooter';
 
 export default function HomePage() {
+  const forwardedCode = React.useRef(false);
+
+  // Supabase sends sign-ins here when the callback address isn't in its Redirect URLs; finish them on the server.
   React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code');
-      if (code) {
-        window.location.href = `/auth/callback?code=${encodeURIComponent(code)}&next=/dashboard`;
-      }
+    if (typeof window === 'undefined' || forwardedCode.current) return;
+    const code = new URLSearchParams(window.location.search).get('code');
+    if (code) {
+      forwardedCode.current = true;
+      window.location.replace(`/auth/callback?code=${encodeURIComponent(code)}&next=/dashboard`);
     }
   }, []);
 
