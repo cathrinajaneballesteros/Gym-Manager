@@ -24,7 +24,7 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showSuccess, showToast, showConfirm, showError } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel, formatDisplayDate } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
-import { Bell, CheckCircle2, Clock, AlertTriangle, FileText, Edit, UserPlus } from 'lucide-react';
+import { Bell, CheckCircle2, Clock, AlertTriangle, FileText, Edit, UserPlus, Trash2 } from 'lucide-react';
 import { getPageWindow } from '@/lib/ui/pagination';
 
 export const PaymentList: React.FC = () => {
@@ -44,6 +44,7 @@ export const PaymentList: React.FC = () => {
   const [checkingPayment, setCheckingPayment] = useState<Payment | null>(null);
   const [remindingPayment, setRemindingPayment] = useState<Payment | null>(null);
   const pageSize = 8;
+  const isOwner = DBService.isOwner();
 
   const refreshData = () => {
     setPayments(DBService.getPayments());
@@ -113,6 +114,24 @@ export const PaymentList: React.FC = () => {
       refreshData();
       showToast(`Payment of ${currency}${Number(p.amount).toLocaleString()} marked as paid!`);
     }
+  };
+
+  // Owner only (the database refuses staff too). Meant for payments recorded by mistake.
+  const handleDeletePayment = async (p: Payment) => {
+    const confirmed = await showConfirm(
+      'Delete this payment?',
+      `${currency}${Number(p.amount).toLocaleString()} from ${getPaymentMemberName(p)} on ${p.payment_date} will be removed from revenue. Membership dates are not changed. This can't be undone.`,
+      'Yes, Delete'
+    );
+    if (!confirmed) return;
+    try {
+      await DBService.deletePayment(p.id);
+    } catch (err) {
+      showError('Delete Failed', err instanceof Error ? err.message : 'Could not delete the payment.');
+      return;
+    }
+    refreshData();
+    showToast('Payment deleted');
   };
 
   return (
@@ -719,6 +738,25 @@ export const PaymentList: React.FC = () => {
                             <Edit size={13} />
                             <span>Edit</span>
                           </button>
+                          {isOwner && (
+                            <button
+                              onClick={() => handleDeletePayment(p)}
+                              title="Delete Payment"
+                              aria-label="Delete payment"
+                              style={{
+                                padding: '0.35rem 0.5rem',
+                                borderRadius: '6px',
+                                border: '1px solid #fecaca',
+                                backgroundColor: '#ffffff',
+                                color: '#dc2626',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

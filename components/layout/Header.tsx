@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Menu, Bell } from 'lucide-react';
+import { Menu } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
 
@@ -11,11 +11,10 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
-  const [hasUnread, setHasUnread] = useState(true);
-  const [profile, setProfile] = useState<UserProfile | null>(null);
+  // AppShell only renders the header once the gym's data has loaded.
+  const [profile, setProfile] = useState<UserProfile>(() => DBService.getProfile());
 
   useEffect(() => {
-    setProfile(DBService.getProfile());
     const handleProfileUpdate = () => {
       setProfile(DBService.getProfile());
     };
@@ -64,44 +63,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
         </button>
       </div>
 
-      {/* Right: Notifications + Profile Avatar */}
+      {/* Right: Profile Avatar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-        {/* Notification Bell */}
-        <button
-          onClick={() => setHasUnread(false)}
-          style={{
-            position: 'relative',
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            backgroundColor: 'transparent',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#636366',
-            cursor: 'pointer',
-            transition: 'background-color 0.12s ease',
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'rgba(118, 118, 128, 0.08)')}
-          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-          aria-label="Notifications"
-        >
-          <Bell size={16} />
-          {hasUnread && (
-            <span
-              style={{
-                position: 'absolute',
-                top: '5px',
-                right: '6px',
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                backgroundColor: '#ff3b30',
-              }}
-            />
-          )}
-        </button>
-
         {/* Profile Avatar */}
         <Link
           href="/settings"

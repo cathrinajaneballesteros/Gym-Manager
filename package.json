@@ -12,7 +12,6 @@
     "@hookform/resolvers": "^5.9.1",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.117.2",
-    "@types/three": "^0.186.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
     "lucide-react": "^1.48.0",
@@ -22,7 +21,6 @@
     "react-hook-form": "^7.89.0",
     "recharts": "^3.10.1",
     "sweetalert2": "^11.26.25",
-    "three": "^0.186.1",
     "xlsx": "^0.18.5",
     "zod": "^4.6.5"
   },

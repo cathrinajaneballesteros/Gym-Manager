@@ -23,7 +23,7 @@ export const PricingSection: React.FC = () => {
         'Executive PDF report exports',
         '1 Administrator account',
       ],
-      cta: 'Start 14-Day Pilot',
+      cta: 'Create Account',
     },
     {
       name: 'Professional',
@@ -40,7 +40,7 @@ export const PricingSection: React.FC = () => {
         'Up to 5 staff accounts with permission roles',
         'Priority 24/7 technical concierge',
       ],
-      cta: 'Start 14-Day Pilot',
+      cta: 'Create Account',
     },
     {
       name: 'Enterprise Franchise',
@@ -57,7 +57,7 @@ export const PricingSection: React.FC = () => {
         'Unlimited administrator & cashier seats',
         'Custom Service Level Agreement (SLA)',
       ],
-      cta: 'Contact Enterprise',
+      cta: 'Create Account',
     },
   ];
 

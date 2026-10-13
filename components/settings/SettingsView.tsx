@@ -4,28 +4,26 @@ import React, { useState, useEffect } from 'react';
 import {
   User,
   Lock,
-  Bell,
-  Sliders,
   Building2,
   Users,
   CheckCircle,
-  Database,
-  Camera,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
-import { UserProfile, UserRole } from '@/types/database';
+import { UserProfile } from '@/types/database';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { GymSettings } from './GymSettings';
 import { StaffSettings } from './StaffSettings';
 import { showError } from '@/lib/ui/swal';
 
+type SettingsTab = 'account' | 'gym' | 'staff' | 'security';
+
 export const SettingsView: React.FC = () => {
-  const [profile, setProfile] = useState<UserProfile>(DBService.getProfile());
-  const [activeTab, setActiveTab] = useState<'account' | 'gym' | 'staff' | 'security' | 'notifications' | 'appearance'>('account');
+  const [profile, setProfile] = useState<UserProfile>(() => DBService.getProfile());
+  const [activeTab, setActiveTab] = useState<SettingsTab>('account');
   const isOwner = DBService.isOwner();
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
+  const [fullName, setFullName] = useState(() => DBService.getProfile().full_name || '');
+  const [email, setEmail] = useState(() => DBService.getProfile().email || '');
+  const [phone, setPhone] = useState(() => DBService.getProfile().phone || '');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Security password fields
@@ -34,12 +32,6 @@ export const SettingsView: React.FC = () => {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   useEffect(() => {
-    const current = DBService.getProfile();
-    setProfile(current);
-    setFullName(current.full_name || '');
-    setEmail(current.email || '');
-    setPhone(current.phone || '');
-
     // Show the sign-in email, which can differ from the profile if it was changed in Supabase.
     import('@/lib/supabase/client').then(({ createClient }) => {
       createClient().auth.getUser().then(({ data: { user } }) => {
@@ -145,7 +137,7 @@ export const SettingsView: React.FC = () => {
             gap: '0.35rem',
           }}
         >
-          {[
+          {([
             { key: 'account', label: 'Account', icon: User, color: '#0071e3' },
             ...(isOwner
               ? [
@@ -154,15 +146,13 @@ export const SettingsView: React.FC = () => {
                 ]
               : []),
             { key: 'security', label: 'Security', icon: Lock, color: '#34c759' },
-            { key: 'notifications', label: 'Notifications', icon: Bell, color: '#ff3b30' },
-            { key: 'appearance', label: 'Appearance', icon: Sliders, color: '#af52de' },
-          ].map((tab) => {
+          ] as { key: SettingsTab; label: string; icon: typeof User; color: string }[]).map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
             return (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key as any)}
+                onClick={() => setActiveTab(tab.key)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -358,27 +348,6 @@ export const SettingsView: React.FC = () => {
             </form>
           )}
 
-          {activeTab === 'notifications' && (
-            <div style={{ maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#0f172a' }}>
-                Notification Preferences
-              </h2>
-              <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                Email reminders for membership expirations (7 days in advance) are enabled.
-              </p>
-            </div>
-          )}
-
-          {activeTab === 'appearance' && (
-            <div style={{ maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#0f172a' }}>
-                Appearance & Theme
-              </h2>
-              <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                2026 Modern SaaS Light Canvas with Dark Slate Sidebar active.
-              </p>
-            </div>
-          )}
         </div>
       </div>
       </ScrollReveal>

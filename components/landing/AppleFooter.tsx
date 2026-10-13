@@ -70,9 +70,6 @@ export const AppleFooter: React.FC = () => {
           <div>
             <div style={{ fontWeight: 600, color: '#1d1d1f', marginBottom: '0.85rem' }}>About Smart Gym</div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: 0 }}>
-              <li><span style={{ color: 'inherit' }}>IronPeak Fitness System</span></li>
-              <li><span style={{ color: 'inherit' }}>Privacy Policy</span></li>
-              <li><span style={{ color: 'inherit' }}>Terms of Service</span></li>
               <li><span style={{ color: 'inherit' }}>Philippines (PHP ₱)</span></li>
             </ul>
           </div>
@@ -93,12 +90,6 @@ export const AppleFooter: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <img src="/logo.svg" alt="Smart Gym Finance Manager" width={18} height={18} style={{ borderRadius: '4px' }} />
             <span>Copyright © 2026 Smart Gym Finance Manager Inc. All rights reserved.</span>
-          </div>
-
-          <div style={{ display: 'flex', gap: '1.25rem' }}>
-            <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy Policy</a>
-            <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>Legal Notices</a>
-            <a href="#" style={{ color: 'inherit', textDecoration: 'none' }}>Site Map</a>
           </div>
         </div>
       </div>

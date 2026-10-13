@@ -146,7 +146,7 @@ export const ReportsView: React.FC = () => {
   if (!kpis) return null;
 
   const currency = profile?.currency || '₱';
-  const gymName = profile?.gym_name || 'IronPeak Fitness & Gym';
+  const gymName = profile?.gym_name || 'Your Gym';
 
   const lastRev = lastMonthKpis?.totalRevenue || 0;
   const lastExp = lastMonthKpis?.totalExpenses || 0;
