@@ -7,7 +7,11 @@ export const PerformanceMetrics: React.FC = () => {
   // What the app actually does, not measured results.
   const metrics = [
     {
-      value: 'Cash + GCash',
+      value: (
+        <>
+          Cash + <span style={{ color: '#007dfe' }}>GCash</span>
+        </>
+      ),
       label: 'Payments Tracked',
       description: 'Record on-site cash and GCash payments, and check GCash receipts against their reference numbers.',
     },
