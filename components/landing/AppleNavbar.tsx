@@ -24,8 +24,8 @@ export const AppleNavbar: React.FC = () => {
   const navLinks = [
     { name: 'Overview', href: '#overview' },
     { name: 'Intelligence', href: '#intelligence' },
-    { name: 'Architecture', href: '#architecture' },
-    { name: 'Metrics', href: '#metrics' },
+    { name: 'Features', href: '#architecture' },
+    { name: 'Highlights', href: '#metrics' },
   ];
 
   return (
