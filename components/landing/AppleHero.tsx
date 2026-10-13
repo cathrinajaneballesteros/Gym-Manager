@@ -440,8 +440,9 @@ export const AppleHero: React.FC = () => {
               className="floating-glass-chip chip-right"
               style={{
                 position: 'absolute',
-                bottom: '12%',
-                right: '-28px',
+                // Hangs off the bottom edge of the preview so it doesn't cover the cards.
+                bottom: '-26px',
+                right: '32px',
                 zIndex: 2,
                 backgroundColor: 'rgba(255, 255, 255, 0.85)',
                 backdropFilter: 'blur(20px)',
