@@ -1,5 +1,8 @@
 -- Smart Gym Finance Manager Database Schema
 -- Supabase PostgreSQL Schema with RLS and Performance Optimization
+--
+-- New project: run this file, then every file in supabase/migrations/ in order
+-- (002 adds gyms and staff, and replaces the per-login policies below with per-gym ones).
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
