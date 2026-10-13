@@ -35,6 +35,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const [todayCheckInsCount, setTodayCheckInsCount] = useState(0);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     setProfile(DBService.getProfile());
     const handleProfileUpdate = () => {
       setProfile(DBService.getProfile());

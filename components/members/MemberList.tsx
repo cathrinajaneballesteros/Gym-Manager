@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
-  Users,
   Search,
   Plus,
   MoreVertical,
@@ -56,6 +55,7 @@ export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' })
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- portals need document, which only exists after mount
     setMounted(true);
   }, []);
 
@@ -115,6 +115,7 @@ export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' })
   useGymDataRefresh(refreshData);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     refreshData();
   }, []);
 
@@ -295,7 +296,7 @@ export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' })
 
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
               style={{
                 backgroundColor: '#ffffff',
                 border: '1px solid #e2e8f0',

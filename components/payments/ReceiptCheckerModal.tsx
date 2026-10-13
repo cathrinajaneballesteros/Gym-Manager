@@ -2,26 +2,19 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  FileCheck,
   CheckCircle,
   XCircle,
   AlertTriangle,
   Printer,
   Copy,
-  ShieldCheck,
   Receipt,
   Clock,
-  User,
-  CreditCard,
-  Hash,
-  ExternalLink,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { printReceipt } from '@/lib/export/receipt-print';
-import { Payment, UserProfile } from '@/types/database';
-import { showToast, showConfirm, showError, showAlert } from '@/lib/ui/swal';
-import { escapeHtml } from '@/lib/ui/escape';
+import { Payment } from '@/types/database';
+import { showToast, showError } from '@/lib/ui/swal';
 import { getPaymentMemberName } from '@/lib/ui/format';
 
 interface ReceiptCheckerModalProps {
@@ -83,8 +76,8 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
       showToast('Receipt verified and approved successfully!');
       onSuccess();
       onClose();
-    } catch (err: any) {
-      showError('Verification Failed', err.message);
+    } catch (err) {
+      showError('Verification Failed', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       processingRef.current = false;
       setIsProcessing(false);
@@ -105,8 +98,8 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
       showToast('Receipt marked as rejected');
       onSuccess();
       onClose();
-    } catch (err: any) {
-      showError('Rejection Failed', err.message);
+    } catch (err) {
+      showError('Rejection Failed', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       processingRef.current = false;
       setIsProcessing(false);

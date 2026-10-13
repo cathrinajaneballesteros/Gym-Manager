@@ -5,16 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
-  Calendar,
   Phone,
   Mail,
   CreditCard,
-  Edit,
   Trash2,
-  CheckCircle,
   Clock,
-  Sparkles,
-  AlertCircle,
   LogIn,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
@@ -59,6 +54,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
   useGymDataRefresh(loadData);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     loadData();
     window.addEventListener('sgfm_attendance_updated', loadData);
     return () => window.removeEventListener('sgfm_attendance_updated', loadData);
@@ -234,16 +230,16 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
 
       {/* 3. Navigation Tabs */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem' }}>
-        {[
+        {([
           { key: 'overview', label: 'Overview' },
           { key: 'payments', label: 'Payment History' },
           { key: 'attendance', label: 'Attendance' },
           { key: 'history', label: 'Membership History' },
           { key: 'notes', label: 'Notes' },
-        ].map((tab) => (
+        ] as const).map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setActiveTab(tab.key as any)}
+            onClick={() => setActiveTab(tab.key)}
             style={{
               padding: '0.5rem 1rem',
               fontSize: '0.875rem',

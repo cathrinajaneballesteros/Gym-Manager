@@ -1,18 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  TrendingUp,
-  AlertTriangle,
-  UserX,
-  Sparkles,
-  ArrowUpRight,
-  ShieldAlert,
-  CheckCircle,
-  Activity,
-  Layers,
-  ArrowRight,
-} from 'lucide-react';
+import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 export const InteractiveProductShowcase: React.FC = () => {
@@ -83,14 +72,14 @@ export const InteractiveProductShowcase: React.FC = () => {
                 overflowX: 'auto',
               }}
             >
-              {[
+              {([
                 { id: 'forecast', label: '01 Predictive Cashflow' },
                 { id: 'churn', label: '02 Churn Radar' },
                 { id: 'leaks', label: '03 Expense Sentinel' },
-              ].map((tab) => (
+              ] as const).map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id)}
                   style={{
                     padding: '0.55rem 1.35rem',
                     borderRadius: '9999px',

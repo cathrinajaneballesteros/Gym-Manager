@@ -95,8 +95,8 @@ export const SettingsView: React.FC = () => {
       setOldPassword('');
       setNewPassword('');
       setTimeout(() => setPasswordSuccess(false), 3000);
-    } catch (err: any) {
-      showError('Password Update Error', err.message || 'Unable to update password');
+    } catch (err) {
+      showError('Password Update Error', err instanceof Error ? err.message : 'Unable to update password');
     }
   };
 

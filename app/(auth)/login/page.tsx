@@ -30,6 +30,7 @@ export default function LoginPage() {
       const isAuth = sessionStorage.getItem('sgfm_authenticated') === 'true';
 
       if (urlMode === 'signin') {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage and the URL are only readable in the browser
         setMode('signin');
       } else if (urlMode === 'signup') {
         setMode('signup');
@@ -141,8 +142,8 @@ export default function LoginPage() {
           setMode('signin');
         }
       }
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please verify your credentials.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication failed. Please verify your credentials.');
     } finally {
       setLoading(false);
     }
@@ -163,8 +164,8 @@ export default function LoginPage() {
         },
       });
       if (oAuthError) throw oAuthError;
-    } catch (err: any) {
-      setError(err.message || 'Google authentication failed.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google authentication failed.');
       setLoading(false);
     }
   };

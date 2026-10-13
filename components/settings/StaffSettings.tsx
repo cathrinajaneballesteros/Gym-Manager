@@ -80,7 +80,7 @@ export const StaffSettings: React.FC = () => {
           </button>
         </div>
         <p style={{ fontSize: '0.75rem', color: '#64748b' }}>
-          Ask them to sign up (or sign in) with this exact email. They'll be asked to join your gym when they set up their account (only if they don't run a gym of their own). No email is sent.
+          Ask them to sign up (or sign in) with this exact email. They&apos;ll be asked to join your gym when they set up their account (only if they don&apos;t run a gym of their own). No email is sent.
         </p>
       </form>
 

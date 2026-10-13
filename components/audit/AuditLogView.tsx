@@ -10,8 +10,6 @@ import {
   Clock,
   CalendarDays,
   Download,
-  Info,
-  CheckCircle,
 } from 'lucide-react';
 import { AuditAction, AuditEntityType, AuditLogEntry } from '@/types/database';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';

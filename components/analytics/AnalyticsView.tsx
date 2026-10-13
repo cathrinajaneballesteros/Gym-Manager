@@ -1,28 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Sparkles,
-  TrendingUp,
-  AlertTriangle,
-  UserX,
-  PhoneCall,
-  CheckCircle,
-  HelpCircle,
-  ArrowRight,
-  ShieldCheck,
-  Send,
-  PiggyBank,
-  Zap,
-  CheckCircle2,
-  DollarSign,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+import { Sparkles, PiggyBank, CheckCircle2 } from 'lucide-react';
 import { calculateRevenueForecast } from '@/lib/ai/forecasting';
 import { predictMemberChurn } from '@/lib/ai/churn-detector';
 import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
-import { RevenueForecastResult, ChurnPredictionResult, ChurnPredictionMember, ExpenseLeakResult, CostSavingPlaybook } from '@/types/ai';
+import { RevenueForecastResult, ChurnPredictionResult, ChurnPredictionMember, ExpenseLeakResult } from '@/types/ai';
 import { DBService } from '@/lib/data/db-service';
 import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { UserProfile } from '@/types/database';
@@ -58,6 +41,7 @@ export const AnalyticsView: React.FC = () => {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     loadAnalytics();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -112,14 +96,14 @@ export const AnalyticsView: React.FC = () => {
         confirmButtonText: 'Done',
         confirmButtonColor: '#6366f1',
       });
-    } catch (err: any) {
-      showError('AI Generation Notice', err.message || 'Unable to generate brief at this time.');
+    } catch (err) {
+      showError('AI Generation Notice', err instanceof Error ? err.message : 'Unable to generate brief at this time.');
     } finally {
       setIsAiLoading(false);
     }
   };
 
-  const handleAiDraftMessage = async (member: any) => {
+  const handleAiDraftMessage = async (member: ChurnPredictionMember) => {
     try {
       showToast('Generating personalized message with Gemini...');
       const res = await fetch('/api/ai/narrative', {
@@ -160,7 +144,7 @@ export const AnalyticsView: React.FC = () => {
           setContactedMemberId(member.memberId);
         }
       });
-    } catch (err: any) {
+    } catch {
       handleContactMember(member);
     }
   };
@@ -218,8 +202,8 @@ export const AnalyticsView: React.FC = () => {
         confirmButtonText: 'Adopt Plan',
         confirmButtonColor: '#059669',
       });
-    } catch (err: any) {
-      showError('AI Optimization Notice', err.message || 'Unable to generate cost-saving plan at this time.');
+    } catch (err) {
+      showError('AI Optimization Notice', err instanceof Error ? err.message : 'Unable to generate cost-saving plan at this time.');
     } finally {
       setIsCostSavingAiLoading(false);
     }
@@ -377,14 +361,14 @@ export const AnalyticsView: React.FC = () => {
       {/* 2. Apple macOS/iOS Segmented Navigation Controls */}
       <ScrollReveal delay={40}>
         <div style={{ display: 'inline-flex', backgroundColor: 'rgba(118, 118, 128, 0.12)', padding: '3px', borderRadius: '10px', gap: '2px', width: 'fit-content' }}>
-          {[
+          {([
             { key: 'forecast', label: 'Revenue Forecast' },
             { key: 'churn', label: 'Churn Prediction' },
             { key: 'leaks', label: 'Spending & Savings' },
-          ].map((tab) => (
+          ] as const).map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
+              onClick={() => setActiveTab(tab.key)}
               style={{
                 padding: '0.4rem 1.15rem',
                 borderRadius: '8px',
@@ -479,7 +463,7 @@ export const AnalyticsView: React.FC = () => {
                   <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `${currency}${(val / 1000).toFixed(0)}k`} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
-                    formatter={(val: any) => [`${currency}${Number(val).toLocaleString()}`, '']}
+                    formatter={(val) => [`${currency}${Number(val).toLocaleString()}`, '']}
                   />
                   <Line type="monotone" dataKey="historical" stroke="#0284c7" strokeWidth={2.5} dot={{ r: 3, fill: '#0284c7' }} />
                   <Line type="monotone" dataKey="forecast" stroke="#0284c7" strokeWidth={2.5} strokeDasharray="4 4" dot={{ r: 4, fill: '#ffffff', stroke: '#0284c7', strokeWidth: 2 }} />

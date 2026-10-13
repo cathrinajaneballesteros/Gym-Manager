@@ -14,13 +14,9 @@ import {
   ArrowRight,
   Plus,
   X,
-  CheckCircle2,
-  AlertCircle,
   Bell,
   ArrowUpRight,
   ArrowDownRight,
-  ShieldCheck,
-  DollarSign,
   Building2,
   Zap,
   Package,
@@ -31,8 +27,6 @@ import {
   Smartphone,
   Banknote,
   Activity,
-  FileText,
-  Percent,
   LogIn,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
@@ -71,6 +65,7 @@ export const DashboardOverview: React.FC = () => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- portals need document, which only exists after mount
     setMounted(true);
   }, []);
 
@@ -103,6 +98,7 @@ export const DashboardOverview: React.FC = () => {
   useGymDataRefresh(refreshData);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     refreshData();
     const handleProfileUpdate = () => {
       setProfile(DBService.getProfile());

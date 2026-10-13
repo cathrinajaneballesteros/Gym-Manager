@@ -8,10 +8,8 @@ import {
   Users,
   ShieldCheck,
   Sparkles,
-  ChevronRight,
   CheckCircle2,
   DollarSign,
-  Activity,
   Zap,
 } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
@@ -22,6 +20,7 @@ export const AppleHero: React.FC = () => {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage and the URL are only readable in the browser
       setIsLoggedIn(sessionStorage.getItem('sgfm_authenticated') === 'true');
     }
   }, []);

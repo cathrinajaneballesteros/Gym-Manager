@@ -5,19 +5,14 @@ import {
   Receipt,
   Search,
   Plus,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   Trash2,
   Edit,
   ArrowDownRight,
   ArrowUpRight,
-  TrendingDown,
   History,
-  Layers,
-  BarChart3,
   Download,
-  CalendarDays,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
@@ -26,7 +21,7 @@ import { CategoryExpenseChart } from '@/components/charts/CategoryExpenseChart';
 import { ExpenseModal } from './ExpenseModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showError, showToast } from '@/lib/ui/swal';
-import { getCurrentMonthRangeLabel, getRecentMonthKeys, getTodayKey, formatDisplayDate } from '@/lib/ui/date';
+import { getRecentMonthKeys, getTodayKey, formatDisplayDate } from '@/lib/ui/date';
 import { downloadCSV } from '@/lib/ui/csv';
 import { escapeHtml } from '@/lib/ui/escape';
 import { getPageWindow } from '@/lib/ui/pagination';
@@ -52,6 +47,7 @@ export const ExpenseList: React.FC = () => {
   useGymDataRefresh(refreshData);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     refreshData();
   }, []);
 

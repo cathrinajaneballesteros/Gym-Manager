@@ -7,8 +7,6 @@ import {
   Lock,
   Database,
   CreditCard,
-  Check,
-  Shield,
   Zap,
 } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';

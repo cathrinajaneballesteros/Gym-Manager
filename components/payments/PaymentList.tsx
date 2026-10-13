@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import {
   CreditCard,
   Search,
@@ -9,8 +8,6 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  MoreVertical,
-  Printer,
   FileCheck,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
@@ -21,10 +18,10 @@ import { WalkInModal } from './WalkInModal';
 import { ReceiptCheckerModal } from './ReceiptCheckerModal';
 import { PaymentReminderModal } from './PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { showSuccess, showToast, showConfirm, showError } from '@/lib/ui/swal';
+import { showToast, showConfirm, showError } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel, formatDisplayDate } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
-import { Bell, CheckCircle2, Clock, AlertTriangle, FileText, Edit, UserPlus, Trash2 } from 'lucide-react';
+import { Bell, CheckCircle2, Clock, AlertTriangle, Edit, UserPlus, Trash2 } from 'lucide-react';
 import { getPageWindow } from '@/lib/ui/pagination';
 
 export const PaymentList: React.FC = () => {
@@ -55,6 +52,7 @@ export const PaymentList: React.FC = () => {
   useGymDataRefresh(refreshData);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     refreshData();
   }, []);
 

@@ -11,12 +11,9 @@ import {
   Users,
   Bell,
   Plus,
-  CheckCircle2,
-  AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
   X,
-  Sparkles,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
@@ -56,6 +53,7 @@ export const CalendarView: React.FC = () => {
   useGymDataRefresh(loadData);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     loadData();
     const handleUpdate = () => loadData();
     window.addEventListener('storage', handleUpdate);
