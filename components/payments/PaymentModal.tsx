@@ -5,9 +5,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Modal } from '@/components/ui/Modal';
-import { DBService } from '@/lib/data/db-service';
+import { DBService, PaymentSavedError } from '@/lib/data/db-service';
 import { Payment, Member, MembershipPlan } from '@/types/database';
-import { showError } from '@/lib/ui/swal';
+import { showError, showWarning } from '@/lib/ui/swal';
 import { MemberPicker } from './MemberPicker';
 import { getTodayKey } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
@@ -145,6 +145,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       reset();
       onClose();
     } catch (err) {
+      if (err instanceof PaymentSavedError) {
+        onSuccess(err.payment);
+        reset();
+        onClose();
+        showWarning('Payment Saved', err.message);
+        return;
+      }
       showError('Payment Failed', err instanceof Error ? err.message : 'Failed to save payment record');
     }
   };

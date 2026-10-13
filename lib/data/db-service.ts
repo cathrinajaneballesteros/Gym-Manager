@@ -259,6 +259,14 @@ function diffMetadata(previous: object, updates: object): AuditMetadata {
   return metadata;
 }
 
+/** Thrown when a payment saved but a follow-up step failed; carries the saved payment. */
+export class PaymentSavedError extends Error {
+  constructor(public payment: Payment, message: string) {
+    super(message);
+    this.name = 'PaymentSavedError';
+  }
+}
+
 export class DBService {
   // 0. Loading the signed-in owner's gym
   /** Loads this owner's data from Supabase (once per sign-in). Every getter reads from what this loaded. */
@@ -993,8 +1001,22 @@ export class DBService {
       },
     });
 
-    await this.applyPaymentToMembership(newPayment);
+    await this.applySavedPayment(newPayment);
     return newPayment;
+  }
+
+  // The payment is already saved by now, so a failure here must not read as "the payment failed",
+  // or the user records it again and it is counted twice.
+  private static async applySavedPayment(payment: Payment): Promise<void> {
+    try {
+      await this.applyPaymentToMembership(payment);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : 'unknown error';
+      throw new PaymentSavedError(
+        payment,
+        `The payment was saved, but the membership dates didn't update (${reason}). Don't record it again; edit the member to fix the dates.`
+      );
+    }
   }
 
   static async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment> {
@@ -1016,7 +1038,7 @@ export class DBService {
       },
     });
 
-    if (previous.payment_status !== 'completed') await this.applyPaymentToMembership(updatedPayment);
+    if (previous.payment_status !== 'completed') await this.applySavedPayment(updatedPayment);
     return updatedPayment;
   }
 
@@ -1049,7 +1071,7 @@ export class DBService {
       },
     });
 
-    if (current.payment_status !== 'completed') await this.applyPaymentToMembership(updatedPayment);
+    if (current.payment_status !== 'completed') await this.applySavedPayment(updatedPayment);
     return updatedPayment;
   }
 
