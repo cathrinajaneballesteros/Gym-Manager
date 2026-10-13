@@ -12,16 +12,21 @@ import { showError } from '@/lib/ui/swal';
 import { addMonthsToDateKey, getTodayKey } from '@/lib/ui/date';
 
 const memberSchema = z.object({
-  first_name: z.string().min(2, 'First name must be at least 2 characters'),
-  last_name: z.string().min(2, 'Last name must be at least 2 characters'),
-  email: z.string().email('Please enter a valid email address'),
-  phone: z.string().min(7, 'Please enter a valid phone number'),
-  emergency_contact: z.string().min(3, 'Emergency contact is required'),
+  first_name: z.string().trim().min(1, 'First name is required').max(60, 'First name is too long'),
+  last_name: z.string().trim().min(1, 'Last name is required').max(60, 'Last name is too long'),
+  email: z.union([z.literal(''), z.string().trim().email('Please enter a valid email address').max(120)]),
+  phone: z
+    .string()
+    .trim()
+    .regex(/^\+?[0-9()\-\s]{7,20}$/, 'Use digits only, e.g. 09171234567 or +63 917 123 4567'),
+  emergency_contact: z.string().trim().max(120, 'Emergency contact is too long'),
   membership_plan_id: z.string().min(1, 'Please select a membership plan'),
   start_date: z.string().min(10, 'Start date is required'),
   end_date: z.string().min(10, 'End date is required'),
-  notes: z.string().optional(),
+  notes: z.string().max(500, 'Notes can be up to 500 characters').optional(),
 });
+
+const digitsOnly = (value: string) => value.replace(/\D/g, '');
 
 type MemberFormData = z.infer<typeof memberSchema>;
 
@@ -57,9 +62,9 @@ export const MemberModal: React.FC<MemberModalProps> = ({
       ? {
           first_name: initialMember.first_name,
           last_name: initialMember.last_name,
-          email: initialMember.email,
-          phone: initialMember.phone,
-          emergency_contact: initialMember.emergency_contact,
+          email: initialMember.email || '',
+          phone: initialMember.phone || '',
+          emergency_contact: initialMember.emergency_contact || '',
           membership_plan_id: initialMember.membership_plan_id,
           start_date: initialMember.start_date,
           end_date: initialMember.end_date || computedEndDate,
@@ -109,6 +114,23 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   }, [isOpen, initialMember?.id]);
 
   const onSubmit = async (data: MemberFormData) => {
+    // Stop the same person being registered twice by mistake.
+    const email = data.email.toLowerCase();
+    const phone = digitsOnly(data.phone);
+    const duplicate = DBService.getMembers().find(
+      (m) =>
+        m.id !== initialMember?.id &&
+        ((email && m.email?.toLowerCase() === email) || (phone && digitsOnly(m.phone || '') === phone))
+    );
+    if (duplicate) {
+      const field = email && duplicate.email?.toLowerCase() === email ? 'email' : 'phone number';
+      showError(
+        'Member Already Exists',
+        `${duplicate.first_name} ${duplicate.last_name} already uses this ${field}.`
+      );
+      return;
+    }
+
     try {
       if (initialMember) {
         const updated = await DBService.updateMember(initialMember.id, data);
@@ -122,8 +144,8 @@ export const MemberModal: React.FC<MemberModalProps> = ({
       }
       reset();
       onClose();
-    } catch (err: any) {
-      showError('Save Failed', err.message || 'Failed to save member record');
+    } catch (err) {
+      showError('Save Failed', err instanceof Error ? err.message : 'Failed to save member record');
     }
   };
 
@@ -143,6 +165,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
             <input
               type="text"
               placeholder="e.g. Aaron Ram"
+              maxLength={60}
               {...register('first_name')}
               style={{ width: '100%' }}
             />
@@ -160,6 +183,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
             <input
               type="text"
               placeholder="e.g. Cabato"
+              maxLength={60}
               {...register('last_name')}
               style={{ width: '100%' }}
             />
@@ -174,11 +198,12 @@ export const MemberModal: React.FC<MemberModalProps> = ({
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-              Email Address *
+              Email Address
             </label>
             <input
               type="email"
               placeholder="member@example.com"
+              maxLength={120}
               {...register('email')}
               style={{ width: '100%' }}
             />
@@ -196,6 +221,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
             <input
               type="text"
               placeholder="+63 9xx xxx xxxx"
+              maxLength={20}
               {...register('phone')}
               style={{ width: '100%' }}
             />
@@ -209,11 +235,12 @@ export const MemberModal: React.FC<MemberModalProps> = ({
 
         <div>
           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-            Emergency Contact Name & Phone *
+            Emergency Contact Name & Phone
           </label>
           <input
             type="text"
             placeholder="e.g. Maria Cabato (Mother) - 09171112234"
+            maxLength={120}
             {...register('emergency_contact')}
             style={{ width: '100%' }}
           />
@@ -315,6 +342,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
           <textarea
             rows={2}
             placeholder="e.g. Focus on strength training, morning session attendee"
+            maxLength={500}
             {...register('notes')}
             style={{ width: '100%' }}
           />

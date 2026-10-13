@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { walkInPriceProblem } from '@/lib/ui/validation';
 import { GymDetails } from '@/types/database';
 import { OpeningHoursEditor } from '@/components/gym/OpeningHoursEditor';
 import { GymLogoPicker } from '@/components/gym/GymLogoPicker';
@@ -55,6 +56,15 @@ export const GymSettings: React.FC = () => {
       showError('Check opening hours', `Closing time must be after opening time on ${badDays.join(', ')}.`);
       return;
     }
+    if (!details.name.trim()) {
+      showError('Gym name needed', 'Please enter the name of your gym.');
+      return;
+    }
+    const priceProblem = walkInPriceProblem(details.walk_in_price);
+    if (priceProblem) {
+      showError('Check the walk-in price', priceProblem);
+      return;
+    }
     setSaving(true);
     try {
       await DBService.updateGym({ ...details, name: details.name.trim() });
@@ -87,20 +97,20 @@ export const GymSettings: React.FC = () => {
         </div>
         <div>
           <label style={labelStyle}>Gym Name</label>
-          <input type="text" value={details.name} onChange={(e) => set('name', e.target.value)} style={{ width: '100%' }} required />
+          <input type="text" value={details.name} onChange={(e) => set('name', e.target.value)} maxLength={80} style={{ width: '100%' }} required />
         </div>
         <div>
           <label style={labelStyle}>Address</label>
-          <input type="text" value={details.address} onChange={(e) => set('address', e.target.value)} placeholder="e.g. 123 Rizal Ave., Brgy. San Roque, Quezon City" style={{ width: '100%' }} />
+          <input type="text" value={details.address} onChange={(e) => set('address', e.target.value)} maxLength={200} placeholder="e.g. 123 Rizal Ave., Brgy. San Roque, Quezon City" style={{ width: '100%' }} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label style={labelStyle}>Gym Phone</label>
-            <input type="tel" value={details.phone} onChange={(e) => set('phone', e.target.value)} style={{ width: '100%' }} />
+            <input type="tel" value={details.phone} onChange={(e) => set('phone', e.target.value)} maxLength={20} style={{ width: '100%' }} />
           </div>
           <div>
             <label style={labelStyle}>Gym Email</label>
-            <input type="email" value={details.email} onChange={(e) => set('email', e.target.value)} style={{ width: '100%' }} />
+            <input type="email" value={details.email} onChange={(e) => set('email', e.target.value)} maxLength={120} style={{ width: '100%' }} />
           </div>
         </div>
         <div>

@@ -11,16 +11,17 @@ import { showError } from '@/lib/ui/swal';
 import { MemberPicker } from './MemberPicker';
 import { getTodayKey } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
+import { amountField, MAX_AMOUNT, pastDateField } from '@/lib/ui/validation';
 
 const paymentSchema = z.object({
   member_id: z.string().min(1, 'Please select a member'),
   membership_plan_id: z.string().optional(),
-  amount: z.number().positive('Payment amount must be greater than 0'),
-  payment_date: z.string().min(10, 'Payment date is required'),
+  amount: amountField('Payment amount'),
+  payment_date: pastDateField('Payment date'),
   payment_method: z.enum(['Cash', 'GCash']),
   payment_status: z.enum(['completed', 'pending', 'refunded']),
-  reference_number: z.string().optional(),
-  notes: z.string().optional(),
+  reference_number: z.string().max(50, 'Reference number is too long').optional(),
+  notes: z.string().max(500, 'Notes can be up to 500 characters').optional(),
 }).refine((d) => d.payment_method !== 'GCash' || Boolean(d.reference_number?.trim()), {
   // The reference number is what the receipt check is done against.
   message: 'Enter the GCash reference number',
@@ -143,8 +144,8 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
       onSuccess(payment);
       reset();
       onClose();
-    } catch (err: any) {
-      showError('Payment Failed', err.message || 'Failed to save payment record');
+    } catch (err) {
+      showError('Payment Failed', err instanceof Error ? err.message : 'Failed to save payment record');
     }
   };
 
@@ -215,11 +216,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-              Payment Amount (₱) *
+              Payment Amount ({currency}) *
             </label>
             <input
               type="number"
               step="0.01"
+              min="0.01"
+              max={MAX_AMOUNT}
               {...register('amount', { valueAsNumber: true })}
               style={{ width: '100%' }}
             />
@@ -236,7 +239,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
               Payment Date *
             </label>
-            <input type="date" {...register('payment_date')} style={{ width: '100%' }} />
+            <input type="date" max={todayStr} {...register('payment_date')} style={{ width: '100%' }} />
             {errors.payment_date && (
               <span style={{ fontSize: '0.725rem', color: 'var(--danger)', marginTop: '0.2rem', display: 'block' }}>
                 {errors.payment_date.message}
@@ -281,6 +284,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <input
               type="text"
               placeholder="e.g. 1012 345 678901"
+              maxLength={50}
               {...register('reference_number')}
               style={{ width: '100%' }}
             />
@@ -299,6 +303,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <input
             type="text"
             placeholder="e.g. Walk-in renewal with student ID verification"
+            maxLength={500}
             {...register('notes')}
             style={{ width: '100%' }}
           />

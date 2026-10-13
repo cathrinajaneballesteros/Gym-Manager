@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Layers, Clock, CheckCircle2, XCircle, Pencil, Power } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { amountProblem, MAX_AMOUNT } from '@/lib/ui/validation';
 import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { MembershipPlan, UserProfile } from '@/types/database';
 import { Modal } from '@/components/ui/Modal';
@@ -58,8 +59,9 @@ export const PlansView: React.FC = () => {
       showError('Plan name required', 'Please enter a name for the plan.');
       return;
     }
-    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
-      showError('Invalid price', 'Enter a price greater than 0.');
+    const priceProblem = amountProblem(price);
+    if (priceProblem) {
+      showError('Invalid price', priceProblem);
       return;
     }
     if (!Number.isInteger(parsedDuration) || parsedDuration <= 0 || parsedDuration > 120) {
@@ -325,6 +327,7 @@ export const PlansView: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Student Monthly Pass"
+              maxLength={60}
               style={{ width: '100%' }}
             />
           </div>
@@ -337,6 +340,7 @@ export const PlansView: React.FC = () => {
               <input
                 type="number"
                 min="0.01"
+                max={MAX_AMOUNT}
                 step="0.01"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
@@ -371,6 +375,7 @@ export const PlansView: React.FC = () => {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What's included in this plan?"
+              maxLength={500}
               style={{ width: '100%' }}
             />
           </div>

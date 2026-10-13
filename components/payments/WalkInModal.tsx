@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
+import { amountProblem, MAX_AMOUNT } from '@/lib/ui/validation';
 import { Payment, PaymentMethod } from '@/types/database';
 import { showError } from '@/lib/ui/swal';
 
@@ -52,8 +53,9 @@ const WalkInForm: React.FC<Omit<WalkInModalProps, 'isOpen'>> = ({ onClose, onSuc
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const value = Number(amount);
-    if (!amount.trim() || !Number.isFinite(value) || value <= 0) {
-      showError('Amount needed', 'Enter how much the walk-in paid.');
+    const problem = amountProblem(amount);
+    if (problem) {
+      showError('Check the amount', problem);
       return;
     }
     if (method === 'GCash' && !reference.trim()) {
@@ -89,6 +91,7 @@ const WalkInForm: React.FC<Omit<WalkInModalProps, 'isOpen'>> = ({ onClose, onSuc
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="e.g. Juan Dela Cruz"
+          maxLength={60}
           style={{ width: '100%' }}
           autoFocus
         />
@@ -99,7 +102,8 @@ const WalkInForm: React.FC<Omit<WalkInModalProps, 'isOpen'>> = ({ onClose, onSuc
           <label style={labelStyle}>Amount ({currency}) *</label>
           <input
             type="number"
-            min="0"
+            min="0.01"
+            max={MAX_AMOUNT}
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}

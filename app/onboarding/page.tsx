@@ -12,6 +12,7 @@ import { DEFAULT_OPENING_HOURS, emptyGymDetails, invalidHourDays } from '@/lib/u
 import { STAFF_HOME } from '@/lib/ui/roles';
 import { showError, showToast } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
+import { amountProblem, MAX_AMOUNT, walkInPriceProblem } from '@/lib/ui/validation';
 
 interface PlanDraft {
   name: string;
@@ -99,7 +100,8 @@ export default function OnboardingPage() {
     for (const p of filledPlans) {
       const price = Number(p.price);
       const months = Number(p.months);
-      if (p.price.trim() === '' || !Number.isFinite(price) || price < 0) return `Enter a price for "${p.name.trim()}".`;
+      const priceProblem = amountProblem(p.price);
+      if (priceProblem) return `"${p.name.trim()}": ${priceProblem}`;
       if (!Number.isInteger(months) || months < 1) return `"${p.name.trim()}" needs a duration of at least 1 month.`;
     }
     const names = filledPlans.map((p) => p.name.trim().toLowerCase());
@@ -123,6 +125,11 @@ export default function OnboardingPage() {
   };
 
   const finish = async (withPlans: boolean) => {
+    const priceProblem = walkInPriceProblem(details.walk_in_price);
+    if (priceProblem) {
+      showError('Check the walk-in price', priceProblem);
+      return;
+    }
     const error = withPlans ? planError() : null;
     if (error) {
       showError('Check your plans', error);
@@ -130,9 +137,12 @@ export default function OnboardingPage() {
     }
     setSaving(true);
     try {
-      const gym = await DBService.createGym({ ...details, name: details.name.trim() });
+      // If an earlier try saved the gym but then failed on a plan, don't create it again.
+      const existing = DBService.getGym();
+      const gym = existing?.onboarded_at ? existing : await DBService.createGym({ ...details, name: details.name.trim() });
       if (withPlans) {
-        for (const p of filledPlans) {
+        const savedNames = new Set(DBService.getPlans().map((p) => p.name.trim().toLowerCase()));
+        for (const p of filledPlans.filter((p) => !savedNames.has(p.name.trim().toLowerCase()))) {
           await DBService.addPlan({
             name: p.name.trim(),
             price: Number(p.price),
@@ -222,11 +232,11 @@ export default function OnboardingPage() {
             </div>
             <div>
               <label style={labelStyle}>Gym name *</label>
-              <input type="text" value={details.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. IronPeak Fitness Club" style={{ width: '100%' }} autoFocus />
+              <input type="text" value={details.name} onChange={(e) => set('name', e.target.value)} maxLength={80} placeholder="e.g. IronPeak Fitness Club" style={{ width: '100%' }} autoFocus />
             </div>
             <div>
               <label style={labelStyle}>Address</label>
-              <input type="text" value={details.address} onChange={(e) => set('address', e.target.value)} placeholder="e.g. 123 Rizal Ave., Brgy. San Roque, Quezon City" style={{ width: '100%' }} />
+              <input type="text" value={details.address} onChange={(e) => set('address', e.target.value)} maxLength={200} placeholder="e.g. 123 Rizal Ave., Brgy. San Roque, Quezon City" style={{ width: '100%' }} />
             </div>
             <p style={{ fontSize: '0.75rem', color: '#86868b' }}>
               Were you invited as staff? Sign in with the email your gym owner invited, and you&apos;ll join their gym instead.
@@ -238,11 +248,11 @@ export default function OnboardingPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div>
               <label style={labelStyle}>Gym phone</label>
-              <input type="tel" value={details.phone} onChange={(e) => set('phone', e.target.value)} placeholder="e.g. +63 917 123 4567" style={{ width: '100%' }} />
+              <input type="tel" value={details.phone} onChange={(e) => set('phone', e.target.value)} maxLength={20} placeholder="e.g. +63 917 123 4567" style={{ width: '100%' }} />
             </div>
             <div>
               <label style={labelStyle}>Gym email</label>
-              <input type="email" value={details.email} onChange={(e) => set('email', e.target.value)} style={{ width: '100%' }} />
+              <input type="email" value={details.email} onChange={(e) => set('email', e.target.value)} maxLength={120} style={{ width: '100%' }} />
             </div>
           </div>
         )}
@@ -258,6 +268,7 @@ export default function OnboardingPage() {
               <input
                 type="number"
                 min="0"
+                max={MAX_AMOUNT}
                 step="0.01"
                 value={details.walk_in_price ?? ''}
                 onChange={(e) => set('walk_in_price', e.target.value === '' ? null : Number(e.target.value))}
@@ -281,8 +292,8 @@ export default function OnboardingPage() {
             )}
             {plans.map((p, i) => (
               <div key={i} className="onboarding-plan-row" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 90px 32px', gap: '0.5rem', alignItems: 'center' }}>
-                <input type="text" value={p.name} onChange={(e) => setPlan(i, { name: e.target.value })} placeholder="e.g. Monthly Pass" aria-label="Plan name" />
-                <input type="number" min="0" step="0.01" value={p.price} onChange={(e) => setPlan(i, { price: e.target.value })} placeholder="1500" aria-label="Price" />
+                <input type="text" value={p.name} onChange={(e) => setPlan(i, { name: e.target.value })} placeholder="e.g. Monthly Pass" aria-label="Plan name" maxLength={60} />
+                <input type="number" min="0.01" max={MAX_AMOUNT} step="0.01" value={p.price} onChange={(e) => setPlan(i, { price: e.target.value })} placeholder="1500" aria-label="Price" />
                 <input type="number" min="1" step="1" value={p.months} onChange={(e) => setPlan(i, { months: e.target.value })} aria-label="Duration in months" />
                 <button
                   type="button"

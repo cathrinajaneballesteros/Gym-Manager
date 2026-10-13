@@ -57,6 +57,11 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
+    if (mode === 'signup' && !fullName.trim()) {
+      setError('Please enter your full name.');
+      setLoading(false);
+      return;
+    }
 
     try {
       if (mode === 'signin') {
@@ -86,7 +91,7 @@ export default function LoginPage() {
             // The confirmation link finishes signing them in through the app, not Supabase's default page.
             emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
             data: {
-              full_name: fullName.trim() || 'Gym Administrator',
+              full_name: fullName.trim(),
               // Only used to prefill onboarding; invited staff leave it blank.
               gym_name: gymName.trim() || undefined,
             },
@@ -390,6 +395,7 @@ export default function LoginPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="e.g. John Doe"
+                    maxLength={80}
                     required
                     style={{
                       width: '100%',
