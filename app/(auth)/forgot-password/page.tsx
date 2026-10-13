@@ -51,15 +51,15 @@ export default function ForgotPasswordPage() {
       >
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <img
-            src="/logo.png"
-            alt="Smart Gym Logo"
+            src="/logo.svg"
+            alt="Smart Gym Finance Manager"
             width={48}
             height={48}
             style={{
               borderRadius: '12px',
               objectFit: 'contain',
               marginBottom: '1rem',
-              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
+              boxShadow: '0 3px 10px rgba(0, 0, 0, 0.08)',
             }}
           />
 

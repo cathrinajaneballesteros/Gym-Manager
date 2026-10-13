@@ -67,8 +67,8 @@ export const AppleNavbar: React.FC = () => {
           }}
         >
           <img
-            src="/logo.png"
-            alt="Smart Gym Logo"
+            src="/logo.svg"
+            alt="Smart Gym Finance Manager"
             width={28}
             height={28}
             style={{

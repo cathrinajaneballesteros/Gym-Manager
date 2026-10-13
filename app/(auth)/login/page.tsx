@@ -250,8 +250,8 @@ export default function LoginPage() {
         {/* Brand Icon & Heading */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <img
-            src="/logo.png"
-            alt="Smart Gym Logo"
+            src="/logo.svg"
+            alt="Smart Gym Finance Manager"
             width={48}
             height={48}
             style={{

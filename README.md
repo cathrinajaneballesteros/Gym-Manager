@@ -2,7 +2,7 @@
 
 An intelligent, cloud-based financial management platform and modern web application engineered for fitness center operators, gym owners, and studio managers. Built with an Apple-inspired minimalist design aesthetic, real-time analytics, and automated financial intelligence.
 
-![Smart Gym Finance Manager](public/logo.png)
+![Smart Gym Finance Manager](public/logo.svg)
 
 ---
 

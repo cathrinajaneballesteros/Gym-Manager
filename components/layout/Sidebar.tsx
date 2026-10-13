@@ -214,8 +214,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       >
         {/* The gym's own logo when the owner has uploaded one, otherwise the app logo. */}
         <img
-          src={gymLogo || '/logo.png'}
-          alt={gymLogo ? `${profile?.gym_name || 'Gym'} logo` : 'Smart Gym Logo'}
+          src={gymLogo || '/logo.svg'}
+          alt={gymLogo ? `${profile?.gym_name || 'Gym'} logo` : 'Smart Gym Finance Manager'}
           width={32}
           height={32}
           style={{

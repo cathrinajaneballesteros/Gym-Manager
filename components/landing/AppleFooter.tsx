@@ -91,7 +91,7 @@ export const AppleFooter: React.FC = () => {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <img src="/logo.png" alt="Smart Gym" width={18} height={18} style={{ borderRadius: '4px' }} />
+            <img src="/logo.svg" alt="Smart Gym Finance Manager" width={18} height={18} style={{ borderRadius: '4px' }} />
             <span>Copyright © 2026 Smart Gym Finance Manager Inc. All rights reserved.</span>
           </div>
 
