@@ -15,9 +15,11 @@ import {
   LogOut,
   Calendar,
   Layers,
+  LogIn,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
+import { getTodayKey, toDateKey } from '@/lib/ui/date';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -29,6 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+  const [todayCheckInsCount, setTodayCheckInsCount] = useState(0);
 
   useEffect(() => {
     setProfile(DBService.getProfile());
@@ -44,6 +47,17 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       }
     };
     updatePendingCount();
+    const updateCheckInsCount = () => {
+      try {
+        const today = getTodayKey();
+        setTodayCheckInsCount(
+          DBService.getAttendance().filter((a) => toDateKey(new Date(a.check_in_time)) === today).length
+        );
+      } catch {
+        // Ignore
+      }
+    };
+    updateCheckInsCount();
 
     window.addEventListener('sgfm_profile_updated', handleProfileUpdate);
     window.addEventListener('sgfm_data_updated', updatePendingCount);
@@ -51,7 +65,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     window.addEventListener('sgfm_audit_updated', updatePendingCount);
     window.addEventListener('storage', handleProfileUpdate);
     window.addEventListener('storage', updatePendingCount);
+    window.addEventListener('sgfm_attendance_updated', updateCheckInsCount);
+    window.addEventListener('storage', updateCheckInsCount);
     return () => {
+      window.removeEventListener('sgfm_attendance_updated', updateCheckInsCount);
+      window.removeEventListener('storage', updateCheckInsCount);
       window.removeEventListener('sgfm_profile_updated', handleProfileUpdate);
       window.removeEventListener('sgfm_data_updated', updatePendingCount);
       window.removeEventListener('sgfm_audit_updated', updatePendingCount);
@@ -89,6 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       section: 'MANAGEMENT',
       items: [
         { name: 'Members', href: '/members', icon: Users },
+        { name: 'Attendance', href: '/attendance', icon: LogIn },
         { name: 'Plans', href: '/plans', icon: Layers },
         { name: 'Payments', href: '/payments', icon: CreditCard },
         { name: 'Expenses', href: '/expenses', icon: Receipt },
@@ -287,6 +306,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                         }}
                       >
                         {pendingPaymentsCount}
+                      </span>
+                    )}
+                    {item.href === '/attendance' && todayCheckInsCount > 0 && (
+                      <span
+                        title={`${todayCheckInsCount} check-in${todayCheckInsCount > 1 ? 's' : ''} today`}
+                        style={{
+                          marginLeft: 'auto',
+                          backgroundColor: 'rgba(52, 199, 89, 0.18)',
+                          color: '#34c759',
+                          fontSize: '0.67rem',
+                          fontWeight: 700,
+                          padding: '1px 6px',
+                          borderRadius: '9999px',
+                          lineHeight: '1.4',
+                        }}
+                      >
+                        {todayCheckInsCount}
                       </span>
                     )}
                   </Link>

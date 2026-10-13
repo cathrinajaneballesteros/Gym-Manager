@@ -33,6 +33,7 @@ import {
   Activity,
   FileText,
   Percent,
+  LogIn,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { formatTimeAgo } from '@/lib/ui/date';
@@ -42,6 +43,7 @@ import { MetricCard } from '@/components/ui/MetricCard';
 import { RevenueExpenseChart } from '@/components/charts/RevenueExpenseChart';
 import { CategoryExpenseChart } from '@/components/charts/CategoryExpenseChart';
 import { MemberModal } from '@/components/members/MemberModal';
+import { CheckInModal } from '@/components/members/CheckInModal';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { ExpenseModal } from '@/components/expenses/ExpenseModal';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
@@ -61,6 +63,7 @@ export const DashboardOverview: React.FC = () => {
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
   const [activeBreakdown, setActiveBreakdown] = useState<'revenue' | 'expenses' | 'profit' | 'members' | null>(null);
   const [selectedMemberForReminder, setSelectedMemberForReminder] = useState<Member | null>(null);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
@@ -286,6 +289,13 @@ export const DashboardOverview: React.FC = () => {
 
           {/* Quick Action Buttons */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            <button
+              onClick={() => setIsCheckInModalOpen(true)}
+              className="btn btn-outline btn-sm"
+            >
+              <LogIn size={14} />
+              <span>Check In</span>
+            </button>
             <button
               onClick={() => setIsPaymentModalOpen(true)}
               className="btn btn-outline btn-sm"
@@ -599,6 +609,15 @@ export const DashboardOverview: React.FC = () => {
         onClose={() => setIsExpenseModalOpen(false)}
         onSuccess={() => {
           setIsExpenseModalOpen(false);
+          refreshData();
+        }}
+      />
+
+      <CheckInModal
+        isOpen={isCheckInModalOpen}
+        onClose={() => setIsCheckInModalOpen(false)}
+        onSuccess={() => {
+          setIsCheckInModalOpen(false);
           refreshData();
         }}
       />

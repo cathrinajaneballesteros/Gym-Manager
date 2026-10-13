@@ -32,6 +32,13 @@ export function getTodayKey(): string {
   return toDateKey(new Date());
 }
 
+// The local date `days` days before today as YYYY-MM-DD, e.g. daysAgoKey(29) starts a 30-day window ending today.
+export function daysAgoKey(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return toDateKey(d);
+}
+
 // Returns a human-readable label for the current calendar month,
 // e.g. "Oct 1, 2026 - Oct 31, 2026".
 export function getCurrentMonthRangeLabel(): string {

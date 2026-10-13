@@ -1,6 +1,6 @@
 import { ChurnPredictionResult, ChurnPredictionMember, ChurnRiskLevel } from '@/types/ai';
 import { DBService } from '@/lib/data/db-service';
-import { getTodayKey } from '@/lib/ui/date';
+import { getTodayKey, daysAgoKey, toDateKey } from '@/lib/ui/date';
 
 /**
  * AI Membership Churn Prediction Module
@@ -24,6 +24,16 @@ export function predictMemberChurn(requireMinMembers: number = 3): ChurnPredicti
         'Insufficient membership data. The churn prediction engine requires active members with recorded attendance and expiration schedules to compute risk indicators.',
     };
   }
+
+  // Check-in dates per member, for comparing the last 30 days with the 30 days before.
+  const visitDaysByMember = new Map<string, string[]>();
+  DBService.getAttendance().forEach((a) => {
+    const days = visitDaysByMember.get(a.member_id) || [];
+    days.push(toDateKey(new Date(a.check_in_time)));
+    visitDaysByMember.set(a.member_id, days);
+  });
+  const recentStart = daysAgoKey(29);
+  const previousStart = daysAgoKey(59);
 
   const analyzedMembers: ChurnPredictionMember[] = [];
   let highCount = 0;
@@ -75,6 +85,18 @@ export function predictMemberChurn(requireMinMembers: number = 3): ChurnPredicti
       factors.push(`Renewal window approaching in ${daysUntilExpiration} days`);
     }
 
+    // Factor D: Visit drop-off (last 30 days vs the 30 days before)
+    const visitDays = visitDaysByMember.get(m.id) || [];
+    const visitsLast30Days = visitDays.filter((d) => d >= recentStart).length;
+    const visitsPrevious30Days = visitDays.filter((d) => d >= previousStart && d < recentStart).length;
+    if (visitsPrevious30Days >= 4 && visitsLast30Days < visitsPrevious30Days / 2) {
+      riskScore += 15;
+      factors.push(`Visits dropped from ${visitsPrevious30Days} to ${visitsLast30Days} in the last 30 days`);
+    } else if (visitsLast30Days >= 8) {
+      riskScore -= 5;
+      factors.push(`Visits regularly: ${visitsLast30Days} times in the last 30 days`);
+    }
+
     // Factor C: Plan commitment
     if ((m.plan?.duration_months ?? 0) >= 12) {
       riskScore -= 15;
@@ -115,6 +137,7 @@ export function predictMemberChurn(requireMinMembers: number = 3): ChurnPredicti
       phone: m.phone,
       planName: m.plan?.name || 'Standard Plan',
       daysSinceLastVisit,
+      visitsLast30Days,
       daysUntilExpiration,
       expirationDate: m.end_date,
       riskLevel,

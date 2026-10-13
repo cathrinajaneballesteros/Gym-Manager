@@ -11,6 +11,7 @@ import {
   DashboardKPIs,
   MonthlyTrendData,
   AuditLogEntry,
+  AttendanceLog,
 } from '@/types/database';
 import {
   INITIAL_PROFILE,
@@ -20,7 +21,7 @@ import {
   INITIAL_EXPENSES,
 } from './mock-data';
 import { getPaymentMemberName } from '@/lib/ui/format';
-import { getRecentMonthKeys } from '@/lib/ui/date';
+import { getRecentMonthKeys, getTodayKey, toDateKey } from '@/lib/ui/date';
 
 /** Only Cash and GCash are supported; anything else (legacy data) is treated as Cash. */
 const normalizeMethod = (method: string | undefined): PaymentMethod =>
@@ -33,6 +34,7 @@ const STORAGE_KEYS = {
   PAYMENTS: 'sgfm_payments_clean',
   EXPENSES: 'sgfm_expenses_clean',
   AUDIT: 'sgfm_audit_log_clean',
+  ATTENDANCE: 'sgfm_attendance_clean',
 };
 
 const MAX_AUDIT_ENTRIES = 1000;
@@ -406,6 +408,9 @@ export class DBService {
     });
     setStoredItem(STORAGE_KEYS.PAYMENTS, keptPayments);
 
+    const attendance = getStoredItem<AttendanceLog[]>(STORAGE_KEYS.ATTENDANCE, []);
+    setStoredItem(STORAGE_KEYS.ATTENDANCE, attendance.filter((a) => a.member_id !== id));
+
     this.recordAudit({
       action: 'member.delete',
       entity_type: 'member',
@@ -420,6 +425,83 @@ export class DBService {
         payments_kept: paymentsKept,
       },
     });
+  }
+
+  // 3b. Attendance (check-ins)
+  // Check-ins aren't written to the Audit Log: a busy gym would push everything else out of it within days.
+  static getAttendance(memberId?: string): AttendanceLog[] {
+    const logs = getStoredItem<AttendanceLog[]>(STORAGE_KEYS.ATTENDANCE, []);
+    return logs
+      .filter((a) => !memberId || a.member_id === memberId)
+      .sort((a, b) => b.check_in_time.localeCompare(a.check_in_time));
+  }
+
+  static isCheckedInToday(memberId: string): boolean {
+    const today = getTodayKey();
+    return this.getAttendance(memberId).some((a) => toDateKey(new Date(a.check_in_time)) === today);
+  }
+
+  static checkInMember(memberId: string): AttendanceLog {
+    const members = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
+    const index = members.findIndex((m) => m.id === memberId);
+    if (index === -1) throw new Error('Member not found');
+    if (this.isCheckedInToday(memberId)) throw new Error('Already checked in today');
+
+    const log: AttendanceLog = {
+      id: `att_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      admin_id: this.getProfile().id,
+      member_id: memberId,
+      check_in_time: new Date().toISOString(),
+    };
+    const logs = getStoredItem<AttendanceLog[]>(STORAGE_KEYS.ATTENDANCE, []);
+    setStoredItem(STORAGE_KEYS.ATTENDANCE, [log, ...logs]);
+
+    // Written directly rather than through updateMember so each visit doesn't add a member.update entry.
+    members[index] = { ...members[index], last_visit_date: getTodayKey() };
+    setStoredItem(STORAGE_KEYS.MEMBERS, members);
+
+    this.notifyAttendanceChanged();
+    return log;
+  }
+
+  static undoCheckIn(logId: string): void {
+    const logs = getStoredItem<AttendanceLog[]>(STORAGE_KEYS.ATTENDANCE, []);
+    const log = logs.find((a) => a.id === logId);
+    if (!log) throw new Error('Check-in not found');
+    const remaining = logs.filter((a) => a.id !== logId);
+    setStoredItem(STORAGE_KEYS.ATTENDANCE, remaining);
+
+    // Last visit goes back to the newest remaining check-in, or the start date if there are none.
+    const members = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
+    const index = members.findIndex((m) => m.id === log.member_id);
+    const member = index === -1 ? undefined : members[index];
+    if (member) {
+      const previousVisit = remaining
+        .filter((a) => a.member_id === log.member_id)
+        .map((a) => a.check_in_time)
+        .sort()
+        .pop();
+      members[index] = {
+        ...member,
+        last_visit_date: previousVisit ? toDateKey(new Date(previousVisit)) : member.start_date,
+      };
+      setStoredItem(STORAGE_KEYS.MEMBERS, members);
+    }
+
+    this.recordAudit({
+      action: 'member.check_in_undo',
+      entity_type: 'member',
+      entity_id: log.member_id,
+      entity_label: this.memberLabel(member),
+      metadata: { check_in_time: log.check_in_time },
+    });
+    this.notifyAttendanceChanged();
+  }
+
+  private static notifyAttendanceChanged(): void {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sgfm_attendance_updated'));
+    }
   }
 
   // 4. Payments

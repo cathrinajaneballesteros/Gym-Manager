@@ -33,6 +33,7 @@ export interface ChurnPredictionMember {
   phone: string;
   planName: string;
   daysSinceLastVisit: number;
+  visitsLast30Days: number;
   daysUntilExpiration: number;
   expirationDate: string;
   riskLevel: ChurnRiskLevel;

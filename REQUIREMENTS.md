@@ -39,6 +39,7 @@ Progress as of Oct 12, 2026.
 
 ## AI analytics that help owners save money — Mostly done
 - Analytics page with a revenue forecast, member churn risk, and expense leak detection with estimated monthly and yearly savings.
+- Churn risk uses recorded check-ins: staff check members in from the Attendance page (or from Members, a member's page, or the Dashboard), and a drop in visits over the last 30 days raises the risk. The Attendance page also lists current members not seen in 14+ days.
 - Gemini writes an executive brief and personalised member messages.
 - The dashboard shows the top AI insights.
 - Left: when a gym has no expense history yet, leak detection compares against fixed peso amounts instead of the gym's own numbers, and one-off equipment purchases count as savings that would repeat every month.

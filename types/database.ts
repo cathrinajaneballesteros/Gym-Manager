@@ -114,6 +114,7 @@ export type AuditAction =
   | 'member.update'
   | 'member.delete'
   | 'member.reminder_sent'
+  | 'member.check_in_undo'
   | 'payment.create'
   | 'payment.update'
   | 'payment.delete'

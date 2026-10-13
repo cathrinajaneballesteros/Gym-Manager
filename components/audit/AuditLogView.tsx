@@ -83,6 +83,7 @@ const ACTION_META: Record<AuditAction, ActionMeta> = {
   'member.update': { label: 'Member updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
   'member.delete': { label: 'Member deleted', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
   'member.reminder_sent': { label: 'Reminder dispatched', color: '#d97706', background: '#fffbeb', border: '#fde68a' },
+  'member.check_in_undo': { label: 'Check-in undone', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
   'payment.create': { label: 'Payment recorded', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
   'payment.update': { label: 'Payment updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
   'payment.delete': { label: 'Payment deleted', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
@@ -145,7 +146,8 @@ export const AuditLogView: React.FC = () => {
           : actionFilter === 'receipt'
             ? entry.action.startsWith('payment.receipt_')
             : entry.action.endsWith(`.${actionFilter}`) ||
-              (actionFilter === 'update' && (entry.action === 'plan.activate' || entry.action === 'plan.deactivate')));
+              (actionFilter === 'update' && (entry.action === 'plan.activate' || entry.action === 'plan.deactivate')) ||
+              (actionFilter === 'delete' && entry.action === 'member.check_in_undo'));
 
       const matchesEntity = entityFilter === 'all' || entry.entity_type === entityFilter;
 

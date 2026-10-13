@@ -17,6 +17,7 @@ import {
   Dumbbell,
   Bell,
   Clock,
+  LogIn,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { Member, MembershipPlan } from '@/types/database';
@@ -28,6 +29,7 @@ import { showConfirm, showToast } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { formatDisplayDate } from '@/lib/ui/date';
+import { checkInWithPrompt } from '@/lib/ui/check-in';
 
 interface MemberListProps {
   initialStatus?: string;
@@ -621,6 +623,36 @@ export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' })
             <Eye size={15} color="#64748b" />
             <span>View Profile</span>
           </Link>
+
+          {/* Check In */}
+          <button
+            type="button"
+            onClick={async () => {
+              const member = activeMember;
+              setActiveMenuId(null);
+              if (await checkInWithPrompt(member)) refreshData();
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              padding: '0.55rem 0.75rem',
+              fontSize: '0.825rem',
+              color: '#1e293b',
+              borderRadius: '7px',
+              width: '100%',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontWeight: 500,
+              transition: 'background-color 0.12s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            <LogIn size={15} color="#64748b" />
+            <span>Check In</span>
+          </button>
 
           {/* Record Payment */}
           <button

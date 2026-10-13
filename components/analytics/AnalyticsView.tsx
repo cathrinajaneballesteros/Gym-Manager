@@ -537,6 +537,7 @@ export const AnalyticsView: React.FC = () => {
                   <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Risk Level</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Days Inactive</th>
+                  <th style={{ padding: '0.9rem 1.25rem' }}>Visits (30 days)</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Primary Factor</th>
                   <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Outreach</th>
                 </tr>
@@ -544,7 +545,7 @@ export const AnalyticsView: React.FC = () => {
               <tbody>
                 {churn.highRiskMembers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#94a3b8' }}>
+                    <td colSpan={6} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#94a3b8' }}>
                       No members at risk. All active memberships are in good standing or no members are registered yet.
                     </td>
                   </tr>
@@ -559,6 +560,9 @@ export const AnalyticsView: React.FC = () => {
                       </td>
                       <td style={{ padding: '1rem 1.25rem', color: '#ef4444', fontWeight: 600 }}>
                         {m.daysSinceLastVisit} days
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', color: '#334155' }}>
+                        {m.visitsLast30Days}
                       </td>
                       <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
                         {m.factors[0] || 'Prolonged attendance drop'}
