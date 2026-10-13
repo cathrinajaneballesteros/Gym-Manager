@@ -47,6 +47,8 @@ export interface Gym {
   opening_hours: OpeningHours | null;
   /** Usual fee for a one-time visitor; prefilled on the walk-in form. */
   walk_in_price: number | null;
+  /** Public link to the gym's uploaded logo; the app logo is shown when empty. */
+  logo_url: string | null;
   onboarded_at: string | null;
   created_at: string;
   updated_at?: string;

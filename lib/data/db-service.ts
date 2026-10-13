@@ -43,7 +43,10 @@ const PAYMENT_COLUMNS = [
 ] as const;
 const EXPENSE_COLUMNS = ['category', 'title', 'amount', 'expense_date', 'payment_method', 'description'] as const;
 const PROFILE_COLUMNS = ['full_name', 'phone'] as const;
-const GYM_COLUMNS = ['name', 'address', 'city', 'phone', 'email', 'currency', 'opening_hours', 'walk_in_price'] as const;
+const GYM_COLUMNS = ['name', 'address', 'city', 'phone', 'email', 'currency', 'opening_hours', 'walk_in_price', 'logo_url'] as const;
+const LOGO_BUCKET = 'gym-logos';
+const LOGO_TYPES: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
 /** Everything the signed-in owner can see, loaded once per session and kept in step with each write. */
 interface GymData {
@@ -148,7 +151,15 @@ const fromGymRow = (r: Row): Gym => ({
   phone: text(r.phone),
   email: text(r.email),
   walk_in_price: r.walk_in_price === null || r.walk_in_price === undefined ? null : Number(r.walk_in_price),
+  logo_url: (r.logo_url as string | null) || null,
 });
+
+// The file's path inside the logo bucket, taken from its public link.
+const logoPath = (url: string | null): string | null => {
+  const marker = `/${LOGO_BUCKET}/`;
+  const at = url ? url.indexOf(marker) : -1;
+  return url && at >= 0 ? decodeURIComponent(url.slice(at + marker.length)) : null;
+};
 
 const fromStaffRow = (r: Row): StaffMember => ({
   ...(r as unknown as StaffMember),
@@ -438,7 +449,7 @@ export class DBService {
     return gym;
   }
 
-  static async updateGym(updates: Partial<GymDetails>): Promise<Gym> {
+  static async updateGym(updates: Partial<GymDetails> & Partial<Pick<Gym, 'logo_url'>>): Promise<Gym> {
     const current = data.gym;
     if (!current) throw new Error('No gym to update');
     const row = check(
@@ -450,7 +461,8 @@ export class DBService {
     emit('sgfm_profile_updated', data.profile);
 
     // Opening hours are an object; compare them as text so an unchanged schedule isn't logged.
-    const flat = (g: Partial<GymDetails>) => ({ ...g, opening_hours: g.opening_hours ? JSON.stringify(g.opening_hours) : undefined });
+    const flat = (g: Partial<GymDetails>) =>
+      'opening_hours' in g ? { ...g, opening_hours: g.opening_hours ? JSON.stringify(g.opening_hours) : null } : g;
     if (changedFields(flat(current), flat(updates)).length > 0) {
       this.recordAudit({
         action: 'settings.update',
@@ -461,6 +473,40 @@ export class DBService {
       });
     }
     return gym;
+  }
+
+  /** Why a file can't be used as a logo, or null if it can. */
+  static logoFileProblem(file: File): string | null {
+    if (!LOGO_TYPES[file.type]) return 'Please choose a PNG, JPG or WebP image.';
+    if (file.size > MAX_LOGO_BYTES) return 'The logo must be 2 MB or smaller.';
+    return null;
+  }
+
+  /** Uploads a new gym logo (PNG, JPEG or WebP, up to 2 MB) and removes the previous one. Owner only. */
+  static async uploadGymLogo(file: File): Promise<Gym> {
+    const gym = data.gym;
+    if (!gym) throw new Error('No gym to add a logo to');
+    const problem = this.logoFileProblem(file);
+    if (problem) throw new Error(problem);
+    const ext = LOGO_TYPES[file.type];
+
+    // A new name every time, so browsers never keep showing the old logo from their cache.
+    const path = `${gym.id}/logo-${Date.now()}.${ext}`;
+    check(await db().storage.from(LOGO_BUCKET).upload(path, file, { contentType: file.type }));
+    const { data: link } = db().storage.from(LOGO_BUCKET).getPublicUrl(path);
+
+    const oldPath = logoPath(gym.logo_url);
+    const updated = await this.updateGym({ logo_url: link.publicUrl });
+    if (oldPath) await db().storage.from(LOGO_BUCKET).remove([oldPath]);
+    return updated;
+  }
+
+  /** Goes back to the app logo and deletes the uploaded file. Owner only. */
+  static async removeGymLogo(): Promise<Gym> {
+    const oldPath = logoPath(data.gym?.logo_url ?? null);
+    const updated = await this.updateGym({ logo_url: null });
+    if (oldPath) await db().storage.from(LOGO_BUCKET).remove([oldPath]);
+    return updated;
   }
 
   static getStaff(): StaffMember[] {

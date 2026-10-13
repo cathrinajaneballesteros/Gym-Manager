@@ -5,8 +5,9 @@ import { CheckCircle } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { GymDetails } from '@/types/database';
 import { OpeningHoursEditor } from '@/components/gym/OpeningHoursEditor';
+import { GymLogoPicker } from '@/components/gym/GymLogoPicker';
 import { DEFAULT_OPENING_HOURS, emptyGymDetails, invalidHourDays } from '@/lib/ui/gym';
-import { showError } from '@/lib/ui/swal';
+import { showError, showToast } from '@/lib/ui/swal';
 
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' };
 
@@ -29,6 +30,22 @@ export const GymSettings: React.FC = () => {
   const [details, setDetails] = useState<GymDetails>(currentDetails);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(() => DBService.getGym()?.logo_url ?? null);
+  const [logoBusy, setLogoBusy] = useState(false);
+
+  // The logo saves on its own, straight away; the rest of the form saves with the button below.
+  const changeLogo = async (file: File | null) => {
+    setLogoBusy(true);
+    try {
+      const gym = file ? await DBService.uploadGymLogo(file) : await DBService.removeGymLogo();
+      setLogoUrl(gym.logo_url);
+      showToast(file ? 'Logo updated' : 'Logo removed');
+    } catch (err) {
+      showError('Logo not saved', err instanceof Error ? err.message : 'Could not save the logo.');
+    } finally {
+      setLogoBusy(false);
+    }
+  };
 
   const set = <K extends keyof GymDetails>(key: K, value: GymDetails[K]) => setDetails((d) => ({ ...d, [key]: value }));
 
@@ -59,6 +76,16 @@ export const GymSettings: React.FC = () => {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
+        <div>
+          <label style={labelStyle}>Logo</label>
+          <GymLogoPicker
+            imageUrl={logoUrl}
+            gymName={details.name}
+            onSelect={(file) => changeLogo(file)}
+            onRemove={() => changeLogo(null)}
+            busy={logoBusy}
+          />
+        </div>
         <div>
           <label style={labelStyle}>Gym Name</label>
           <input type="text" value={details.name} onChange={(e) => set('name', e.target.value)} style={{ width: '100%' }} required />

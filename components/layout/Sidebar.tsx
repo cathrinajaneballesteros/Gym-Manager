@@ -105,6 +105,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   };
 
   const role = DBService.getRole();
+  // Read on every render; the profile-updated event re-renders the sidebar when the owner changes the logo.
+  const gymLogo = DBService.getGym()?.logo_url;
   const allNavItems = [
     { section: 'OVERVIEW', items: [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }] },
     {
@@ -210,14 +212,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           gap: '0.75rem',
         }}
       >
+        {/* The gym's own logo when the owner has uploaded one, otherwise the app logo. */}
         <img
-          src="/logo.png"
-          alt="Smart Gym Logo"
+          src={gymLogo || '/logo.png'}
+          alt={gymLogo ? `${profile?.gym_name || 'Gym'} logo` : 'Smart Gym Logo'}
           width={32}
           height={32}
           style={{
             borderRadius: '8px',
-            objectFit: 'contain',
+            objectFit: gymLogo ? 'cover' : 'contain',
+            backgroundColor: gymLogo ? '#ffffff' : undefined,
             boxShadow: '0 2px 5px rgba(0, 0, 0, 0.25)',
           }}
         />

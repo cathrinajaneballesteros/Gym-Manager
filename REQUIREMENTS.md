@@ -52,6 +52,7 @@ Progress as of Oct 13, 2026.
 - After signing up, a new owner goes through onboarding: gym name and address, contact details, opening hours, and their first membership plans. All of it can be edited later in Settings → Gym.
 - Owners invite staff by email in Settings → Staff. Staff join the gym when they sign up or sign in with that email. Staff can register and edit members, check members in, record payments, and approve GCash receipts. Expenses, reports, AI analytics, the audit log, plans, gym settings, and deleting members are owner-only.
 - Walk-ins (one-time visitors) can be recorded from Attendance or Payments without registering a member. They count toward revenue, show as "Walk-ins" in revenue by plan, and use the gym's walk-in price (set in onboarding or Settings → Gym).
+- Owners can upload their gym's logo (onboarding or Settings → Gym). It's stored in Supabase Storage and shown in the sidebar for the whole team.
 - New owners start with no data. Sample data for presentations is seeded into one demo account (`supabase/seed.sql`).
 - Left: not yet tested with real gym owners. Invites aren't emailed; the owner tells the staff member which email to sign up with. A person can belong to only one gym.
 

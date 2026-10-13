@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/client';
 import { DBService } from '@/lib/data/db-service';
 import { GymDetails } from '@/types/database';
 import { OpeningHoursEditor } from '@/components/gym/OpeningHoursEditor';
+import { GymLogoPicker } from '@/components/gym/GymLogoPicker';
 import { DEFAULT_OPENING_HOURS, emptyGymDetails, invalidHourDays } from '@/lib/ui/gym';
 import { STAFF_HOME } from '@/lib/ui/roles';
 import { showError, showToast } from '@/lib/ui/swal';
@@ -36,6 +37,22 @@ export default function OnboardingPage() {
   const [plans, setPlans] = useState<PlanDraft[]>([emptyPlan()]);
   const [existingPlans, setExistingPlans] = useState(0);
   const [saving, setSaving] = useState(false);
+  // Uploaded after the gym is created, since the logo is stored in the gym's own folder.
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  const chooseLogo = (file: File | null) => {
+    if (file) {
+      const problem = DBService.logoFileProblem(file);
+      if (problem) {
+        showError('Logo not added', problem);
+        return;
+      }
+    }
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+    setLogoFile(file);
+    setLogoPreview(file ? URL.createObjectURL(file) : null);
+  };
 
   // Only people without a finished gym belong here; everyone else goes into the app.
   useEffect(() => {
@@ -125,8 +142,18 @@ export default function OnboardingPage() {
           });
         }
       }
+      let logoFailed = false;
+      if (logoFile) {
+        try {
+          await DBService.uploadGymLogo(logoFile);
+        } catch {
+          // The gym is set up either way; the logo can be added again from Settings.
+          logoFailed = true;
+        }
+      }
       sessionStorage.setItem('sgfm_authenticated', 'true');
-      showToast(`${escapeHtml(gym.name)} is ready`);
+      if (logoFailed) showToast(`${escapeHtml(gym.name)} is ready. The logo didn't upload; add it in Settings → Gym.`, 'warning');
+      else showToast(`${escapeHtml(gym.name)} is ready`);
       router.replace('/dashboard');
     } catch (err) {
       showError('Setup Failed', err instanceof Error ? err.message : 'Could not save your gym.');
@@ -184,6 +211,15 @@ export default function OnboardingPage() {
 
         {step === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div>
+              <label style={labelStyle}>Logo (optional)</label>
+              <GymLogoPicker
+                imageUrl={logoPreview}
+                gymName={details.name}
+                onSelect={(file) => chooseLogo(file)}
+                onRemove={() => chooseLogo(null)}
+              />
+            </div>
             <div>
               <label style={labelStyle}>Gym name *</label>
               <input type="text" value={details.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. IronPeak Fitness Club" style={{ width: '100%' }} autoFocus />
