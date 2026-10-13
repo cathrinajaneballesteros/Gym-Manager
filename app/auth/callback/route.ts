@@ -31,7 +31,8 @@ export async function GET(request: Request) {
             currency: '₱',
             role: 'admin',
           },
-          { onConflict: 'id' }
+          // Only fills in a missing profile; never overwrites the gym name or details saved in Settings.
+          { onConflict: 'id', ignoreDuplicates: true }
         );
       } catch (upsertErr) {
         console.warn('Profile sync in callback note:', upsertErr);

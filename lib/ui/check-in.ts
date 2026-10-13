@@ -23,7 +23,7 @@ export async function checkInWithPrompt(member: Member): Promise<boolean> {
   }
 
   try {
-    DBService.checkInMember(member.id);
+    await DBService.checkInMember(member.id);
     showToast(`${name} checked in`);
     return true;
   } catch (err) {

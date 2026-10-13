@@ -88,6 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       entity_label: profile?.email || 'Unknown user',
     });
     try {
+      await DBService.flushAudit();
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
       await supabase.auth.signOut();
@@ -98,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       sessionStorage.removeItem('sgfm_authenticated');
       sessionStorage.removeItem('sgfm_login_logged');
     }
+    DBService.clear();
     router.push('/login');
   };
 

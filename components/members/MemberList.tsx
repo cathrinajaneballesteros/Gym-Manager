@@ -25,7 +25,7 @@ import { MemberModal } from './MemberModal';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { showConfirm, showToast } from '@/lib/ui/swal';
+import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { formatDisplayDate } from '@/lib/ui/date';
@@ -153,7 +153,12 @@ export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' })
       '#ef4444'
     );
     if (confirmed) {
-      DBService.deleteMember(id);
+      try {
+        await DBService.deleteMember(id);
+      } catch (err) {
+        showError('Delete Failed', err instanceof Error ? err.message : 'Could not remove the member.');
+        return;
+      }
       refreshData();
       setActiveMenuId(null);
       showToast(`${escapeHtml(name)} removed`);

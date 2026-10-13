@@ -81,13 +81,13 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialExpense?.id]);
 
-  const onSubmit = (data: ExpenseFormData) => {
+  const onSubmit = async (data: ExpenseFormData) => {
     try {
       if (initialExpense) {
-        const updated = DBService.updateExpense(initialExpense.id, data);
+        const updated = await DBService.updateExpense(initialExpense.id, data);
         onSuccess(updated);
       } else {
-        const created = DBService.addExpense(data);
+        const created = await DBService.addExpense(data);
         onSuccess(created);
       }
       reset();

@@ -19,7 +19,7 @@ import { PaymentModal } from './PaymentModal';
 import { ReceiptCheckerModal } from './ReceiptCheckerModal';
 import { PaymentReminderModal } from './PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { showSuccess, showToast, showConfirm } from '@/lib/ui/swal';
+import { showSuccess, showToast, showConfirm, showError } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel, formatDisplayDate } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
 import { Bell, CheckCircle2, Clock, AlertTriangle, FileText, Edit } from 'lucide-react';
@@ -92,12 +92,17 @@ export const PaymentList: React.FC = () => {
       '#059669'
     );
     if (confirmed) {
-      DBService.updatePayment(p.id, {
-        payment_status: 'completed',
-        receipt_status: 'verified',
-        verified_at: new Date().toISOString(),
-        verified_by: profile?.full_name || 'Admin',
-      });
+      try {
+        await DBService.updatePayment(p.id, {
+          payment_status: 'completed',
+          receipt_status: 'verified',
+          verified_at: new Date().toISOString(),
+          verified_by: profile?.full_name || 'Admin',
+        });
+      } catch (err) {
+        showError('Update Failed', err instanceof Error ? err.message : 'Could not update the payment.');
+        return;
+      }
       refreshData();
       showToast(`Payment of ${currency}${Number(p.amount).toLocaleString()} marked as paid!`);
     }

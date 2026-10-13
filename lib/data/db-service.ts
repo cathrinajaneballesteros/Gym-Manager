@@ -13,13 +13,8 @@ import {
   AuditLogEntry,
   AttendanceLog,
 } from '@/types/database';
-import {
-  INITIAL_PROFILE,
-  LEGACY_SAMPLE_PLANS,
-  INITIAL_MEMBERS,
-  INITIAL_PAYMENTS,
-  INITIAL_EXPENSES,
-} from './mock-data';
+import { INITIAL_PROFILE } from './mock-data';
+import { createClient } from '@/lib/supabase/client';
 import { getPaymentMemberName } from '@/lib/ui/format';
 import { getRecentMonthKeys, getTodayKey, toDateKey } from '@/lib/ui/date';
 
@@ -27,63 +22,148 @@ import { getRecentMonthKeys, getTodayKey, toDateKey } from '@/lib/ui/date';
 const normalizeMethod = (method: string | undefined): PaymentMethod =>
   method === 'GCash' ? 'GCash' : 'Cash';
 
-const STORAGE_KEYS = {
-  PROFILE: 'sgfm_profile_clean',
-  MEMBERS: 'sgfm_members_clean',
-  PLANS: 'sgfm_plans_clean',
-  PAYMENTS: 'sgfm_payments_clean',
-  EXPENSES: 'sgfm_expenses_clean',
-  AUDIT: 'sgfm_audit_log_clean',
-  ATTENDANCE: 'sgfm_attendance_clean',
+const MAX_AUDIT_ENTRIES = 1000;
+// Supabase returns at most 1000 rows per request, so bigger tables are read in pages.
+const PAGE_SIZE = 1000;
+
+// Columns the app may write for each table; derived fields like `plan` or `member` are never sent.
+const PLAN_COLUMNS = ['name', 'price', 'duration_months', 'description', 'is_active'] as const;
+const MEMBER_COLUMNS = [
+  'first_name', 'last_name', 'email', 'phone', 'emergency_contact', 'membership_plan_id',
+  'start_date', 'end_date', 'status', 'last_visit_date', 'notes',
+] as const;
+const PAYMENT_COLUMNS = [
+  'member_id', 'member_name', 'membership_plan_id', 'amount', 'payment_date', 'payment_method',
+  'payment_status', 'receipt_status', 'receipt_url', 'receipt_notes', 'verified_at', 'verified_by',
+  'rejection_reason', 'reference_number', 'notes',
+] as const;
+const EXPENSE_COLUMNS = ['category', 'title', 'amount', 'expense_date', 'payment_method', 'description'] as const;
+const PROFILE_COLUMNS = ['email', 'full_name', 'gym_name', 'currency', 'phone'] as const;
+
+/** Everything the signed-in owner can see, loaded once per session and kept in step with each write. */
+interface GymData {
+  userId: string | null;
+  profile: UserProfile;
+  plans: MembershipPlan[];
+  members: Member[];
+  payments: Payment[];
+  expenses: Expense[];
+  attendance: AttendanceLog[];
+  audit: AuditLogEntry[];
+}
+
+const emptyData = (): GymData => ({
+  userId: null,
+  profile: INITIAL_PROFILE,
+  plans: [],
+  members: [],
+  payments: [],
+  expenses: [],
+  attendance: [],
+  audit: [],
+});
+
+let data: GymData = emptyData();
+let loading: Promise<void> | null = null;
+// Bumped by clear(), so a load that finishes after sign-out can't put the old account's data back.
+let generation = 0;
+const pendingAudit = new Set<PromiseLike<void>>();
+
+const db = () => createClient();
+
+// Keep only the given columns; empty strings become null so optional dates and plan ids are stored as empty.
+function toRow(source: object, columns: readonly string[]): Record<string, unknown> {
+  const values = source as Record<string, unknown>;
+  const row: Record<string, unknown> = {};
+  columns.forEach((col) => {
+    if (!(col in values) || values[col] === undefined) return;
+    row[col] = values[col] === '' ? null : values[col];
+  });
+  return row;
+}
+
+// Null text columns come back as '' so screens can keep treating them as strings.
+const text = (v: unknown): string => (v === null || v === undefined ? '' : String(v));
+const optional = <T,>(v: T | null): T | undefined => (v === null ? undefined : v);
+
+type Row = Record<string, unknown>;
+
+const fromPlanRow = (r: Row): MembershipPlan => ({
+  ...(r as unknown as MembershipPlan),
+  price: Number(r.price),
+  description: text(r.description),
+});
+
+const fromMemberRow = (r: Row): Member => ({
+  ...(r as unknown as Member),
+  email: text(r.email),
+  phone: text(r.phone),
+  emergency_contact: text(r.emergency_contact),
+  membership_plan_id: text(r.membership_plan_id),
+  end_date: text(r.end_date),
+  last_visit_date: text(r.last_visit_date),
+  notes: text(r.notes),
+});
+
+const fromPaymentRow = (r: Row): Payment => {
+  const p: Row = {};
+  Object.entries(r).forEach(([k, v]) => (p[k] = optional(v)));
+  return {
+    ...(p as unknown as Payment),
+    member_id: text(r.member_id),
+    amount: Number(r.amount),
+    payment_method: normalizeMethod(r.payment_method as string),
+  };
 };
 
-const MAX_AUDIT_ENTRIES = 1000;
+const fromExpenseRow = (r: Row): Expense => ({
+  ...(r as unknown as Expense),
+  amount: Number(r.amount),
+  payment_method: normalizeMethod(r.payment_method as string),
+  description: optional(r.description as string | null),
+});
 
-// Clear legacy sample data and previous demo sessions for a completely clean slate
-if (typeof window !== 'undefined') {
-  try {
-    if (!localStorage.getItem('sgfm_fresh_slate_v4')) {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (k && k.startsWith('sgfm_')) {
-          keysToRemove.push(k);
-        }
-      }
-      keysToRemove.forEach((k) => localStorage.removeItem(k));
-      localStorage.setItem('sgfm_fresh_slate_v4', 'true');
-    }
-    // Hard reset all legacy example members and payments
-    if (!localStorage.getItem('sgfm_purge_legacy_mock_all_v2')) {
-      localStorage.setItem(STORAGE_KEYS.MEMBERS, '[]');
-      localStorage.setItem(STORAGE_KEYS.PAYMENTS, '[]');
-      localStorage.setItem(STORAGE_KEYS.AUDIT, '[]');
-      localStorage.removeItem(STORAGE_KEYS.EXPENSES);
-      localStorage.setItem('sgfm_purge_legacy_mock_all_v2', 'true');
-    }
-  } catch (err) {
-    // Ignore storage errors in private browsing
+const fromProfileRow = (r: Row): UserProfile => ({
+  ...(r as unknown as UserProfile),
+  full_name: text(r.full_name),
+  phone: text(r.phone),
+});
+
+const fromAuditRow = (r: Row): AuditLogEntry => ({
+  ...(r as unknown as AuditLogEntry),
+  entity_id: optional(r.entity_id as string | null),
+  entity_label: optional(r.entity_label as string | null),
+  metadata: optional(r.metadata as AuditLogEntry['metadata'] | null),
+});
+
+function check<T>(result: { data: T | null; error: { message: string } | null }): T {
+  if (result.error) throw new Error(result.error.message);
+  return result.data as T;
+}
+
+async function fetchAll(table: string, orderBy: string): Promise<Row[]> {
+  const rows: Row[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const page = check(
+      await db()
+        .from(table)
+        .select('*')
+        .order(orderBy, { ascending: false })
+        .order('id')
+        .range(from, from + PAGE_SIZE - 1)
+    ) as Row[];
+    rows.push(...page);
+    if (page.length < PAGE_SIZE) return rows;
   }
 }
 
-// Safe client-side storage retrieval
-function getStoredItem<T>(key: string, fallback: T): T {
-  if (typeof window === 'undefined') return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch (err) {
-    console.warn(`Error reading localStorage for key ${key}:`, err);
-    return fallback;
-  }
-}
+// Goes up on every change, so screens can tell when to recompute.
+let revision = 1;
 
-function setStoredItem<T>(key: string, value: T): void {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (err) {
-    console.warn(`Error writing to localStorage for key ${key}:`, err);
+function emit(name: string, detail?: unknown): void {
+  revision += 1;
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent(name, { detail }));
   }
 }
 
@@ -136,9 +216,91 @@ function diffMetadata(previous: object, updates: object): AuditMetadata {
 }
 
 export class DBService {
+  // 0. Loading the signed-in owner's gym
+  /** Loads this owner's data from Supabase (once per sign-in). Every getter reads from what this loaded. */
+  static load(): Promise<void> {
+    if (!loading) {
+      loading = this.fetchGym().catch((err) => {
+        loading = null;
+        throw err;
+      });
+    }
+    return loading;
+  }
+
+  static getRevision(): number {
+    return revision;
+  }
+
+  static isLoaded(): boolean {
+    return data.userId !== null;
+  }
+
+  /** Forget the previous owner's data, so the next account to sign in never sees it. */
+  static clear(): void {
+    data = emptyData();
+    loading = null;
+    generation += 1;
+    emit('sgfm_profile_updated', data.profile);
+  }
+
+  private static async fetchGym(): Promise<void> {
+    const startedIn = generation;
+    const { data: auth } = await db().auth.getUser();
+    const user = auth.user;
+    if (!user) throw new Error('Not signed in');
+
+    const [profileRow, plans, members, payments, expenses, attendance, audit] = await Promise.all([
+      db().from('profiles').select('*').eq('id', user.id).maybeSingle().then(check),
+      fetchAll('membership_plans', 'created_at'),
+      fetchAll('members', 'created_at'),
+      fetchAll('payments', 'created_at'),
+      fetchAll('expenses', 'expense_date'),
+      fetchAll('attendance_logs', 'check_in_time'),
+      db()
+        .from('audit_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(MAX_AUDIT_ENTRIES)
+        .then(check),
+    ]);
+
+    // An account made before the signup trigger existed may not have a profile row yet.
+    let profile = profileRow as Row | null;
+    if (!profile) {
+      const meta = user.user_metadata || {};
+      profile = check(
+        await db()
+          .from('profiles')
+          .insert({
+            id: user.id,
+            email: user.email || '',
+            full_name: meta.full_name || meta.name || 'Gym Administrator',
+            gym_name: meta.gym_name || 'My Fitness Gym',
+          })
+          .select()
+          .single()
+      ) as Row;
+    }
+
+    // Signed out or switched accounts meanwhile: load again for whoever is signed in now.
+    if (startedIn !== generation) return this.load();
+    data = {
+      userId: user.id,
+      profile: fromProfileRow(profile),
+      plans: plans.map(fromPlanRow).reverse(),
+      members: members.map(fromMemberRow),
+      payments: payments.map(fromPaymentRow),
+      expenses: expenses.map(fromExpenseRow),
+      attendance: attendance as unknown as AttendanceLog[],
+      audit: ((audit as Row[]) || []).map(fromAuditRow),
+    };
+    emit('sgfm_profile_updated', data.profile);
+  }
+
   // 1. Profile / Settings
   static getProfile(): UserProfile {
-    return getStoredItem<UserProfile>(STORAGE_KEYS.PROFILE, INITIAL_PROFILE);
+    return data.profile;
   }
 
   static getFirstName(fullName?: string): string {
@@ -155,16 +317,15 @@ export class DBService {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
-  /** Pass `{ audit: false }` when syncing from Supabase, so only real Settings edits are logged. */
-  static updateProfile(updates: Partial<UserProfile>, { audit = true }: { audit?: boolean } = {}): UserProfile {
+  static async updateProfile(updates: Partial<UserProfile>): Promise<UserProfile> {
     const current = this.getProfile();
-    const updated = { ...current, ...updates, updated_at: new Date().toISOString() };
-    setStoredItem(STORAGE_KEYS.PROFILE, updated);
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('sgfm_profile_updated', { detail: updated }));
-    }
-    const changed = changedFields(current, updates);
-    if (audit && changed.length > 0) {
+    const row = check(
+      await db().from('profiles').update(toRow(updates, PROFILE_COLUMNS)).eq('id', current.id).select().single()
+    ) as Row;
+    const updated = fromProfileRow(row);
+    data.profile = updated;
+    emit('sgfm_profile_updated', updated);
+    if (changedFields(current, updates).length > 0) {
       this.recordAudit({
         action: 'settings.update',
         entity_type: 'settings',
@@ -177,23 +338,41 @@ export class DBService {
   }
 
   // 1b. User Audit Trail
+  static getAuditLog(): AuditLogEntry[] {
+    return data.audit;
+  }
+
+  /** Shows up in the log right away and is saved in the background, so it never holds up the action it records. */
   static recordAudit(
     input: Omit<AuditLogEntry, 'id' | 'admin_id' | 'actor_email' | 'created_at'>
   ): AuditLogEntry {
     const profile = this.getProfile();
     const entry: AuditLogEntry = {
       ...input,
-      id: `audit_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      admin_id: profile.id,
+      id: crypto.randomUUID(),
+      admin_id: data.userId || profile.id,
       actor_email: profile.email,
       created_at: new Date().toISOString(),
     };
-    const logs = getStoredItem<AuditLogEntry[]>(STORAGE_KEYS.AUDIT, []);
-    setStoredItem(STORAGE_KEYS.AUDIT, [entry, ...logs].slice(0, MAX_AUDIT_ENTRIES));
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('sgfm_audit_updated', { detail: entry }));
-    }
+    data.audit = [entry, ...data.audit].slice(0, MAX_AUDIT_ENTRIES);
+    emit('sgfm_audit_updated', entry);
+
+    const { admin_id, ...row } = entry;
+    void admin_id; // filled in by the database from the signed-in account
+    const saving = db()
+      .from('audit_logs')
+      .insert(row)
+      .then(({ error }) => {
+        if (error) console.warn('Could not save audit entry:', error.message);
+      });
+    pendingAudit.add(saving);
+    saving.then(() => pendingAudit.delete(saving));
     return entry;
+  }
+
+  /** Waits for audit entries still being saved (call before signing out, while writes are still allowed). */
+  static async flushAudit(): Promise<void> {
+    await Promise.all(pendingAudit);
   }
 
   private static memberLabel(member?: Member): string {
@@ -203,26 +382,15 @@ export class DBService {
 
   // 2. Membership Plans
   static getPlans(): MembershipPlan[] {
-    const stored = getStoredItem<MembershipPlan[] | null>(STORAGE_KEYS.PLANS, null);
-    if (stored) return stored;
-    // Nothing saved yet: start empty, except for sample plans that existing members or payments still use.
-    const usedPlanIds = new Set([
-      ...getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, []).map((m) => m.membership_plan_id),
-      ...getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, []).map((p) => p.membership_plan_id),
-    ]);
-    return LEGACY_SAMPLE_PLANS.filter((p) => usedPlanIds.has(p.id));
+    return data.plans;
   }
 
-  static addPlan(plan: Omit<MembershipPlan, 'id' | 'admin_id' | 'created_at'>): MembershipPlan {
-    const plans = this.getPlans();
-    const newPlan: MembershipPlan = {
-      ...plan,
-      id: `plan_${Date.now()}`,
-      admin_id: this.getProfile().id,
-      created_at: new Date().toISOString(),
-    };
-    const updated = [...plans, newPlan];
-    setStoredItem(STORAGE_KEYS.PLANS, updated);
+  static async addPlan(plan: Omit<MembershipPlan, 'id' | 'admin_id' | 'created_at'>): Promise<MembershipPlan> {
+    const row = check(
+      await db().from('membership_plans').insert(toRow(plan, PLAN_COLUMNS)).select().single()
+    ) as Row;
+    const newPlan = fromPlanRow(row);
+    data.plans = [...data.plans, newPlan];
 
     const currency = this.getProfile().currency || '₱';
     this.recordAudit({
@@ -239,19 +407,18 @@ export class DBService {
     return newPlan;
   }
 
-  static updatePlan(
+  static async updatePlan(
     id: string,
     updates: Partial<Omit<MembershipPlan, 'id' | 'admin_id' | 'created_at'>>
-  ): MembershipPlan {
-    const plans = this.getPlans();
-    const index = plans.findIndex((p) => p.id === id);
-    if (index === -1) throw new Error('Plan not found');
+  ): Promise<MembershipPlan> {
+    const previous = data.plans.find((p) => p.id === id);
+    if (!previous) throw new Error('Plan not found');
 
-    const previous = plans[index];
-    const updatedPlan: MembershipPlan = { ...previous, ...updates };
-    const updated = [...plans];
-    updated[index] = updatedPlan;
-    setStoredItem(STORAGE_KEYS.PLANS, updated);
+    const row = check(
+      await db().from('membership_plans').update(toRow(updates, PLAN_COLUMNS)).eq('id', id).select().single()
+    ) as Row;
+    const updatedPlan = fromPlanRow(row);
+    data.plans = data.plans.map((p) => (p.id === id ? updatedPlan : p));
 
     const changed = changedFields(previous, updates);
     if (changed.length === 1 && changed[0] === 'is_active') {
@@ -277,34 +444,19 @@ export class DBService {
 
   // 3. Members
   static getMembers(): Member[] {
-    const rawMembers = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
-    // Sanitize: eliminate any legacy example members (mem_1 ... mem_5)
-    const members = rawMembers.filter(
-      (m) => !['mem_1', 'mem_2', 'mem_3', 'mem_4', 'mem_5'].includes(m.id)
-    );
-    if (members.length !== rawMembers.length) {
-      setStoredItem(STORAGE_KEYS.MEMBERS, members);
-    }
-    const plans = this.getPlans();
-    const planMap = new Map(plans.map((p) => [p.id, p]));
+    const planMap = new Map(data.plans.map((p) => [p.id, p]));
 
     // Check expiration and payment presence dynamically
     // Local date (not UTC), parsed the same way as end_date so the day difference is exact.
     const todayStr = formatDateLocal(new Date());
     const today = new Date(todayStr);
 
-    const rawPayments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
-    const validPayments = rawPayments.filter(
-      (p) =>
-        !['pay_101', 'pay_102', 'pay_103', 'pay_104', 'pay_105'].includes(p.id) &&
-        !p.reference_number?.startsWith('REG-')
-    );
     // Only completed payments count; a pending, rejected, or refunded payment doesn't make a member active.
     const memberIdsWithPayments = new Set(
-      validPayments.filter((p) => p.payment_status === 'completed').map((p) => p.member_id)
+      data.payments.filter((p) => p.payment_status === 'completed').map((p) => p.member_id)
     );
 
-    return members.map((m) => {
+    return data.members.map((m) => {
       let status: MemberStatus = m.status;
 
       // Members with no completed payment yet stay pending until one is recorded.
@@ -333,24 +485,19 @@ export class DBService {
     return this.getMembers().find((m) => m.id === id);
   }
 
-  static addMember(
-    data: Omit<Member, 'id' | 'admin_id' | 'created_at' | 'updated_at' | 'status'>
-  ): Member {
-    const members = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
-    
+  static async addMember(
+    input: Omit<Member, 'id' | 'admin_id' | 'created_at' | 'updated_at' | 'status'>
+  ): Promise<Member> {
     // Newly registered member starts as pending until recorded on payments page
-    const status: Member['status'] = 'pending';
-
-    const newMember: Member = {
-      ...data,
-      id: `mem_${Date.now()}`,
-      admin_id: this.getProfile().id,
-      status,
-      created_at: new Date().toISOString(),
-    };
-
-    const updated = [newMember, ...members];
-    setStoredItem(STORAGE_KEYS.MEMBERS, updated);
+    const row = check(
+      await db()
+        .from('members')
+        .insert(toRow({ ...input, status: 'pending' }, MEMBER_COLUMNS))
+        .select()
+        .single()
+    ) as Row;
+    const newMember = fromMemberRow(row);
+    data.members = [newMember, ...data.members];
 
     this.recordAudit({
       action: 'member.create',
@@ -367,19 +514,21 @@ export class DBService {
     return newMember;
   }
 
-  static updateMember(id: string, updates: Partial<Member>): Member {
-    const members = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
-    const index = members.findIndex((m) => m.id === id);
-    if (index === -1) throw new Error('Member not found');
+  /** Saves member fields without an audit entry (used for check-ins, which would flood the log). */
+  private static async saveMember(id: string, updates: Partial<Member>): Promise<Member> {
+    const row = check(
+      await db().from('members').update(toRow(updates, MEMBER_COLUMNS)).eq('id', id).select().single()
+    ) as Row;
+    const saved = fromMemberRow(row);
+    data.members = data.members.map((m) => (m.id === id ? saved : m));
+    return saved;
+  }
 
-    const previous = members[index];
-    const updatedMember = {
-      ...previous,
-      ...updates,
-      updated_at: new Date().toISOString(),
-    };
-    members[index] = updatedMember;
-    setStoredItem(STORAGE_KEYS.MEMBERS, members);
+  static async updateMember(id: string, updates: Partial<Member>): Promise<Member> {
+    const previous = data.members.find((m) => m.id === id);
+    if (!previous) throw new Error('Member not found');
+
+    const updatedMember = await this.saveMember(id, updates);
 
     this.recordAudit({
       action: 'member.update',
@@ -392,30 +541,29 @@ export class DBService {
     return updatedMember;
   }
 
-  static deleteMember(id: string): void {
-    const members = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
-    const member = members.find((m) => m.id === id);
-    const filtered = members.filter((m) => m.id !== id);
-    setStoredItem(STORAGE_KEYS.MEMBERS, filtered);
+  static async deleteMember(id: string): Promise<void> {
+    const member = data.members.find((m) => m.id === id);
 
     // Keep this member's payments so past revenue stays correct; save their name on each one.
-    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
+    // The database then unlinks them from the member and removes the member's check-ins.
+    const memberName = this.memberLabel(member);
+    check(await db().from('payments').update({ member_name: memberName }).eq('member_id', id));
+    check(await db().from('members').delete().eq('id', id));
+
     let paymentsKept = 0;
-    const keptPayments = payments.map((p) => {
+    data.payments = data.payments.map((p) => {
       if (p.member_id !== id) return p;
       paymentsKept += 1;
-      return { ...p, member_name: this.memberLabel(member) };
+      return { ...p, member_id: '', member_name: memberName };
     });
-    setStoredItem(STORAGE_KEYS.PAYMENTS, keptPayments);
-
-    const attendance = getStoredItem<AttendanceLog[]>(STORAGE_KEYS.ATTENDANCE, []);
-    setStoredItem(STORAGE_KEYS.ATTENDANCE, attendance.filter((a) => a.member_id !== id));
+    data.members = data.members.filter((m) => m.id !== id);
+    data.attendance = data.attendance.filter((a) => a.member_id !== id);
 
     this.recordAudit({
       action: 'member.delete',
       entity_type: 'member',
       entity_id: id,
-      entity_label: this.memberLabel(member),
+      entity_label: memberName,
       metadata: {
         email: member?.email || null,
         phone: member?.phone || null,
@@ -430,8 +578,7 @@ export class DBService {
   // 3b. Attendance (check-ins)
   // Check-ins aren't written to the Audit Log: a busy gym would push everything else out of it within days.
   static getAttendance(memberId?: string): AttendanceLog[] {
-    const logs = getStoredItem<AttendanceLog[]>(STORAGE_KEYS.ATTENDANCE, []);
-    return logs
+    return data.attendance
       .filter((a) => !memberId || a.member_id === memberId)
       .sort((a, b) => b.check_in_time.localeCompare(a.check_in_time));
   }
@@ -441,51 +588,42 @@ export class DBService {
     return this.getAttendance(memberId).some((a) => toDateKey(new Date(a.check_in_time)) === today);
   }
 
-  static checkInMember(memberId: string): AttendanceLog {
-    const members = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
-    const index = members.findIndex((m) => m.id === memberId);
-    if (index === -1) throw new Error('Member not found');
+  static async checkInMember(memberId: string): Promise<AttendanceLog> {
+    if (!data.members.some((m) => m.id === memberId)) throw new Error('Member not found');
     if (this.isCheckedInToday(memberId)) throw new Error('Already checked in today');
 
-    const log: AttendanceLog = {
-      id: `att_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-      admin_id: this.getProfile().id,
-      member_id: memberId,
-      check_in_time: new Date().toISOString(),
-    };
-    const logs = getStoredItem<AttendanceLog[]>(STORAGE_KEYS.ATTENDANCE, []);
-    setStoredItem(STORAGE_KEYS.ATTENDANCE, [log, ...logs]);
+    const log = check(
+      await db()
+        .from('attendance_logs')
+        .insert({ member_id: memberId, check_in_time: new Date().toISOString() })
+        .select()
+        .single()
+    ) as unknown as AttendanceLog;
+    data.attendance = [log, ...data.attendance];
 
-    // Written directly rather than through updateMember so each visit doesn't add a member.update entry.
-    members[index] = { ...members[index], last_visit_date: getTodayKey() };
-    setStoredItem(STORAGE_KEYS.MEMBERS, members);
+    await this.saveMember(memberId, { last_visit_date: getTodayKey() });
 
     this.notifyAttendanceChanged();
     return log;
   }
 
-  static undoCheckIn(logId: string): void {
-    const logs = getStoredItem<AttendanceLog[]>(STORAGE_KEYS.ATTENDANCE, []);
-    const log = logs.find((a) => a.id === logId);
+  static async undoCheckIn(logId: string): Promise<void> {
+    const log = data.attendance.find((a) => a.id === logId);
     if (!log) throw new Error('Check-in not found');
-    const remaining = logs.filter((a) => a.id !== logId);
-    setStoredItem(STORAGE_KEYS.ATTENDANCE, remaining);
+    check(await db().from('attendance_logs').delete().eq('id', logId));
+    data.attendance = data.attendance.filter((a) => a.id !== logId);
 
     // Last visit goes back to the newest remaining check-in, or the start date if there are none.
-    const members = getStoredItem<Member[]>(STORAGE_KEYS.MEMBERS, INITIAL_MEMBERS);
-    const index = members.findIndex((m) => m.id === log.member_id);
-    const member = index === -1 ? undefined : members[index];
+    const member = data.members.find((m) => m.id === log.member_id);
     if (member) {
-      const previousVisit = remaining
+      const previousVisit = data.attendance
         .filter((a) => a.member_id === log.member_id)
         .map((a) => a.check_in_time)
         .sort()
         .pop();
-      members[index] = {
-        ...member,
+      await this.saveMember(member.id, {
         last_visit_date: previousVisit ? toDateKey(new Date(previousVisit)) : member.start_date,
-      };
-      setStoredItem(STORAGE_KEYS.MEMBERS, members);
+      });
     }
 
     this.recordAudit({
@@ -499,54 +637,48 @@ export class DBService {
   }
 
   private static notifyAttendanceChanged(): void {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('sgfm_attendance_updated'));
-    }
+    emit('sgfm_attendance_updated');
   }
 
   // 4. Payments
   static getPayments(): Payment[] {
-    const rawPayments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
-    // Sanitize: eliminate any legacy example payments (pay_101 ... pay_105) and any auto-created REG payments
-    const payments = rawPayments
-      .filter(
-        (p) =>
-          !['pay_101', 'pay_102', 'pay_103', 'pay_104', 'pay_105'].includes(p.id) &&
-          !p.reference_number?.startsWith('REG-')
-      )
-      .map((p) => ({ ...p, payment_method: normalizeMethod(p.payment_method) }));
-    if (
-      payments.length !== rawPayments.length ||
-      rawPayments.some((p) => p.payment_method !== normalizeMethod(p.payment_method))
-    ) {
-      setStoredItem(STORAGE_KEYS.PAYMENTS, payments);
-    }
-    const members = this.getMembers();
-    const plans = this.getPlans();
+    const memberMap = new Map(this.getMembers().map((m) => [m.id, m]));
+    const planMap = new Map(data.plans.map((p) => [p.id, p]));
 
-    const memberMap = new Map(members.map((m) => [m.id, m]));
-    const planMap = new Map(plans.map((p) => [p.id, p]));
-
-    return payments.map((p) => ({
+    return data.payments.map((p) => ({
       ...p,
       member: memberMap.get(p.member_id),
       plan: p.membership_plan_id ? planMap.get(p.membership_plan_id) : undefined,
     }));
   }
 
-  static addPayment(
-    data: Omit<Payment, 'id' | 'admin_id' | 'created_at'>
-  ): Payment {
-    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
-    const newPayment: Payment = {
-      ...data,
-      id: `pay_${Date.now()}`,
-      admin_id: this.getProfile().id,
-      receipt_status: data.receipt_status || (data.payment_method === 'Cash' ? 'verified' : 'unverified'),
-      created_at: new Date().toISOString(),
-    };
-    const updated = [newPayment, ...payments];
-    setStoredItem(STORAGE_KEYS.PAYMENTS, updated);
+  private static async savePayment(id: string, updates: Partial<Payment>): Promise<Payment> {
+    const row = check(
+      await db().from('payments').update(toRow(updates, PAYMENT_COLUMNS)).eq('id', id).select().single()
+    ) as Row;
+    const saved = fromPaymentRow(row);
+    data.payments = data.payments.map((p) => (p.id === id ? saved : p));
+    return saved;
+  }
+
+  static async addPayment(input: Omit<Payment, 'id' | 'admin_id' | 'created_at'>): Promise<Payment> {
+    const row = check(
+      await db()
+        .from('payments')
+        .insert(
+          toRow(
+            {
+              ...input,
+              receipt_status: input.receipt_status || (input.payment_method === 'Cash' ? 'verified' : 'unverified'),
+            },
+            PAYMENT_COLUMNS
+          )
+        )
+        .select()
+        .single()
+    ) as Row;
+    const newPayment = fromPaymentRow(row);
+    data.payments = [newPayment, ...data.payments];
 
     const member = this.getMemberById(newPayment.member_id);
     const currency = this.getProfile().currency || '₱';
@@ -567,18 +699,11 @@ export class DBService {
     return newPayment;
   }
 
-  static updatePayment(id: string, updates: Partial<Payment>): Payment {
-    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
-    const index = payments.findIndex((p) => p.id === id);
-    if (index === -1) throw new Error('Payment not found');
+  static async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment> {
+    const previous = data.payments.find((p) => p.id === id);
+    if (!previous) throw new Error('Payment not found');
 
-    const previous = payments[index];
-    const updatedPayment: Payment = {
-      ...previous,
-      ...updates,
-    };
-    payments[index] = updatedPayment;
-    setStoredItem(STORAGE_KEYS.PAYMENTS, payments);
+    const updatedPayment = await this.savePayment(id, updates);
 
     this.recordAudit({
       action: 'payment.update',
@@ -596,23 +721,18 @@ export class DBService {
     return updatedPayment;
   }
 
-  static verifyPaymentReceipt(id: string, options?: { notes?: string }): Payment {
+  static async verifyPaymentReceipt(id: string, options?: { notes?: string }): Promise<Payment> {
     const profile = this.getProfile();
-    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
-    const index = payments.findIndex((p) => p.id === id);
-    if (index === -1) throw new Error('Payment not found');
+    const current = data.payments.find((p) => p.id === id);
+    if (!current) throw new Error('Payment not found');
 
-    const current = payments[index];
-    const updatedPayment: Payment = {
-      ...current,
+    const updatedPayment = await this.savePayment(id, {
       payment_status: 'completed',
       receipt_status: 'verified',
       verified_at: new Date().toISOString(),
       verified_by: profile.full_name || profile.email || 'Admin',
       receipt_notes: options?.notes || current.receipt_notes,
-    };
-    payments[index] = updatedPayment;
-    setStoredItem(STORAGE_KEYS.PAYMENTS, payments);
+    });
 
     const member = this.getMemberById(updatedPayment.member_id);
     const currency = profile.currency || '₱';
@@ -633,23 +753,18 @@ export class DBService {
     return updatedPayment;
   }
 
-  static rejectPaymentReceipt(id: string, reason: string): Payment {
+  static async rejectPaymentReceipt(id: string, reason: string): Promise<Payment> {
     const profile = this.getProfile();
-    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
-    const index = payments.findIndex((p) => p.id === id);
-    if (index === -1) throw new Error('Payment not found');
+    const current = data.payments.find((p) => p.id === id);
+    if (!current) throw new Error('Payment not found');
 
-    const current = payments[index];
-    const updatedPayment: Payment = {
-      ...current,
+    const updatedPayment = await this.savePayment(id, {
       payment_status: 'pending',
       receipt_status: 'rejected',
       verified_at: new Date().toISOString(),
       verified_by: profile.full_name || profile.email || 'Admin',
       rejection_reason: reason,
-    };
-    payments[index] = updatedPayment;
-    setStoredItem(STORAGE_KEYS.PAYMENTS, payments);
+    });
 
     const member = this.getMemberById(updatedPayment.member_id);
     const currency = profile.currency || '₱';
@@ -671,11 +786,10 @@ export class DBService {
     return updatedPayment;
   }
 
-  static deletePayment(id: string): void {
-    const payments = getStoredItem<Payment[]>(STORAGE_KEYS.PAYMENTS, INITIAL_PAYMENTS);
-    const payment = payments.find((p) => p.id === id);
-    const filtered = payments.filter((p) => p.id !== id);
-    setStoredItem(STORAGE_KEYS.PAYMENTS, filtered);
+  static async deletePayment(id: string): Promise<void> {
+    const payment = data.payments.find((p) => p.id === id);
+    check(await db().from('payments').delete().eq('id', id));
+    data.payments = data.payments.filter((p) => p.id !== id);
 
     this.recordAudit({
       action: 'payment.delete',
@@ -694,32 +808,17 @@ export class DBService {
 
   // 5. Expenses
   static getExpenses(): Expense[] {
-    const rawExpenses = getStoredItem<Expense[]>(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
-    // Sanitize: eliminate any legacy mock expenses
-    const expenses = rawExpenses
-      .filter((e) => !e.id.startsWith('exp_curr_') && !e.id.startsWith('exp_hist'))
-      .map((e) => ({ ...e, payment_method: normalizeMethod(e.payment_method) }));
-    if (
-      expenses.length !== rawExpenses.length ||
-      rawExpenses.some((e) => e.payment_method !== normalizeMethod(e.payment_method))
-    ) {
-      setStoredItem(STORAGE_KEYS.EXPENSES, expenses);
-    }
-    return expenses;
+    return data.expenses;
   }
 
-  static addExpense(
-    data: Omit<Expense, 'id' | 'admin_id' | 'created_at' | 'updated_at'>
-  ): Expense {
-    const expenses = getStoredItem<Expense[]>(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
-    const newExpense: Expense = {
-      ...data,
-      id: `exp_${Date.now()}`,
-      admin_id: this.getProfile().id,
-      created_at: new Date().toISOString(),
-    };
-    const updated = [newExpense, ...expenses];
-    setStoredItem(STORAGE_KEYS.EXPENSES, updated);
+  static async addExpense(
+    input: Omit<Expense, 'id' | 'admin_id' | 'created_at' | 'updated_at'>
+  ): Promise<Expense> {
+    const row = check(
+      await db().from('expenses').insert(toRow(input, EXPENSE_COLUMNS)).select().single()
+    ) as Row;
+    const newExpense = fromExpenseRow(row);
+    data.expenses = [newExpense, ...data.expenses];
 
     const currency = this.getProfile().currency || '₱';
     this.recordAudit({
@@ -736,19 +835,15 @@ export class DBService {
     return newExpense;
   }
 
-  static updateExpense(id: string, updates: Partial<Expense>): Expense {
-    const expenses = getStoredItem<Expense[]>(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
-    const index = expenses.findIndex((e) => e.id === id);
-    if (index === -1) throw new Error('Expense not found');
+  static async updateExpense(id: string, updates: Partial<Expense>): Promise<Expense> {
+    const previous = data.expenses.find((e) => e.id === id);
+    if (!previous) throw new Error('Expense not found');
 
-    const previous = expenses[index];
-    const updatedExpense = {
-      ...previous,
-      ...updates,
-      updated_at: new Date().toISOString(),
-    };
-    expenses[index] = updatedExpense;
-    setStoredItem(STORAGE_KEYS.EXPENSES, expenses);
+    const row = check(
+      await db().from('expenses').update(toRow(updates, EXPENSE_COLUMNS)).eq('id', id).select().single()
+    ) as Row;
+    const updatedExpense = fromExpenseRow(row);
+    data.expenses = data.expenses.map((e) => (e.id === id ? updatedExpense : e));
 
     this.recordAudit({
       action: 'expense.update',
@@ -761,11 +856,10 @@ export class DBService {
     return updatedExpense;
   }
 
-  static deleteExpense(id: string): void {
-    const expenses = getStoredItem<Expense[]>(STORAGE_KEYS.EXPENSES, INITIAL_EXPENSES);
-    const expense = expenses.find((e) => e.id === id);
-    const filtered = expenses.filter((e) => e.id !== id);
-    setStoredItem(STORAGE_KEYS.EXPENSES, filtered);
+  static async deleteExpense(id: string): Promise<void> {
+    const expense = data.expenses.find((e) => e.id === id);
+    check(await db().from('expenses').delete().eq('id', id));
+    data.expenses = data.expenses.filter((e) => e.id !== id);
 
     this.recordAudit({
       action: 'expense.delete',
@@ -779,17 +873,6 @@ export class DBService {
         method: expense?.payment_method || null,
       },
     });
-  }
-
-  // 6. Reset to seed data
-  static resetToSeedData(): void {
-    if (typeof window === 'undefined') return;
-    localStorage.removeItem(STORAGE_KEYS.PROFILE);
-    localStorage.removeItem(STORAGE_KEYS.MEMBERS);
-    localStorage.removeItem(STORAGE_KEYS.PLANS);
-    localStorage.removeItem(STORAGE_KEYS.PAYMENTS);
-    localStorage.removeItem(STORAGE_KEYS.EXPENSES);
-    localStorage.removeItem(STORAGE_KEYS.AUDIT);
   }
 
   // 7. Dashboard Financial KPI Calculation

@@ -21,7 +21,7 @@ import { MetricCard } from '@/components/ui/MetricCard';
 import { MemberPicker } from '@/components/payments/MemberPicker';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { checkInWithPrompt } from '@/lib/ui/check-in';
-import { showConfirm, showToast } from '@/lib/ui/swal';
+import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { downloadCSV } from '@/lib/ui/csv';
 import { daysAgoKey, formatDisplayDate, getTodayKey, toDateKey } from '@/lib/ui/date';
@@ -29,22 +29,19 @@ import { daysAgoKey, formatDisplayDate, getTodayKey, toDateKey } from '@/lib/ui/
 const INACTIVE_DAYS = 14;
 const PAGE_SIZE = 12;
 
-// Re-render whenever check-ins or members change (here or in another tab).
+// Re-render whenever check-ins or members change.
 const subscribe = (callback: () => void) => {
   window.addEventListener('sgfm_attendance_updated', callback);
   window.addEventListener('sgfm_audit_updated', callback);
-  window.addEventListener('storage', callback);
   return () => {
     window.removeEventListener('sgfm_attendance_updated', callback);
     window.removeEventListener('sgfm_audit_updated', callback);
-    window.removeEventListener('storage', callback);
   };
 };
 
-const getSnapshot = (): string =>
-  `${localStorage.getItem('sgfm_attendance_clean') ?? ''}|${localStorage.getItem('sgfm_members_clean') ?? ''}`;
+const getSnapshot = (): number => DBService.getRevision();
 
-const getServerSnapshot = (): string => '';
+const getServerSnapshot = (): number => 0;
 
 const formatTime = (iso: string) => new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
@@ -133,7 +130,12 @@ export const AttendanceView: React.FC = () => {
       '#ef4444'
     );
     if (!confirmed) return;
-    DBService.undoCheckIn(log.id);
+    try {
+      await DBService.undoCheckIn(log.id);
+    } catch (err) {
+      showError('Undo Failed', err instanceof Error ? err.message : 'Could not remove the check-in.');
+      return;
+    }
     showToast('Check-in removed');
   };
 

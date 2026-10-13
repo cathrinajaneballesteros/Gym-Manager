@@ -21,7 +21,7 @@ import { DBService } from '@/lib/data/db-service';
 import { Member, Payment, MembershipPlan, AttendanceLog } from '@/types/database';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { MemberModal } from './MemberModal';
-import { showConfirm, showToast } from '@/lib/ui/swal';
+import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { formatDisplayDate, toDateKey, getTodayKey, daysAgoKey } from '@/lib/ui/date';
 import { checkInWithPrompt } from '@/lib/ui/check-in';
 
@@ -81,7 +81,12 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
     const when = new Date(log.check_in_time).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
     const confirmed = await showConfirm('Undo check-in?', `Remove the visit on ${when}?`, 'Yes, undo', '#ef4444');
     if (!confirmed) return;
-    DBService.undoCheckIn(log.id);
+    try {
+      await DBService.undoCheckIn(log.id);
+    } catch (err) {
+      showError('Undo Failed', err instanceof Error ? err.message : 'Could not remove the check-in.');
+      return;
+    }
     showToast('Check-in removed');
     setAttendancePage((p) => Math.min(p, Math.max(1, Math.ceil((attendance.length - 1) / ATTENDANCE_PAGE_SIZE))));
   };
@@ -94,7 +99,12 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
       '#ef4444'
     );
     if (confirmed) {
-      DBService.deleteMember(member.id);
+      try {
+        await DBService.deleteMember(member.id);
+      } catch (err) {
+        showError('Delete Failed', err instanceof Error ? err.message : 'Could not remove the member.');
+        return;
+      }
       router.push('/members');
     }
   };

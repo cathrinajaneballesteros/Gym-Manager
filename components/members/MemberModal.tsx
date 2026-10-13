@@ -108,13 +108,13 @@ export const MemberModal: React.FC<MemberModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialMember?.id]);
 
-  const onSubmit = (data: MemberFormData) => {
+  const onSubmit = async (data: MemberFormData) => {
     try {
       if (initialMember) {
-        const updated = DBService.updateMember(initialMember.id, data);
+        const updated = await DBService.updateMember(initialMember.id, data);
         onSuccess(updated);
       } else {
-        const created = DBService.addMember({
+        const created = await DBService.addMember({
           ...data,
           last_visit_date: data.start_date,
         });

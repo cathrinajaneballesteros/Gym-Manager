@@ -24,7 +24,7 @@ import { Expense, UserProfile } from '@/types/database';
 import { CategoryExpenseChart } from '@/components/charts/CategoryExpenseChart';
 import { ExpenseModal } from './ExpenseModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { showConfirm, showToast } from '@/lib/ui/swal';
+import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel, getRecentMonthKeys, getTodayKey, formatDisplayDate } from '@/lib/ui/date';
 import { downloadCSV } from '@/lib/ui/csv';
 import { escapeHtml } from '@/lib/ui/escape';
@@ -156,7 +156,12 @@ export const ExpenseList: React.FC = () => {
       '#ef4444'
     );
     if (confirmed) {
-      DBService.deleteExpense(id);
+      try {
+        await DBService.deleteExpense(id);
+      } catch (err) {
+        showError('Delete Failed', err instanceof Error ? err.message : 'Could not delete the expense.');
+        return;
+      }
       refreshData();
       showToast(`Expense "${escapeHtml(title)}" deleted`);
     }

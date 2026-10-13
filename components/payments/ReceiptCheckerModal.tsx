@@ -71,12 +71,12 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   const isFormatValid = ref.length >= 6;
   const isAmountMatching = payment.plan ? payment.amount === payment.plan.price : true;
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (processingRef.current) return;
     processingRef.current = true;
     setIsProcessing(true);
     try {
-      DBService.verifyPaymentReceipt(payment.id, { notes: adminNotes });
+      await DBService.verifyPaymentReceipt(payment.id, { notes: adminNotes });
       showToast('Receipt verified and approved successfully!');
       onSuccess();
       onClose();
@@ -88,7 +88,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
     }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!rejectReason.trim()) {
       showError('Rejection Reason Required', 'Please provide a clear reason for rejecting this receipt.');
       return;
@@ -98,7 +98,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
     processingRef.current = true;
     setIsProcessing(true);
     try {
-      DBService.rejectPaymentReceipt(payment.id, rejectReason.trim());
+      await DBService.rejectPaymentReceipt(payment.id, rejectReason.trim());
       showToast('Receipt marked as rejected');
       onSuccess();
       onClose();

@@ -45,7 +45,7 @@ export const PlansView: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSavePlan = (e: React.FormEvent) => {
+  const handleSavePlan = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const parsedPrice = Number(price);
@@ -81,9 +81,9 @@ export const PlansView: React.FC = () => {
         description: description.trim(),
       };
       if (editingPlan) {
-        DBService.updatePlan(editingPlan.id, fields);
+        await DBService.updatePlan(editingPlan.id, fields);
       } else {
-        DBService.addPlan({ ...fields, is_active: true });
+        await DBService.addPlan({ ...fields, is_active: true });
       }
       load();
       setIsModalOpen(false);
@@ -113,7 +113,7 @@ export const PlansView: React.FC = () => {
     );
     if (!confirmed) return;
     try {
-      DBService.updatePlan(plan.id, { is_active: !plan.is_active });
+      await DBService.updatePlan(plan.id, { is_active: !plan.is_active });
       load();
       showToast(deactivating ? 'Plan deactivated' : 'Plan activated');
     } catch (err) {

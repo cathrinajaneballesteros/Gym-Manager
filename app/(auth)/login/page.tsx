@@ -64,35 +64,8 @@ export default function LoginPage() {
         }
 
         if (data.user) {
-          // Sync profile if available
-          try {
-            const { data: prof } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', data.user.id)
-              .single();
-
-            if (prof) {
-              DBService.updateProfile({
-                id: prof.id,
-                email: prof.email,
-                full_name: prof.full_name || 'Gym Administrator',
-                gym_name: prof.gym_name || 'My Fitness Gym',
-                currency: prof.currency || '₱',
-                phone: prof.phone || '',
-              }, { audit: false });
-            } else {
-              DBService.updateProfile({
-                id: data.user.id,
-                email: data.user.email || '',
-                full_name: 'Gym Administrator',
-                gym_name: 'My Fitness Gym',
-              }, { audit: false });
-            }
-          } catch (pErr) {
-            console.warn('Profile fetch note:', pErr);
-          }
-
+          // Drop anything cached from an account that used this browser before.
+          DBService.clear();
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('sgfm_authenticated', 'true');
           }
@@ -116,36 +89,17 @@ export default function LoginPage() {
         }
 
         if (data.user) {
-          // Create or link profile in Supabase table
-          try {
-            await supabase.from('profiles').upsert({
-              id: data.user.id,
-              email: data.user.email || email.trim(),
-              full_name: fullName.trim() || 'Gym Administrator',
-              gym_name: gymName.trim() || 'My Fitness Gym',
-              currency: '₱',
-              role: 'admin',
-            });
-
-            DBService.updateProfile({
-              id: data.user.id,
-              email: data.user.email || email.trim(),
-              full_name: fullName.trim() || 'Gym Administrator',
-              gym_name: gymName.trim() || 'My Fitness Gym',
-              currency: '₱',
-            }, { audit: false });
-          } catch (pErr) {
-            console.warn('Profile setup note:', pErr);
-          }
-
-          DBService.recordAudit({
-            action: 'auth.signup',
-            entity_type: 'auth',
-            entity_label: data.user.email || email.trim() || 'Unknown user',
-          });
+          // The signup trigger creates the profile from the metadata above; the app fills in any gap on first load.
+          DBService.clear();
 
           // If session is already created (auto-confirm enabled in Supabase)
           if (data.session) {
+            // Only a signed-in account can write to its audit log.
+            DBService.recordAudit({
+              action: 'auth.signup',
+              entity_type: 'auth',
+              entity_label: data.user.email || email.trim() || 'Unknown user',
+            });
             if (typeof window !== 'undefined') {
               sessionStorage.setItem('sgfm_authenticated', 'true');
             }

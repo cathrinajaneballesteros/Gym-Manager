@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { DBService } from '@/lib/data/db-service';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -21,7 +22,42 @@ interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [ready, setReady] = useState(() => DBService.isLoaded());
+  const [loadError, setLoadError] = useState('');
   const pathname = usePathname();
+  const router = useRouter();
+
+  // Every page reads this owner's gym data, so load it before showing any of them.
+  useEffect(() => {
+    if (ready) return;
+    let cancelled = false;
+    DBService.load()
+      .then(() => !cancelled && setReady(true))
+      .catch((err: Error) => {
+        if (cancelled) return;
+        if (err.message === 'Not signed in') router.replace('/login?mode=signin');
+        else setLoadError(err.message || 'Could not load your gym data.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, router]);
+
+  if (!ready) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f7', padding: '1rem' }}>
+        {loadError ? (
+          <div style={{ textAlign: 'center', maxWidth: '360px' }}>
+            <p style={{ fontWeight: 600, color: '#1d1d1f', marginBottom: '0.5rem' }}>Couldn&apos;t load your gym data</p>
+            <p style={{ fontSize: '0.875rem', color: '#6e6e73', marginBottom: '1rem' }}>{loadError}</p>
+            <button className="btn btn-primary" onClick={() => window.location.reload()}>Try again</button>
+          </div>
+        ) : (
+          <p style={{ fontSize: '0.9rem', color: '#6e6e73' }}>Loading your gym…</p>
+        )}
+      </div>
+    );
+  }
 
   const mobileNavItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },

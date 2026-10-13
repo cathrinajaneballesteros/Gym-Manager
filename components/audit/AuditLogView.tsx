@@ -20,24 +20,18 @@ import { showToast } from '@/lib/ui/swal';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { getTodayKey, toDateKey } from '@/lib/ui/date';
 import { downloadCSV } from '@/lib/ui/csv';
-
-const AUDIT_STORAGE_KEY = 'sgfm_audit_log_clean';
+import { DBService } from '@/lib/data/db-service';
 
 const subscribeAudit = (callback: () => void) => {
   window.addEventListener('sgfm_audit_updated', callback);
-  window.addEventListener('storage', callback);
-  return () => {
-    window.removeEventListener('sgfm_audit_updated', callback);
-    window.removeEventListener('storage', callback);
-  };
+  return () => window.removeEventListener('sgfm_audit_updated', callback);
 };
 
-const getAuditSnapshot = (): string => {
-  if (typeof window === 'undefined') return '[]';
-  return localStorage.getItem(AUDIT_STORAGE_KEY) ?? '[]';
-};
+// The log array is replaced (never changed in place) when an entry is added, so it is a stable snapshot.
+const getAuditSnapshot = (): AuditLogEntry[] => DBService.getAuditLog();
 
-const getAuditServerSnapshot = (): string => '[]';
+const NO_ENTRIES: AuditLogEntry[] = [];
+const getAuditServerSnapshot = (): AuditLogEntry[] => NO_ENTRIES;
 
 type MetadataValue = string | number | boolean | null;
 
@@ -110,15 +104,7 @@ const ENTITY_LABEL: Record<AuditEntityType, string> = {
 };
 
 export const AuditLogView: React.FC = () => {
-  const rawEntries = useSyncExternalStore(subscribeAudit, getAuditSnapshot, getAuditServerSnapshot);
-  const entries = useMemo<AuditLogEntry[]>(() => {
-    try {
-      const parsed = JSON.parse(rawEntries);
-      return Array.isArray(parsed) ? (parsed as AuditLogEntry[]) : [];
-    } catch {
-      return [];
-    }
-  }, [rawEntries]);
+  const entries = useSyncExternalStore(subscribeAudit, getAuditSnapshot, getAuditServerSnapshot);
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [entityFilter, setEntityFilter] = useState('all');

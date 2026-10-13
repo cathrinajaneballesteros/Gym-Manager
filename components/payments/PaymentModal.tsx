@@ -126,13 +126,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
-  const onSubmit = (data: PaymentFormData) => {
+  const onSubmit = async (data: PaymentFormData) => {
     try {
       let payment: Payment;
       if (initialPayment) {
-        payment = DBService.updatePayment(initialPayment.id, data);
+        payment = await DBService.updatePayment(initialPayment.id, data);
       } else {
-        payment = DBService.addPayment(data);
+        payment = await DBService.addPayment(data);
       }
 
       // If it's a completed payment and not an edit, advance subscription date for renewals or expired memberships
@@ -148,14 +148,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           // Only extend if renewing (prior payment exists) or reactivating an expired membership
           if (priorPayments.length > 0 || isExpired) {
             const baseDate = member.end_date > todayStr ? member.end_date : todayStr;
-            DBService.updateMember(member.id, {
+            await DBService.updateMember(member.id, {
               end_date: addMonthsToDateKey(baseDate, plan.duration_months),
               status: 'active',
               membership_plan_id: plan.id,
             });
           } else {
             // First payment recorded for pending member: activate membership status
-            DBService.updateMember(member.id, {
+            await DBService.updateMember(member.id, {
               status: 'active',
             });
           }
