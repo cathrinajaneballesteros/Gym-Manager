@@ -16,7 +16,8 @@ export default function ForgotPasswordPage() {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
       await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/settings` : undefined,
+        // The link signs them in through /auth/callback, then lets them choose a new password.
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback?next=/reset-password` : undefined,
       });
     } catch (err) {
       console.warn('Password reset notice:', err);

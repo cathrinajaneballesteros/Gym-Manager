@@ -80,6 +80,7 @@ const emptyData = (): GymData => ({
 
 let data: GymData = emptyData();
 let loading: Promise<void> | null = null;
+let refreshing: Promise<void> | null = null;
 // Bumped by clear(), so a load that finishes after sign-out can't put the old account's data back.
 let generation = 0;
 const pendingAudit = new Set<PromiseLike<void>>();
@@ -201,6 +202,9 @@ async function fetchAll(table: string, orderBy: string): Promise<Row[]> {
 // Goes up on every change, so screens can tell when to recompute.
 let revision = 1;
 
+// A background refresh may already have picked up a row this device just saved; never list it twice.
+const withoutId = <T extends { id: string }>(list: T[], id: string): T[] => list.filter((item) => item.id !== id);
+
 function emit(name: string, detail?: unknown): void {
   revision += 1;
   if (typeof window !== 'undefined') {
@@ -285,8 +289,23 @@ export class DBService {
     emit('sgfm_profile_updated', data.profile);
   }
 
-  private static async fetchGym(): Promise<void> {
+  /**
+   * Reloads the gym's data in the background so changes made on another device (e.g. staff at the front desk) show up.
+   * Screens reload their lists on the `sgfm_data_updated` event.
+   */
+  static refresh(): Promise<void> {
+    if (!data.userId || loading === null || refreshing) return refreshing ?? Promise.resolve();
+    refreshing = this.fetchGym({ background: true })
+      .catch((err) => console.warn('Could not refresh gym data:', err instanceof Error ? err.message : err))
+      .finally(() => {
+        refreshing = null;
+      });
+    return refreshing;
+  }
+
+  private static async fetchGym({ background = false }: { background?: boolean } = {}): Promise<void> {
     const startedIn = generation;
+    const revisionAtStart = revision;
     const { data: auth } = await db().auth.getUser();
     const user = auth.user;
     if (!user) throw new Error('Not signed in');
@@ -345,7 +364,9 @@ export class DBService {
       : [null, [], [], [], [], [], [], []];
 
     // Signed out or switched accounts meanwhile: load again for whoever is signed in now.
-    if (startedIn !== generation) return this.load();
+    if (startedIn !== generation) return background ? undefined : this.load();
+    // Something was saved on this device while loading; this copy may be missing it, so wait for the next refresh.
+    if (background && revision !== revisionAtStart) return;
     const gym = gymRow ? fromGymRow(gymRow as Row) : null;
     data = {
       userId: user.id,
@@ -361,6 +382,7 @@ export class DBService {
       audit: ((audit as Row[]) || []).map(fromAuditRow),
     };
     emit('sgfm_profile_updated', data.profile);
+    emit('sgfm_data_updated');
   }
 
   // 1. Profile / Settings
@@ -524,7 +546,7 @@ export class DBService {
       await db().from('gym_staff').insert({ email: address, role: 'staff', status: 'invited' }).select().single()
     ) as Row;
     const invite = fromStaffRow(row);
-    data.staff = [...data.staff, invite];
+    data.staff = [...withoutId(data.staff, invite.id), invite];
 
     this.recordAudit({
       action: 'staff.invite',
@@ -571,7 +593,7 @@ export class DBService {
     };
     // The log belongs to a gym; before onboarding (or after being removed as staff) there is none to write to.
     if (!data.gym) return entry;
-    data.audit = [entry, ...data.audit].slice(0, MAX_AUDIT_ENTRIES);
+    data.audit = [entry, ...withoutId(data.audit, entry.id)].slice(0, MAX_AUDIT_ENTRIES);
     emit('sgfm_audit_updated', entry);
 
     const { admin_id, ...row } = entry;
@@ -607,7 +629,7 @@ export class DBService {
       await db().from('membership_plans').insert(toRow(plan, PLAN_COLUMNS)).select().single()
     ) as Row;
     const newPlan = fromPlanRow(row);
-    data.plans = [...data.plans, newPlan];
+    data.plans = [...withoutId(data.plans, newPlan.id), newPlan];
 
     const currency = this.getProfile().currency || '₱';
     this.recordAudit({
@@ -714,7 +736,7 @@ export class DBService {
         .single()
     ) as Row;
     const newMember = fromMemberRow(row);
-    data.members = [newMember, ...data.members];
+    data.members = [newMember, ...withoutId(data.members, newMember.id)];
 
     this.recordAudit({
       action: 'member.create',
@@ -809,14 +831,18 @@ export class DBService {
     if (!data.members.some((m) => m.id === memberId)) throw new Error('Member not found');
     if (this.isCheckedInToday(memberId)) throw new Error('Already checked in today');
 
-    const log = check(
-      await db()
-        .from('attendance_logs')
-        .insert({ member_id: memberId, check_in_time: new Date().toISOString() })
-        .select()
-        .single()
-    ) as unknown as AttendanceLog;
-    data.attendance = [log, ...data.attendance];
+    const result = await db()
+      .from('attendance_logs')
+      .insert({ member_id: memberId, check_in_time: new Date().toISOString() })
+      .select()
+      .single();
+    // The database allows one check-in per member per day; another device may have just checked them in.
+    if (result.error?.code === '23505') {
+      void this.refresh();
+      throw new Error('Already checked in today');
+    }
+    const log = check(result) as unknown as AttendanceLog;
+    data.attendance = [log, ...withoutId(data.attendance, log.id)];
 
     await this.saveMember(memberId, { last_visit_date: getTodayKey() });
 
@@ -951,7 +977,7 @@ export class DBService {
         .single()
     ) as Row;
     const newPayment = fromPaymentRow(row);
-    data.payments = [newPayment, ...data.payments];
+    data.payments = [newPayment, ...withoutId(data.payments, newPayment.id)];
 
     const member = this.getMemberById(newPayment.member_id);
     const currency = this.getProfile().currency || '₱';
@@ -1094,7 +1120,7 @@ export class DBService {
       await db().from('expenses').insert(toRow(input, EXPENSE_COLUMNS)).select().single()
     ) as Row;
     const newExpense = fromExpenseRow(row);
-    data.expenses = [newExpense, ...data.expenses];
+    data.expenses = [newExpense, ...withoutId(data.expenses, newExpense.id)];
 
     const currency = this.getProfile().currency || '₱';
     this.recordAudit({

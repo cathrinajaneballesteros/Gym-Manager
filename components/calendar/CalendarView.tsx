@@ -19,6 +19,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { Member, Payment, Expense, UserProfile } from '@/types/database';
 import { getPaymentMemberName } from '@/lib/ui/format';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
@@ -51,6 +52,8 @@ export const CalendarView: React.FC = () => {
     setPayments(DBService.getPayments());
     setExpenses(DBService.getExpenses());
   };
+
+  useGymDataRefresh(loadData);
 
   useEffect(() => {
     loadData();

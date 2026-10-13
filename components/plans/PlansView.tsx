@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Layers, Clock, CheckCircle2, XCircle, Pencil, Power } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { MembershipPlan, UserProfile } from '@/types/database';
 import { Modal } from '@/components/ui/Modal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
@@ -25,6 +26,8 @@ export const PlansView: React.FC = () => {
     setPlans(DBService.getPlans());
     setProfile(DBService.getProfile());
   };
+
+  useGymDataRefresh(load);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

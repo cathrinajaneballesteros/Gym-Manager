@@ -45,6 +45,31 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     };
   }, [ready, router]);
 
+  // Pick up changes made on other devices: when the tab comes back into view (at most every 30s) and every 2 minutes.
+  const [, setDataVersion] = useState(0);
+  useEffect(() => {
+    if (!ready) return;
+    let lastRefresh = Date.now();
+    const refresh = (minGapMs: number) => {
+      if (document.visibilityState !== 'visible' || Date.now() - lastRefresh < minGapMs) return;
+      lastRefresh = Date.now();
+      DBService.refresh();
+    };
+    const onFocus = () => refresh(30_000);
+    const timer = window.setInterval(() => refresh(0), 120_000);
+    // Re-check redirects (e.g. a removed staff member) after each refresh.
+    const onData = () => setDataVersion((v) => v + 1);
+    document.addEventListener('visibilitychange', onFocus);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('sgfm_data_updated', onData);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('sgfm_data_updated', onData);
+    };
+  }, [ready]);
+
   // A gym that isn't set up goes to onboarding; staff on an owner-only page go to their home page.
   const redirectTo = !ready
     ? null

@@ -18,6 +18,7 @@ import {
   LogIn,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { Member, Payment, MembershipPlan, AttendanceLog } from '@/types/database';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { MemberModal } from './MemberModal';
@@ -54,6 +55,8 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
     setPayments(allPayments.filter((p) => p.member_id === memberId));
     setAttendance(DBService.getAttendance(memberId));
   };
+
+  useGymDataRefresh(loadData);
 
   useEffect(() => {
     loadData();

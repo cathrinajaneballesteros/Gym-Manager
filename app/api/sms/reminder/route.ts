@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { requireSignedIn } from '@/lib/supabase/require-user';
 import { SmsService } from '@/lib/sms/sms-service';
 
 export async function POST(req: Request) {
+  const unauthorized = await requireSignedIn();
+  if (unauthorized) return unauthorized;
+
   try {
     const body = await req.json();
     const { phone, memberName, gymName, amount, planName, dueDate, customMessage } = body;

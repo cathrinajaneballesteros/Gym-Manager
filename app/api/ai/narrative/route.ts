@@ -1,7 +1,11 @@
 import { NextResponse } from 'next/server';
+import { requireSignedIn } from '@/lib/supabase/require-user';
 import { GeminiService, ExecutiveReportRequest } from '@/lib/ai/gemini-service';
 
 export async function POST(req: Request) {
+  const unauthorized = await requireSignedIn();
+  if (unauthorized) return unauthorized;
+
   try {
     if (!GeminiService.isConfigured()) {
       return NextResponse.json(

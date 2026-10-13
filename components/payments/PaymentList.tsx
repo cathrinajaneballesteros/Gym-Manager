@@ -14,6 +14,7 @@ import {
   FileCheck,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { Payment, UserProfile, Member } from '@/types/database';
 import { PaymentModal } from './PaymentModal';
 import { WalkInModal } from './WalkInModal';
@@ -49,6 +50,8 @@ export const PaymentList: React.FC = () => {
     setMembers(DBService.getMembers());
     setProfile(DBService.getProfile());
   };
+
+  useGymDataRefresh(refreshData);
 
   useEffect(() => {
     refreshData();

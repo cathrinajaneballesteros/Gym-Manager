@@ -20,6 +20,7 @@ import {
   CalendarDays,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { Expense, UserProfile } from '@/types/database';
 import { CategoryExpenseChart } from '@/components/charts/CategoryExpenseChart';
 import { ExpenseModal } from './ExpenseModal';
@@ -47,6 +48,8 @@ export const ExpenseList: React.FC = () => {
     setExpenses(DBService.getExpenses());
     setProfile(DBService.getProfile());
   };
+
+  useGymDataRefresh(refreshData);
 
   useEffect(() => {
     refreshData();

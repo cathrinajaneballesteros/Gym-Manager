@@ -36,6 +36,7 @@ import {
   LogIn,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { formatTimeAgo } from '@/lib/ui/date';
 import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
 import { DashboardKPIs, MonthlyTrendData, Member, UserProfile, Payment, Expense } from '@/types/database';
@@ -98,6 +99,8 @@ export const DashboardOverview: React.FC = () => {
     setExpenses(DBService.getExpenses());
     setProfile(DBService.getProfile());
   };
+
+  useGymDataRefresh(refreshData);
 
   useEffect(() => {
     refreshData();

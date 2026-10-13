@@ -9,6 +9,7 @@ import {
   ArrowDownRight,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { DashboardKPIs, MonthlyTrendData, Expense, Member, Payment, UserProfile } from '@/types/database';
 import { generateFinancialPDFReport } from '@/lib/export/pdf-generator';
 import { generateFinancialExcelReport } from '@/lib/export/excel-generator';
@@ -123,7 +124,7 @@ export const ReportsView: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isExporting, setIsExporting] = useState(false);
 
-  useEffect(() => {
+  const loadReport = () => {
     setKpis(DBService.getDashboardKPIs('this-month'));
     setLastMonthKpis(DBService.getDashboardKPIs('last-month'));
     setSixMonthKpis(DBService.getDashboardKPIs('last-6-months'));
@@ -134,7 +135,13 @@ export const ReportsView: React.FC = () => {
     setMembers(DBService.getMembers());
     setPayments(DBService.getPayments());
     setProfile(DBService.getProfile());
+  };
+
+  useEffect(() => {
+    loadReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useGymDataRefresh(loadReport);
 
   if (!kpis) return null;
 

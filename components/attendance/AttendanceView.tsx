@@ -36,9 +36,11 @@ const PAGE_SIZE = 12;
 const subscribe = (callback: () => void) => {
   window.addEventListener('sgfm_attendance_updated', callback);
   window.addEventListener('sgfm_audit_updated', callback);
+  window.addEventListener('sgfm_data_updated', callback);
   return () => {
     window.removeEventListener('sgfm_attendance_updated', callback);
     window.removeEventListener('sgfm_audit_updated', callback);
+    window.removeEventListener('sgfm_data_updated', callback);
   };
 };
 

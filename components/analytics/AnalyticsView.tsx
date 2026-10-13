@@ -24,6 +24,7 @@ import { predictMemberChurn } from '@/lib/ai/churn-detector';
 import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
 import { RevenueForecastResult, ChurnPredictionResult, ChurnPredictionMember, ExpenseLeakResult, CostSavingPlaybook } from '@/types/ai';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { UserProfile } from '@/types/database';
 import { showAlert, showToast, showError } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
@@ -49,12 +50,18 @@ export const AnalyticsView: React.FC = () => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isCostSavingAiLoading, setIsCostSavingAiLoading] = useState(false);
 
-  useEffect(() => {
+  const loadAnalytics = () => {
     setProfile(DBService.getProfile());
     setForecast(calculateRevenueForecast(false));
     setChurn(predictMemberChurn());
     setLeaks(detectExpenseLeaks());
+  };
+
+  useEffect(() => {
+    loadAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useGymDataRefresh(loadAnalytics);
 
   const handleGenerateAiBrief = async () => {
     setIsAiLoading(true);

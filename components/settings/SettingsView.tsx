@@ -72,6 +72,30 @@ export const SettingsView: React.FC = () => {
     try {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) throw new Error('Please sign in again.');
+
+      // Accounts made with Google have no password to check; they can set one through Forgot password.
+      const providers: string[] = user.app_metadata?.providers || [user.app_metadata?.provider ?? ''];
+      if (!providers.includes('email')) {
+        showError(
+          'You sign in with Google',
+          'This account has no password yet. To add one, sign out and use "Forgot password" on the sign-in page.'
+        );
+        return;
+      }
+
+      // Make sure it's really the account owner (not someone at an unlocked computer) before changing it.
+      if (!oldPassword) {
+        showError('Current Password Needed', 'Enter your current password to change it.');
+        return;
+      }
+      const { error: checkError } = await supabase.auth.signInWithPassword({ email: user.email, password: oldPassword });
+      if (checkError) {
+        showError('Wrong Password', 'Your current password is incorrect.');
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 

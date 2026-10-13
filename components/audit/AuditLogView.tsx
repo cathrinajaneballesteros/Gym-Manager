@@ -24,7 +24,11 @@ import { DBService } from '@/lib/data/db-service';
 
 const subscribeAudit = (callback: () => void) => {
   window.addEventListener('sgfm_audit_updated', callback);
-  return () => window.removeEventListener('sgfm_audit_updated', callback);
+  window.addEventListener('sgfm_data_updated', callback);
+  return () => {
+    window.removeEventListener('sgfm_audit_updated', callback);
+    window.removeEventListener('sgfm_data_updated', callback);
+  };
 };
 
 // The log array is replaced (never changed in place) when an entry is added, so it is a stable snapshot.

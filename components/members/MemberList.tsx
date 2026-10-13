@@ -20,6 +20,7 @@ import {
   LogIn,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { Member, MembershipPlan } from '@/types/database';
 import { MemberModal } from './MemberModal';
 import { PaymentModal } from '@/components/payments/PaymentModal';
@@ -110,6 +111,8 @@ export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' })
     setMembers(DBService.getMembers());
     setPlans(DBService.getPlans());
   };
+
+  useGymDataRefresh(refreshData);
 
   useEffect(() => {
     refreshData();
