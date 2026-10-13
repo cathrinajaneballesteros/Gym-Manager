@@ -21,6 +21,7 @@ const currentDetails = (): GymDetails => {
     email: gym.email,
     currency: gym.currency,
     opening_hours: gym.opening_hours || DEFAULT_OPENING_HOURS,
+    walk_in_price: gym.walk_in_price,
   };
 };
 
@@ -81,6 +82,21 @@ export const GymSettings: React.FC = () => {
             <label style={labelStyle}>Gym Email</label>
             <input type="email" value={details.email} onChange={(e) => set('email', e.target.value)} style={{ width: '100%' }} />
           </div>
+        </div>
+        <div>
+          <label style={labelStyle}>Walk-in Price ({details.currency})</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={details.walk_in_price ?? ''}
+            onChange={(e) => set('walk_in_price', e.target.value === '' ? null : Number(e.target.value))}
+            placeholder="e.g. 100"
+            style={{ width: '100%' }}
+          />
+          <p style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '0.35rem' }}>
+            What a one-time visitor pays. Filled in automatically when you record a walk-in.
+          </p>
         </div>
         <div>
           <label style={labelStyle}>Opening Hours</label>

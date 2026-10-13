@@ -16,13 +16,14 @@ import {
 import { DBService } from '@/lib/data/db-service';
 import { Payment, UserProfile, Member } from '@/types/database';
 import { PaymentModal } from './PaymentModal';
+import { WalkInModal } from './WalkInModal';
 import { ReceiptCheckerModal } from './ReceiptCheckerModal';
 import { PaymentReminderModal } from './PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showSuccess, showToast, showConfirm, showError } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel, formatDisplayDate } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
-import { Bell, CheckCircle2, Clock, AlertTriangle, FileText, Edit } from 'lucide-react';
+import { Bell, CheckCircle2, Clock, AlertTriangle, FileText, Edit, UserPlus } from 'lucide-react';
 import { getPageWindow } from '@/lib/ui/pagination';
 
 export const PaymentList: React.FC = () => {
@@ -36,6 +37,9 @@ export const PaymentList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  // Walk-ins have no member, so they use their own form (new: null with the modal open; edit: the payment).
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+  const [editingWalkIn, setEditingWalkIn] = useState<Payment | null>(null);
   const [checkingPayment, setCheckingPayment] = useState<Payment | null>(null);
   const [remindingPayment, setRemindingPayment] = useState<Payment | null>(null);
   const pageSize = 8;
@@ -122,7 +126,17 @@ export const PaymentList: React.FC = () => {
             </p>
           </div>
 
-          <div style={{ position: 'relative', display: 'inline-flex' }}>
+          <div style={{ position: 'relative', display: 'inline-flex', gap: '0.6rem' }}>
+            <button
+              onClick={() => {
+                setEditingWalkIn(null);
+                setIsWalkInOpen(true);
+              }}
+              className="btn btn-outline"
+            >
+              <UserPlus size={16} />
+              <span>Record Walk-in</span>
+            </button>
             <button
               onClick={() => {
                 setEditingPayment(null);
@@ -492,7 +506,7 @@ export const PaymentList: React.FC = () => {
 
                       {/* Plan */}
                       <td style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
-                        {p.plan?.name || p.member?.plan?.name || 'Premium'}
+                        {p.is_walk_in ? 'Walk-in' : p.plan?.name || p.member?.plan?.name || 'Premium'}
                       </td>
 
                       {/* Amount */}
@@ -676,6 +690,11 @@ export const PaymentList: React.FC = () => {
                           </button>
                           <button
                             onClick={() => {
+                              if (p.is_walk_in) {
+                                setEditingWalkIn(p);
+                                setIsWalkInOpen(true);
+                                return;
+                              }
                               setEditingPayment(p);
                               setIsModalOpen(true);
                             }}
@@ -796,6 +815,20 @@ export const PaymentList: React.FC = () => {
           setIsModalOpen(false);
           setEditingPayment(null);
           refreshData();
+        }}
+      />
+
+      {/* Walk-in Modal */}
+      <WalkInModal
+        isOpen={isWalkInOpen}
+        onClose={() => {
+          setIsWalkInOpen(false);
+          setEditingWalkIn(null);
+        }}
+        initialPayment={editingWalkIn}
+        onSuccess={(payment) => {
+          refreshData();
+          showToast(`Walk-in ${editingWalkIn ? 'updated' : 'recorded'} · ${currency}${Number(payment.amount).toLocaleString()}`);
         }}
       />
 

@@ -22,7 +22,7 @@ const STEPS = [
   { title: 'Your gym', subtitle: 'What is your gym called, and where is it?', icon: Building2 },
   { title: 'Contact details', subtitle: 'How members can reach the gym. Used on receipts and reminders.', icon: Phone },
   { title: 'Opening hours', subtitle: 'When is the gym open? You can change this later in Settings.', icon: Clock },
-  { title: 'Membership plans', subtitle: 'Add the plans members can sign up for. You can also do this later.', icon: Layers },
+  { title: 'Prices', subtitle: 'What walk-ins pay, and the plans members can sign up for. You can also do this later.', icon: Layers },
 ];
 
 const labelStyle: React.CSSProperties = { display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#424245', marginBottom: '0.4rem' };
@@ -221,6 +221,19 @@ export default function OnboardingPage() {
 
         {step === 3 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div style={{ marginBottom: '0.75rem' }}>
+              <label style={labelStyle}>Walk-in price ({details.currency})</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={details.walk_in_price ?? ''}
+                onChange={(e) => set('walk_in_price', e.target.value === '' ? null : Number(e.target.value))}
+                placeholder="e.g. 100 (leave blank if you don't take walk-ins)"
+                style={{ width: '100%' }}
+              />
+            </div>
+            <label style={{ ...labelStyle, marginBottom: 0 }}>Membership plans</label>
             {existingPlans > 0 && (
               <p style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
                 You already have {existingPlans} {existingPlans === 1 ? 'plan' : 'plans'}. Add more here or skip.

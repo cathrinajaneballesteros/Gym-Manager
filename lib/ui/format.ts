@@ -11,8 +11,11 @@ export function formatCompactAmount(value: number, currency: string): string {
   return `${sign}${currency}${short}k`;
 }
 
-// Name to show for who made a payment. Deleted members keep their saved name, marked "(deleted)".
-export function getPaymentMemberName(payment: Pick<Payment, 'member_name'> & { member?: Member }): string {
+// Name to show for who made a payment. Walk-ins are marked "(walk-in)"; deleted members keep their saved name, marked "(deleted)".
+export function getPaymentMemberName(
+  payment: Pick<Payment, 'member_name' | 'is_walk_in'> & { member?: Member }
+): string {
+  if (payment.is_walk_in) return payment.member_name ? `${payment.member_name} (walk-in)` : 'Walk-in guest';
   if (payment.member) return `${payment.member.first_name} ${payment.member.last_name}`.trim();
   if (payment.member_name) return `${payment.member_name} (deleted)`;
   return 'Unknown member';

@@ -14,6 +14,7 @@ export const emptyGymDetails = (): GymDetails => ({
   // The app is for Philippine gyms only.
   currency: '₱',
   opening_hours: DEFAULT_OPENING_HOURS,
+  walk_in_price: null,
 });
 
 /** Days where the gym opens at or after it closes; overnight hours aren't supported. */

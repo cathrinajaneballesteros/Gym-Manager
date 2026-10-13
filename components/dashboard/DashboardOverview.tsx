@@ -189,7 +189,7 @@ export const DashboardOverview: React.FC = () => {
   const plans = DBService.getPlans();
   const paymentsByPlan = activePaymentsList.reduce<Record<string, { total: number; count: number; name: string }>>((acc, p) => {
     const plan = plans.find((pl) => pl.id === p.membership_plan_id);
-    const planName = plan ? plan.name : 'Standard Pass';
+    const planName = p.is_walk_in ? 'Walk-ins' : plan ? plan.name : 'Standard Pass';
     if (!acc[planName]) acc[planName] = { total: 0, count: 0, name: planName };
     acc[planName].total += Number(p.amount);
     acc[planName].count += 1;

@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Bell,
+  UserPlus,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { AttendanceLog, Member } from '@/types/database';
@@ -20,6 +21,8 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { MemberPicker } from '@/components/payments/MemberPicker';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
+import { WalkInModal } from '@/components/payments/WalkInModal';
+import { getPaymentMemberName } from '@/lib/ui/format';
 import { checkInWithPrompt } from '@/lib/ui/check-in';
 import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { getPageWindow } from '@/lib/ui/pagination';
@@ -57,10 +60,11 @@ const memberName = (m?: Member) => (m ? `${m.first_name} ${m.last_name}`.trim() 
 
 export const AttendanceView: React.FC = () => {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
-  const { members, attendance } = useMemo(
+  const { members, attendance, walkInsToday } = useMemo(
     () => ({
       members: snapshot ? DBService.getMembers() : [],
       attendance: snapshot ? DBService.getAttendance() : [],
+      walkInsToday: snapshot ? DBService.getWalkIns(getTodayKey()) : [],
     }),
     [snapshot]
   );
@@ -73,6 +77,7 @@ export const AttendanceView: React.FC = () => {
   const [toDate, setToDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [reminderMember, setReminderMember] = useState<Member | null>(null);
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const inactiveRef = useRef<HTMLDivElement>(null);
 
   const todayKey = getTodayKey();
@@ -201,13 +206,23 @@ export const AttendanceView: React.FC = () => {
             <LogIn size={15} />
             <span>Check In</span>
           </button>
+          <button className="btn btn-outline" style={{ alignSelf: 'flex-end' }} onClick={() => setIsWalkInOpen(true)}>
+            <UserPlus size={15} />
+            <span>Walk-in</span>
+          </button>
         </div>
       </ScrollReveal>
 
       {/* 3. Summary cards */}
       <ScrollReveal delay={50}>
         <div className="grid grid-cols-4 gap-4">
-          <MetricCard title="Check-ins Today" value={todayLogs.length} icon={Activity} variant="emerald" />
+          <MetricCard
+            title="Check-ins Today"
+            value={todayLogs.length}
+            icon={Activity}
+            variant="emerald"
+            subtitle={`+ ${walkInsToday.length} walk-in${walkInsToday.length === 1 ? '' : 's'}`}
+          />
           <MetricCard title="This Week" value={weekCount} icon={CalendarDays} variant="blue" subtitle="Since Monday" />
           <MetricCard title="This Month" value={monthCount} icon={CalendarRange} variant="purple" />
           <MetricCard
@@ -226,9 +241,9 @@ export const AttendanceView: React.FC = () => {
       <ScrollReveal delay={70}>
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Today ({todayLogs.length})</h2>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Today ({todayLogs.length + walkInsToday.length})</h2>
           </div>
-          {todayLogs.length === 0 ? (
+          {todayLogs.length + walkInsToday.length === 0 ? (
             <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
               No one has checked in today yet.
             </div>
@@ -259,6 +274,18 @@ export const AttendanceView: React.FC = () => {
                       </tr>
                     );
                   })}
+                  {walkInsToday.map((p) => (
+                    <tr key={p.id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                      <td style={{ ...tdStyle, color: '#64748b' }}>{formatTime(p.created_at)}</td>
+                      <td style={{ ...tdStyle, fontWeight: 600, color: '#0f172a' }}>{getPaymentMemberName(p)}</td>
+                      <td style={tdStyle}>
+                        <span className="badge badge-pending">
+                          Walk-in · {DBService.getProfile().currency || '₱'}{Number(p.amount).toLocaleString()}
+                        </span>
+                      </td>
+                      <td style={tdStyle}></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -509,6 +536,12 @@ export const AttendanceView: React.FC = () => {
         onClose={() => setReminderMember(null)}
         member={reminderMember}
         onSuccess={() => setReminderMember(null)}
+      />
+
+      <WalkInModal
+        isOpen={isWalkInOpen}
+        onClose={() => setIsWalkInOpen(false)}
+        onSuccess={(p) => showToast(`Walk-in recorded · ${DBService.getProfile().currency || '₱'}${Number(p.amount).toLocaleString()}`)}
       />
     </div>
   );

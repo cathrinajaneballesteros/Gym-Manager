@@ -39,11 +39,11 @@ const MEMBER_COLUMNS = [
 const PAYMENT_COLUMNS = [
   'member_id', 'member_name', 'membership_plan_id', 'amount', 'payment_date', 'payment_method',
   'payment_status', 'receipt_status', 'receipt_url', 'receipt_notes', 'verified_at', 'verified_by',
-  'rejection_reason', 'reference_number', 'notes',
+  'rejection_reason', 'reference_number', 'notes', 'is_walk_in',
 ] as const;
 const EXPENSE_COLUMNS = ['category', 'title', 'amount', 'expense_date', 'payment_method', 'description'] as const;
 const PROFILE_COLUMNS = ['full_name', 'phone'] as const;
-const GYM_COLUMNS = ['name', 'address', 'city', 'phone', 'email', 'currency', 'opening_hours'] as const;
+const GYM_COLUMNS = ['name', 'address', 'city', 'phone', 'email', 'currency', 'opening_hours', 'walk_in_price'] as const;
 
 /** Everything the signed-in owner can see, loaded once per session and kept in step with each write. */
 interface GymData {
@@ -147,6 +147,7 @@ const fromGymRow = (r: Row): Gym => ({
   city: text(r.city),
   phone: text(r.phone),
   email: text(r.email),
+  walk_in_price: r.walk_in_price === null || r.walk_in_price === undefined ? null : Number(r.walk_in_price),
 });
 
 const fromStaffRow = (r: Row): StaffMember => ({
@@ -420,6 +421,7 @@ export class DBService {
         p_email: details.email,
         p_currency: details.currency,
         p_opening_hours: details.opening_hours,
+        p_walk_in_price: details.walk_in_price,
       })
     );
     loading = null;
@@ -830,6 +832,32 @@ export class DBService {
     return saved;
   }
 
+  /** Walk-in payments (one-time visitors), newest first. Pass a date (YYYY-MM-DD) to get just that day's. */
+  static getWalkIns(date?: string): Payment[] {
+    return this.getPayments().filter((p) => p.is_walk_in && (!date || p.payment_date === date));
+  }
+
+  /** Records a one-time visitor who pays at the door, without registering them as a member. */
+  static addWalkIn(input: {
+    name?: string;
+    amount: number;
+    payment_method: PaymentMethod;
+    reference_number?: string;
+    notes?: string;
+  }): Promise<Payment> {
+    return this.addPayment({
+      member_id: '',
+      member_name: input.name?.trim() || undefined,
+      is_walk_in: true,
+      amount: input.amount,
+      payment_date: getTodayKey(),
+      payment_method: input.payment_method,
+      payment_status: 'completed',
+      reference_number: input.reference_number,
+      notes: input.notes,
+    });
+  }
+
   static async addPayment(input: Omit<Payment, 'id' | 'admin_id' | 'created_at'>): Promise<Payment> {
     const row = check(
       await db()
@@ -855,7 +883,7 @@ export class DBService {
       action: 'payment.create',
       entity_type: 'payment',
       entity_id: newPayment.id,
-      entity_label: `${this.memberLabel(member)} · ${currency}${Number(newPayment.amount).toLocaleString()}`,
+      entity_label: `${newPayment.is_walk_in ? getPaymentMemberName(newPayment) : this.memberLabel(member)} · ${currency}${Number(newPayment.amount).toLocaleString()}`,
       metadata: {
         amount: Number(newPayment.amount),
         method: newPayment.payment_method,

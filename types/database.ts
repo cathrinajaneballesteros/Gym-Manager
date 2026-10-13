@@ -45,12 +45,17 @@ export interface Gym {
   email: string;
   currency: string;
   opening_hours: OpeningHours | null;
+  /** Usual fee for a one-time visitor; prefilled on the walk-in form. */
+  walk_in_price: number | null;
   onboarded_at: string | null;
   created_at: string;
   updated_at?: string;
 }
 
-export type GymDetails = Pick<Gym, 'name' | 'address' | 'city' | 'phone' | 'email' | 'currency' | 'opening_hours'>;
+export type GymDetails = Pick<
+  Gym,
+  'name' | 'address' | 'city' | 'phone' | 'email' | 'currency' | 'opening_hours' | 'walk_in_price'
+>;
 
 export interface StaffMember {
   id: string;
@@ -106,8 +111,10 @@ export interface Payment {
   admin_id: string;
   member_id: string;
   member?: Member;
-  /** The member's name, saved when the member is deleted so their payments still show who paid. */
+  /** The member's name, saved when the member is deleted so their payments still show who paid. Also a walk-in's name. */
   member_name?: string;
+  /** A one-time visitor who paid at the door; has no member. */
+  is_walk_in?: boolean;
   membership_plan_id?: string;
   plan?: MembershipPlan;
   amount: number;

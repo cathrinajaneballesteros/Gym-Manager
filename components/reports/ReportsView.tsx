@@ -208,7 +208,7 @@ export const ReportsView: React.FC = () => {
   }, {});
 
   const paymentsByPlan = monthPayments.reduce<Record<string, { total: number; count: number }>>((acc, p) => {
-    const planName = p.plan?.name || (p.membership_plan_id ? 'Unknown plan' : 'No plan');
+    const planName = p.is_walk_in ? 'Walk-ins' : p.plan?.name || (p.membership_plan_id ? 'Unknown plan' : 'No plan');
     if (!acc[planName]) acc[planName] = { total: 0, count: 0 };
     acc[planName].total += Number(p.amount);
     acc[planName].count += 1;
