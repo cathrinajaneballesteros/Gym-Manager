@@ -10,31 +10,59 @@ import {
   Clock,
   CalendarDays,
   Download,
-  Info,
-  CheckCircle,
 } from 'lucide-react';
 import { AuditAction, AuditEntityType, AuditLogEntry } from '@/types/database';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { Modal } from '@/components/ui/Modal';
 import { showToast } from '@/lib/ui/swal';
-
-const AUDIT_STORAGE_KEY = 'sgfm_audit_log_clean';
+import { getPageWindow } from '@/lib/ui/pagination';
+import { getTodayKey, toDateKey } from '@/lib/ui/date';
+import { downloadCSV } from '@/lib/ui/csv';
+import { DBService } from '@/lib/data/db-service';
 
 const subscribeAudit = (callback: () => void) => {
   window.addEventListener('sgfm_audit_updated', callback);
-  window.addEventListener('storage', callback);
+  window.addEventListener('sgfm_data_updated', callback);
   return () => {
     window.removeEventListener('sgfm_audit_updated', callback);
-    window.removeEventListener('storage', callback);
+    window.removeEventListener('sgfm_data_updated', callback);
   };
 };
 
-const getAuditSnapshot = (): string => {
-  if (typeof window === 'undefined') return '[]';
-  return localStorage.getItem(AUDIT_STORAGE_KEY) ?? '[]';
+// The log array is replaced (never changed in place) when an entry is added, so it is a stable snapshot.
+const getAuditSnapshot = (): AuditLogEntry[] => DBService.getAuditLog();
+
+const NO_ENTRIES: AuditLogEntry[] = [];
+const getAuditServerSnapshot = (): AuditLogEntry[] => NO_ENTRIES;
+
+type MetadataValue = string | number | boolean | null;
+
+interface DetailRow {
+  field: string;
+  value: MetadataValue;
+  from?: MetadataValue;
+}
+
+// Turn flat metadata into table rows, pairing `field.from` / `field.to` into one "old → new" row.
+const getDetailRows = (metadata: AuditLogEntry['metadata']): DetailRow[] => {
+  const rows: DetailRow[] = [];
+  Object.entries(metadata || {}).forEach(([key, value]) => {
+    if (key === 'changed') return;
+    if (key.endsWith('.from')) {
+      const field = key.slice(0, -'.from'.length);
+      rows.push({ field, from: value, value: metadata?.[`${field}.to`] ?? null });
+    } else if (!key.endsWith('.to')) {
+      rows.push({ field: key, value });
+    }
+  });
+  return rows;
 };
 
-const getAuditServerSnapshot = (): string => '[]';
+const formatFieldName = (field: string): string =>
+  field.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
+
+const formatDetailValue = (value: MetadataValue): string =>
+  value === null || value === '' ? '—' : String(value);
 
 interface ActionMeta {
   label: string;
@@ -51,6 +79,7 @@ const ACTION_META: Record<AuditAction, ActionMeta> = {
   'member.update': { label: 'Member updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
   'member.delete': { label: 'Member deleted', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
   'member.reminder_sent': { label: 'Reminder dispatched', color: '#d97706', background: '#fffbeb', border: '#fde68a' },
+  'member.check_in_undo': { label: 'Check-in undone', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
   'payment.create': { label: 'Payment recorded', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
   'payment.update': { label: 'Payment updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
   'payment.delete': { label: 'Payment deleted', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
@@ -60,7 +89,14 @@ const ACTION_META: Record<AuditAction, ActionMeta> = {
   'expense.create': { label: 'Expense added', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
   'expense.update': { label: 'Expense updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
   'expense.delete': { label: 'Expense deleted', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
+  'plan.create': { label: 'Plan created', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
+  'plan.update': { label: 'Plan updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
+  'plan.activate': { label: 'Plan activated', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
+  'plan.deactivate': { label: 'Plan deactivated', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
   'settings.update': { label: 'Settings updated', color: '#4b5563', background: '#f3f4f6', border: '#e5e7eb' },
+  'gym.onboard': { label: 'Gym set up', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
+  'staff.invite': { label: 'Staff invited', color: '#0891b2', background: '#ecfeff', border: '#a5f3fc' },
+  'staff.remove': { label: 'Staff removed', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
 };
 
 const ENTITY_LABEL: Record<AuditEntityType, string> = {
@@ -68,47 +104,22 @@ const ENTITY_LABEL: Record<AuditEntityType, string> = {
   member: 'Member',
   payment: 'Payment',
   expense: 'Expense',
+  plan: 'Plan',
   settings: 'Settings',
+  staff: 'Staff',
 };
 
 export const AuditLogView: React.FC = () => {
-  const rawEntries = useSyncExternalStore(subscribeAudit, getAuditSnapshot, getAuditServerSnapshot);
-  const entries = useMemo<AuditLogEntry[]>(() => {
-    try {
-      const parsed = JSON.parse(rawEntries);
-      return Array.isArray(parsed) ? (parsed as AuditLogEntry[]) : [];
-    } catch {
-      return [];
-    }
-  }, [rawEntries]);
+  const entries = useSyncExternalStore(subscribeAudit, getAuditSnapshot, getAuditServerSnapshot);
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [entityFilter, setEntityFilter] = useState('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 12;
 
   const [selectedEntry, setSelectedEntry] = useState<AuditLogEntry | null>(null);
-
-  const exportCSV = () => {
-    const headers = ['Timestamp', 'Actor', 'Action', 'Entity', 'Label', 'Metadata'];
-    const rows = entries.map((e) => [
-      e.created_at,
-      e.actor_email,
-      e.action,
-      e.entity_type,
-      `"${(e.entity_label || '').replace(/"/g, '""')}"`,
-      `"${JSON.stringify(e.metadata || {}).replace(/"/g, '""')}"`,
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `User_Audit_Trail_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Audit trail exported successfully!');
-  };
 
   const filteredEntries = useMemo(() => {
     const query = searchQuery.toLowerCase();
@@ -117,25 +128,49 @@ export const AuditLogView: React.FC = () => {
       const matchesSearch =
         (entry.actor_email || '').toLowerCase().includes(query) ||
         (entry.entity_label || '').toLowerCase().includes(query) ||
-        (meta?.label || '').toLowerCase().includes(query);
+        (meta?.label || '').toLowerCase().includes(query) ||
+        Object.values(entry.metadata || {}).some((v) => String(v ?? '').toLowerCase().includes(query));
 
       const matchesAction =
         actionFilter === 'all' ||
         (actionFilter === 'auth'
           ? entry.action.startsWith('auth.')
-          : entry.action.endsWith(`.${actionFilter}`));
+          : actionFilter === 'receipt'
+            ? entry.action.startsWith('payment.receipt_')
+            : entry.action.endsWith(`.${actionFilter}`) ||
+              (actionFilter === 'update' && (entry.action === 'plan.activate' || entry.action === 'plan.deactivate')) ||
+              (actionFilter === 'delete' && entry.action === 'member.check_in_undo'));
 
       const matchesEntity = entityFilter === 'all' || entry.entity_type === entityFilter;
 
-      return matchesSearch && matchesAction && matchesEntity;
+      const dateKey = entry.created_at ? toDateKey(new Date(entry.created_at)) : '';
+      const matchesDate = (!fromDate || dateKey >= fromDate) && (!toDate || dateKey <= toDate);
+
+      return matchesSearch && matchesAction && matchesEntity && matchesDate;
     });
-  }, [entries, searchQuery, actionFilter, entityFilter]);
+  }, [entries, searchQuery, actionFilter, entityFilter, fromDate, toDate]);
+
+  const exportCSV = () => {
+    const headers = ['Timestamp', 'Actor', 'Action', 'Entity', 'Label', 'Metadata'];
+    const rows = filteredEntries.map((e) => [
+      e.created_at,
+      e.actor_email,
+      e.action,
+      e.entity_type,
+      e.entity_label,
+      JSON.stringify(e.metadata || {}),
+    ]);
+    downloadCSV(`User_Audit_Trail_${getTodayKey()}.csv`, [headers, ...rows]);
+    showToast('Audit trail exported successfully!');
+  };
 
   const totalPages = Math.ceil(filteredEntries.length / pageSize) || 1;
+  // After a delete the last page can disappear; go back to the last page that still exists.
+  if (currentPage > totalPages) setCurrentPage(totalPages);
   const paginated = filteredEntries.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const todayKey = new Date().toISOString().split('T')[0];
-  const eventsToday = entries.filter((e) => (e.created_at || '').startsWith(todayKey)).length;
+  const todayKey = getTodayKey();
+  const eventsToday = entries.filter((e) => e.created_at && toDateKey(new Date(e.created_at)) === todayKey).length;
   const lastActivity = entries[0]?.created_at;
 
   const formatDateTime = (iso: string) => {
@@ -255,7 +290,7 @@ export const AuditLogView: React.FC = () => {
             <Search size={15} color="#94a3b8" />
             <input
               type="text"
-              placeholder="Search by actor, entity, or action..."
+              placeholder="Search actor, entity, action, or details..."
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
@@ -294,6 +329,8 @@ export const AuditLogView: React.FC = () => {
               <option value="create">Created</option>
               <option value="update">Updated</option>
               <option value="delete">Deleted</option>
+              <option value="receipt">Receipt verified/rejected</option>
+              <option value="reminder_sent">Reminders sent</option>
               <option value="auth">Authentication</option>
             </select>
 
@@ -317,8 +354,40 @@ export const AuditLogView: React.FC = () => {
               <option value="member">Members</option>
               <option value="payment">Payments</option>
               <option value="expense">Expenses</option>
+              <option value="plan">Plans</option>
+              <option value="settings">Settings</option>
               <option value="auth">Authentication</option>
             </select>
+
+            {[
+              { label: 'From', value: fromDate, set: setFromDate, max: toDate || undefined, min: undefined },
+              { label: 'To', value: toDate, set: setToDate, min: fromDate || undefined, max: undefined },
+            ].map((field) => (
+              <label
+                key={field.label}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', color: '#64748b' }}
+              >
+                {field.label}
+                <input
+                  type="date"
+                  value={field.value}
+                  min={field.min}
+                  max={field.max}
+                  onChange={(e) => {
+                    field.set(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  style={{
+                    backgroundColor: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '0.45rem 0.6rem',
+                    fontSize: '0.85rem',
+                    color: '#334155',
+                  }}
+                />
+              </label>
+            ))}
           </div>
         </div>
       </ScrollReveal>
@@ -438,7 +507,7 @@ export const AuditLogView: React.FC = () => {
                   <ChevronLeft size={14} />
                 </button>
 
-                {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 5).map((page) => (
+                {getPageWindow(currentPage, totalPages).map((page) => (
                   <button
                     key={page}
                     onClick={() => setCurrentPage(page)}
@@ -516,21 +585,34 @@ export const AuditLogView: React.FC = () => {
 
             <div>
               <div style={{ fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
-                Event Metadata Payload
+                Details
               </div>
-              <pre
-                style={{
-                  backgroundColor: '#0f172a',
-                  color: '#e2e8f0',
-                  padding: '1rem',
-                  borderRadius: '8px',
-                  fontSize: '0.785rem',
-                  overflowX: 'auto',
-                  fontFamily: 'monospace',
-                }}
-              >
-                {JSON.stringify(selectedEntry.metadata || {}, null, 2)}
-              </pre>
+              {getDetailRows(selectedEntry.metadata).length === 0 ? (
+                <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>No extra details recorded.</div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                  <tbody>
+                    {getDetailRows(selectedEntry.metadata).map((row) => (
+                      <tr key={row.field} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '0.45rem 0.75rem 0.45rem 0', color: '#64748b', whiteSpace: 'nowrap', verticalAlign: 'top' }}>
+                          {formatFieldName(row.field)}
+                        </td>
+                        <td style={{ padding: '0.45rem 0', color: '#0f172a', wordBreak: 'break-word' }}>
+                          {row.from !== undefined ? (
+                            <>
+                              <span style={{ color: '#94a3b8', textDecoration: 'line-through' }}>{formatDetailValue(row.from)}</span>
+                              {' → '}
+                              <span style={{ fontWeight: 600 }}>{formatDetailValue(row.value)}</span>
+                            </>
+                          ) : (
+                            formatDetailValue(row.value)
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.5rem' }}>

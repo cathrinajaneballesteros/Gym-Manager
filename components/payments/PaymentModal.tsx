@@ -5,20 +5,27 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Modal } from '@/components/ui/Modal';
-import { DBService } from '@/lib/data/db-service';
+import { DBService, PaymentSavedError } from '@/lib/data/db-service';
 import { Payment, Member, MembershipPlan } from '@/types/database';
-import { showError } from '@/lib/ui/swal';
+import { showError, showWarning } from '@/lib/ui/swal';
 import { MemberPicker } from './MemberPicker';
+import { getTodayKey } from '@/lib/ui/date';
+import { getPaymentMemberName } from '@/lib/ui/format';
+import { amountField, MAX_AMOUNT, pastDateField } from '@/lib/ui/validation';
 
 const paymentSchema = z.object({
   member_id: z.string().min(1, 'Please select a member'),
   membership_plan_id: z.string().optional(),
-  amount: z.number().positive('Payment amount must be greater than 0'),
-  payment_date: z.string().min(10, 'Payment date is required'),
+  amount: amountField('Payment amount'),
+  payment_date: pastDateField('Payment date'),
   payment_method: z.enum(['Cash', 'GCash']),
   payment_status: z.enum(['completed', 'pending', 'refunded']),
-  reference_number: z.string().optional(),
-  notes: z.string().optional(),
+  reference_number: z.string().max(50, 'Reference number is too long').optional(),
+  notes: z.string().max(500, 'Notes can be up to 500 characters').optional(),
+}).refine((d) => d.payment_method !== 'GCash' || Boolean(d.reference_number?.trim()), {
+  // The reference number is what the receipt check is done against.
+  message: 'Enter the GCash reference number',
+  path: ['reference_number'],
 });
 
 type PaymentFormData = z.infer<typeof paymentSchema>;
@@ -40,15 +47,20 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 }) => {
   const members: Member[] = DBService.getMembers();
   const plans: MembershipPlan[] = DBService.getPlans();
-  const todayStr = new Date().toISOString().split('T')[0];
+  const currency = DBService.getProfile().currency || '₱';
+  const todayStr = getTodayKey();
+  // Editing a payment whose member was deleted: keep it attached to them instead of offering the picker.
+  const deletedMemberPayment =
+    initialPayment && !members.some((m) => m.id === initialPayment.member_id) ? initialPayment : null;
 
   const defaultMember = preselectedMemberId
     ? members.find((m) => m.id === preselectedMemberId)
     : members.find((m) => m.status === 'pending') || members[0];
 
+  const firstActivePlan = plans.find((p) => p.is_active);
   const defaultPlan = defaultMember
-    ? plans.find((p) => p.id === defaultMember.membership_plan_id) || plans[0]
-    : plans[0];
+    ? plans.find((p) => p.id === defaultMember.membership_plan_id) || firstActivePlan
+    : firstActivePlan;
 
   const buildDefaultValues = (): PaymentFormData => {
     if (initialPayment) {
@@ -66,7 +78,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     return {
       member_id: defaultMember?.id || '',
       membership_plan_id: defaultPlan?.id || '',
-      amount: defaultPlan?.price || 1500,
+      amount: defaultPlan?.price || 0,
       payment_date: todayStr,
       payment_method: 'Cash',
       payment_status: 'completed',
@@ -86,6 +98,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     resolver: zodResolver(paymentSchema),
     defaultValues: buildDefaultValues(),
   });
+
+  // Only active plans can be chosen, but keep the plan already on this payment
+  // or on the selected member so it does not drop out of the list.
+  const selectedMemberPlanId = members.find((m) => m.id === watch('member_id'))?.membership_plan_id;
+  const selectablePlans = plans.filter(
+    (p) => p.is_active || p.id === initialPayment?.membership_plan_id || p.id === selectedMemberPlanId
+  );
 
   // Refill the form with the correct values every time the modal opens or the target payment/member changes.
   useEffect(() => {
@@ -112,48 +131,28 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
-  const onSubmit = (data: PaymentFormData) => {
+  const isNewGCash = !initialPayment && watch('payment_method') === 'GCash';
+
+  const onSubmit = async (data: PaymentFormData) => {
     try {
-      let payment: Payment;
-      if (initialPayment) {
-        payment = DBService.updatePayment(initialPayment.id, data);
-      } else {
-        payment = DBService.addPayment(data);
-      }
-
-      // If it's a completed payment and not an edit, advance subscription date for renewals or expired memberships
-      if (!initialPayment && data.payment_status === 'completed' && data.membership_plan_id) {
-        const plan = plans.find((p) => p.id === data.membership_plan_id);
-        const member = members.find((m) => m.id === data.member_id);
-        if (member && plan) {
-          const priorPayments = DBService.getPayments().filter(
-            (p) => p.member_id === member.id && p.payment_status === 'completed' && p.id !== payment.id
-          );
-          const isExpired = new Date(member.end_date).getTime() < new Date(todayStr).getTime();
-
-          // Only extend if renewing (prior payment exists) or reactivating an expired membership
-          if (priorPayments.length > 0 || isExpired) {
-            const baseDate = new Date(member.end_date > todayStr ? member.end_date : todayStr);
-            baseDate.setMonth(baseDate.getMonth() + plan.duration_months);
-            DBService.updateMember(member.id, {
-              end_date: baseDate.toISOString().split('T')[0],
-              status: 'active',
-              membership_plan_id: plan.id,
-            });
-          } else {
-            // First payment recorded for pending member: activate membership status
-            DBService.updateMember(member.id, {
-              status: 'active',
-            });
-          }
-        }
-      }
+      // A new GCash payment waits for its receipt to be verified before it counts or extends the membership.
+      // Activating or extending the membership happens in DBService once the payment is completed.
+      const payment = initialPayment
+        ? await DBService.updatePayment(initialPayment.id, data)
+        : await DBService.addPayment(data.payment_method === 'GCash' ? { ...data, payment_status: 'pending' } : data);
 
       onSuccess(payment);
       reset();
       onClose();
-    } catch (err: any) {
-      showError('Payment Failed', err.message || 'Failed to save payment record');
+    } catch (err) {
+      if (err instanceof PaymentSavedError) {
+        onSuccess(err.payment);
+        reset();
+        onClose();
+        showWarning('Payment Saved', err.message);
+        return;
+      }
+      showError('Payment Failed', err instanceof Error ? err.message : 'Failed to save payment record');
     }
   };
 
@@ -169,7 +168,14 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
             Member *
           </label>
-          {members.length === 0 ? (
+          {deletedMemberPayment ? (
+            <>
+              <input type="hidden" {...register('member_id')} />
+              <div style={{ padding: '0.65rem 0.85rem', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', color: '#64748b', fontSize: '0.825rem' }}>
+                {getPaymentMemberName(deletedMemberPayment)}
+              </div>
+            </>
+          ) : members.length === 0 ? (
             <div style={{ padding: '0.65rem 0.85rem', backgroundColor: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', color: '#92400e', fontSize: '0.825rem', lineHeight: 1.4 }}>
               ⚠️ No members registered yet. Please add a member in the <strong>Members</strong> tab before recording a payment.
             </div>
@@ -207,9 +213,9 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
               }}
               style={{ width: '100%' }}
             >
-              {plans.map((p) => (
+              {selectablePlans.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name}
+                  {p.name} — {currency}{p.price.toLocaleString()} ({p.duration_months} mo)
                 </option>
               ))}
             </select>
@@ -217,11 +223,13 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
 
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-              Payment Amount (₱) *
+              Payment Amount ({currency}) *
             </label>
             <input
               type="number"
               step="0.01"
+              min="0.01"
+              max={MAX_AMOUNT}
               {...register('amount', { valueAsNumber: true })}
               style={{ width: '100%' }}
             />
@@ -238,7 +246,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
               Payment Date *
             </label>
-            <input type="date" {...register('payment_date')} style={{ width: '100%' }} />
+            <input type="date" max={todayStr} {...register('payment_date')} style={{ width: '100%' }} />
             {errors.payment_date && (
               <span style={{ fontSize: '0.725rem', color: 'var(--danger)', marginTop: '0.2rem', display: 'block' }}>
                 {errors.payment_date.message}
@@ -262,23 +270,36 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
               Status *
             </label>
-            <select {...register('payment_status')} style={{ width: '100%' }}>
-              <option value="completed">Completed / Settled</option>
-              <option value="pending">Pending Verification</option>
-              <option value="refunded">Refunded</option>
-            </select>
+            {isNewGCash ? (
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.45, paddingTop: '0.35rem' }}>
+                Pending until the receipt is verified on the Payments page. It counts as revenue, and extends the
+                membership, once verified.
+              </p>
+            ) : (
+              <select {...register('payment_status')} style={{ width: '100%' }}>
+                <option value="completed">Completed / Settled</option>
+                <option value="pending">Pending Verification</option>
+                <option value="refunded">Refunded</option>
+              </select>
+            )}
           </div>
 
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-              Reference / Transaction ID
+              GCash Reference No.{watch('payment_method') === 'GCash' ? ' *' : ''}
             </label>
             <input
               type="text"
-              placeholder="e.g. GC-902148X"
+              placeholder="e.g. 1012 345 678901"
+              maxLength={50}
               {...register('reference_number')}
               style={{ width: '100%' }}
             />
+            {errors.reference_number && (
+              <span style={{ fontSize: '0.725rem', color: 'var(--danger)', marginTop: '0.2rem', display: 'block' }}>
+                {errors.reference_number.message}
+              </span>
+            )}
           </div>
         </div>
 
@@ -289,6 +310,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
           <input
             type="text"
             placeholder="e.g. Walk-in renewal with student ID verification"
+            maxLength={500}
             {...register('notes')}
             style={{ width: '100%' }}
           />

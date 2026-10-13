@@ -33,6 +33,7 @@ export interface ChurnPredictionMember {
   phone: string;
   planName: string;
   daysSinceLastVisit: number;
+  visitsLast30Days: number;
   daysUntilExpiration: number;
   expirationDate: string;
   riskLevel: ChurnRiskLevel;
@@ -62,6 +63,8 @@ export interface ExpenseAnomaly {
   detectionReason: string;
   suggestedAction: string;
   dateDetected: string;
+  /** A one-time purchase (equipment): shown, but not counted as monthly savings. */
+  isOneOff?: boolean;
 }
 
 export interface CostSavingPlaybook {
@@ -80,6 +83,8 @@ export interface ExpenseLeakResult {
   anomalies: ExpenseAnomaly[];
   totalCategoriesAnalyzed: number;
   hasSufficientData: boolean;
+  /** At least 2 earlier months of expenses to compare against; before that, nothing is flagged. */
+  hasEnoughHistory: boolean;
   alertSummary: string;
   potentialMonthlySavings: number;
   potentialAnnualSavings: number;

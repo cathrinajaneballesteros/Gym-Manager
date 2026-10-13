@@ -7,7 +7,11 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
     'placeholder-anon-key';
 
-  return createBrowserClient(supabaseUrl, supabaseAnonKey);
+  // Sign-in codes in the address bar are only used by /auth/callback on the server.
+  // If the browser used them too, the two would race and the callback would fail with an already-used code.
+  return createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    auth: { detectSessionInUrl: false },
+  });
 }
 
 export const isSupabaseConfigured = () => {

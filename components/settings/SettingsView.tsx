@@ -4,26 +4,26 @@ import React, { useState, useEffect } from 'react';
 import {
   User,
   Lock,
-  Bell,
-  Sliders,
   Building2,
+  Users,
   CheckCircle,
-  Database,
-  Camera,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
-import { UserProfile, UserRole } from '@/types/database';
+import { UserProfile } from '@/types/database';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { showError, showInfo } from '@/lib/ui/swal';
+import { GymSettings } from './GymSettings';
+import { StaffSettings } from './StaffSettings';
+import { showError } from '@/lib/ui/swal';
+
+type SettingsTab = 'account' | 'gym' | 'staff' | 'security';
 
 export const SettingsView: React.FC = () => {
-  const [profile, setProfile] = useState<UserProfile>(DBService.getProfile());
-  const [activeTab, setActiveTab] = useState<'account' | 'security' | 'notifications' | 'appearance'>('account');
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [gymName, setGymName] = useState('');
-  const [currency, setCurrency] = useState('₱');
+  const [profile, setProfile] = useState<UserProfile>(() => DBService.getProfile());
+  const [activeTab, setActiveTab] = useState<SettingsTab>('account');
+  const isOwner = DBService.isOwner();
+  const [fullName, setFullName] = useState(() => DBService.getProfile().full_name || '');
+  const [email, setEmail] = useState(() => DBService.getProfile().email || '');
+  const [phone, setPhone] = useState(() => DBService.getProfile().phone || '');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Security password fields
@@ -32,61 +32,22 @@ export const SettingsView: React.FC = () => {
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
   useEffect(() => {
-    const current = DBService.getProfile();
-    setProfile(current);
-    setFullName(current.full_name || '');
-    setEmail(current.email || '');
-    setPhone(current.phone || '');
-    setGymName(current.gym_name || '');
-    setCurrency(current.currency || '₱');
-
-    // Retrieve active authenticated Supabase user email
-    try {
-      import('@/lib/supabase/client').then(({ createClient }) => {
-        const supabase = createClient();
-        supabase.auth.getUser().then(({ data: { user } }) => {
-          if (user?.email) {
-            setEmail(user.email);
-            if (!current.email) {
-              DBService.updateProfile({ email: user.email });
-            }
-          }
-        });
+    // Show the sign-in email, which can differ from the profile if it was changed in Supabase.
+    import('@/lib/supabase/client').then(({ createClient }) => {
+      createClient().auth.getUser().then(({ data: { user } }) => {
+        if (user?.email) setEmail(user.email);
       });
-    } catch (e) {
-      // Fallback
-    }
+    });
   }, []);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-    const updated = DBService.updateProfile({
-      full_name: fullName,
-      email,
-      gym_name: gymName,
-      currency,
-      phone,
-    });
-    setProfile(updated);
-
-    // Also sync to Supabase if session exists
     try {
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient();
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        await supabase.from('profiles').upsert({
-          id: user.id,
-          email: user.email || email,
-          full_name: fullName,
-          gym_name: gymName,
-          currency,
-          phone,
-          updated_at: new Date().toISOString(),
-        });
-      }
+      const updated = await DBService.updateProfile({ full_name: fullName, phone });
+      setProfile(updated);
     } catch (err) {
-      console.warn('Supabase profile sync note:', err);
+      showError('Save Failed', err instanceof Error ? err.message : 'Could not save your settings.');
+      return;
     }
 
     setSaveSuccess(true);
@@ -103,6 +64,30 @@ export const SettingsView: React.FC = () => {
     try {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.email) throw new Error('Please sign in again.');
+
+      // Accounts made with Google have no password to check; they can set one through Forgot password.
+      const providers: string[] = user.app_metadata?.providers || [user.app_metadata?.provider ?? ''];
+      if (!providers.includes('email')) {
+        showError(
+          'You sign in with Google',
+          'This account has no password yet. To add one, sign out and use "Forgot password" on the sign-in page.'
+        );
+        return;
+      }
+
+      // Make sure it's really the account owner (not someone at an unlocked computer) before changing it.
+      if (!oldPassword) {
+        showError('Current Password Needed', 'Enter your current password to change it.');
+        return;
+      }
+      const { error: checkError } = await supabase.auth.signInWithPassword({ email: user.email, password: oldPassword });
+      if (checkError) {
+        showError('Wrong Password', 'Your current password is incorrect.');
+        return;
+      }
+
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
 
@@ -110,8 +95,8 @@ export const SettingsView: React.FC = () => {
       setOldPassword('');
       setNewPassword('');
       setTimeout(() => setPasswordSuccess(false), 3000);
-    } catch (err: any) {
-      showError('Password Update Error', err.message || 'Unable to update password');
+    } catch (err) {
+      showError('Password Update Error', err instanceof Error ? err.message : 'Unable to update password');
     }
   };
 
@@ -152,18 +137,22 @@ export const SettingsView: React.FC = () => {
             gap: '0.35rem',
           }}
         >
-          {[
+          {([
             { key: 'account', label: 'Account', icon: User, color: '#0071e3' },
+            ...(isOwner
+              ? [
+                  { key: 'gym', label: 'Gym', icon: Building2, color: '#ff9500' },
+                  { key: 'staff', label: 'Staff', icon: Users, color: '#5ac8fa' },
+                ]
+              : []),
             { key: 'security', label: 'Security', icon: Lock, color: '#34c759' },
-            { key: 'notifications', label: 'Notifications', icon: Bell, color: '#ff3b30' },
-            { key: 'appearance', label: 'Appearance', icon: Sliders, color: '#af52de' },
-          ].map((tab) => {
+          ] as { key: SettingsTab; label: string; icon: typeof User; color: string }[]).map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.key;
             return (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key as any)}
+                onClick={() => setActiveTab(tab.key)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -212,7 +201,7 @@ export const SettingsView: React.FC = () => {
                   Profile Information
                 </h2>
                 <p style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  Update your gym account identity and contact details.
+                  Your own name and contact details.{isOwner ? ' Gym details are under Gym.' : ''}
                 </p>
               </div>
 
@@ -239,15 +228,8 @@ export const SettingsView: React.FC = () => {
                     {fullName || profile.full_name || 'Admin'}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                    Admin
+                    {isOwner ? 'Owner' : 'Staff'} · {profile.gym_name}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => showInfo('Photo Upload', 'Photo upload dialog: file selector enabled.')}
-                    style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600, marginTop: '4px', cursor: 'pointer' }}
-                  >
-                    Change photo
-                  </button>
                 </div>
               </div>
 
@@ -273,9 +255,9 @@ export const SettingsView: React.FC = () => {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    style={{ width: '100%' }}
-                    required
+                    readOnly
+                    title="This is the email you sign in with."
+                    style={{ width: '100%', backgroundColor: '#f8fafc', color: '#64748b' }}
                   />
                 </div>
 
@@ -291,34 +273,6 @@ export const SettingsView: React.FC = () => {
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
-                    Gym Facility Name
-                  </label>
-                  <input
-                    type="text"
-                    value={gymName}
-                    onChange={(e) => setGymName(e.target.value)}
-                    style={{ width: '100%' }}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
-                    Currency Symbol
-                  </label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    style={{ width: '100%' }}
-                  >
-                    <option value="₱">₱ (PHP - Philippine Peso)</option>
-                    <option value="$">$ (USD - US Dollar)</option>
-                    <option value="€">€ (EUR - Euro)</option>
-                    <option value="£">£ (GBP - British Pound)</option>
-                  </select>
-                </div>
               </div>
 
               {/* Submit Button */}
@@ -339,6 +293,10 @@ export const SettingsView: React.FC = () => {
               </div>
             </form>
           )}
+
+          {activeTab === 'gym' && isOwner && <GymSettings />}
+
+          {activeTab === 'staff' && isOwner && <StaffSettings />}
 
           {activeTab === 'security' && (
             <form onSubmit={handleSavePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '500px' }}>
@@ -390,27 +348,6 @@ export const SettingsView: React.FC = () => {
             </form>
           )}
 
-          {activeTab === 'notifications' && (
-            <div style={{ maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#0f172a' }}>
-                Notification Preferences
-              </h2>
-              <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                Email reminders for membership expirations (7 days in advance) are enabled.
-              </p>
-            </div>
-          )}
-
-          {activeTab === 'appearance' && (
-            <div style={{ maxWidth: '500px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#0f172a' }}>
-                Appearance & Theme
-              </h2>
-              <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
-                2026 Modern SaaS Light Canvas with Dark Slate Sidebar active.
-              </p>
-            </div>
-          )}
         </div>
       </div>
       </ScrollReveal>

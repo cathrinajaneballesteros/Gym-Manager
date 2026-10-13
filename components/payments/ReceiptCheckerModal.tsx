@@ -2,25 +2,20 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  FileCheck,
   CheckCircle,
   XCircle,
   AlertTriangle,
   Printer,
   Copy,
-  ShieldCheck,
   Receipt,
   Clock,
-  User,
-  CreditCard,
-  Hash,
-  ExternalLink,
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
-import { Payment, UserProfile } from '@/types/database';
-import { showToast, showConfirm, showError, showAlert } from '@/lib/ui/swal';
-import { escapeHtml } from '@/lib/ui/escape';
+import { printReceipt } from '@/lib/export/receipt-print';
+import { Payment } from '@/types/database';
+import { showToast, showError } from '@/lib/ui/swal';
+import { getPaymentMemberName } from '@/lib/ui/format';
 
 interface ReceiptCheckerModalProps {
   isOpen: boolean;
@@ -57,37 +52,39 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   const profile = DBService.getProfile();
   const currency = profile.currency || '₱';
   const member = payment.member || (payment.member_id ? DBService.getMemberById(payment.member_id) : undefined);
-  const memberName = member ? `${member.first_name} ${member.last_name}` : 'Direct Guest';
+  const memberName = getPaymentMemberName({ ...payment, member });
   const planName = payment.plan?.name || 'Membership Plan';
 
   // Automated Fraud / Sanity Verification Checks
-  const ref = payment.reference_number || '';
+  // GCash reference numbers are 13 digits; spaces are ignored so "1012 345 678901" matches "1012345678901".
+  const normalizeRef = (value?: string) => (value || '').replace(/\s+/g, '');
+  const ref = normalizeRef(payment.reference_number);
   const allPayments = DBService.getPayments();
   const duplicatePayments = ref
-    ? allPayments.filter((p) => p.id !== payment.id && p.reference_number?.trim() === ref.trim())
+    ? allPayments.filter((p) => p.id !== payment.id && normalizeRef(p.reference_number) === ref)
     : [];
   const isDuplicateRef = duplicatePayments.length > 0;
-  const isFormatValid = ref.length >= 6;
+  const isFormatValid = /^\d{13}$/.test(ref);
   const isAmountMatching = payment.plan ? payment.amount === payment.plan.price : true;
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (processingRef.current) return;
     processingRef.current = true;
     setIsProcessing(true);
     try {
-      DBService.verifyPaymentReceipt(payment.id, { notes: adminNotes });
+      await DBService.verifyPaymentReceipt(payment.id, { notes: adminNotes });
       showToast('Receipt verified and approved successfully!');
       onSuccess();
       onClose();
-    } catch (err: any) {
-      showError('Verification Failed', err.message);
+    } catch (err) {
+      showError('Verification Failed', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       processingRef.current = false;
       setIsProcessing(false);
     }
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!rejectReason.trim()) {
       showError('Rejection Reason Required', 'Please provide a clear reason for rejecting this receipt.');
       return;
@@ -97,12 +94,12 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
     processingRef.current = true;
     setIsProcessing(true);
     try {
-      DBService.rejectPaymentReceipt(payment.id, rejectReason.trim());
+      await DBService.rejectPaymentReceipt(payment.id, rejectReason.trim());
       showToast('Receipt marked as rejected');
       onSuccess();
       onClose();
-    } catch (err: any) {
-      showError('Rejection Failed', err.message);
+    } catch (err) {
+      showError('Rejection Failed', err instanceof Error ? err.message : 'Please try again.');
     } finally {
       processingRef.current = false;
       setIsProcessing(false);
@@ -110,7 +107,14 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    const opened = printReceipt({
+      payment: { ...payment, member },
+      gym: DBService.getGym(),
+      gymName: profile.gym_name || 'Gym',
+      currency,
+      validUntil: member?.end_date,
+    });
+    if (!opened) showError('Pop-up blocked', 'Allow pop-ups for this site to print the receipt.');
   };
 
   const copyRefNumber = () => {
@@ -211,7 +215,8 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
             Automated Checker Checklist
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
+          {/* Three across in the modal on wider screens, stacked on phones. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.65rem' }}>
             {/* Check 1: Ref format */}
             <div
               style={{
@@ -228,7 +233,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
                 <span>Ref Format</span>
               </div>
               <div style={{ color: '#64748b', marginTop: '0.2rem' }}>
-                {isFormatValid ? 'Valid ref length' : 'Short / missing ref'}
+                {isFormatValid ? '13-digit GCash ref' : ref ? 'Not 13 digits; double-check it' : 'No reference entered'}
               </div>
             </div>
 

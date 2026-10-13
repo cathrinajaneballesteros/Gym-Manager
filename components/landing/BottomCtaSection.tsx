@@ -10,13 +10,14 @@ export const BottomCtaSection: React.FC = () => {
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage and the URL are only readable in the browser
       setIsLoggedIn(sessionStorage.getItem('sgfm_authenticated') === 'true');
     }
   }, []);
   return (
     <section
       style={{
-        padding: '100px 0 120px',
+        padding: '64px 0 96px',
         backgroundColor: '#ffffff',
         position: 'relative',
         overflow: 'hidden',

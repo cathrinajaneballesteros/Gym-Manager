@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Montserrat } from 'next/font/google';
 import './globals.css';
 
@@ -13,6 +13,13 @@ export const metadata: Metadata = {
   title: 'Smart Gym Finance Manager | Cloud Financial SaaS',
   description:
     'Intelligent financial management platform for fitness centers with AI revenue forecasting, churn prediction, and expense leak detection.',
+};
+
+// Lets the bottom tab bar extend under the iPhone home bar, using safe-area padding to stay clear of it.
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({

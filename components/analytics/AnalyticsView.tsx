@@ -1,32 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Sparkles,
-  TrendingUp,
-  AlertTriangle,
-  UserX,
-  PhoneCall,
-  CheckCircle,
-  HelpCircle,
-  ArrowRight,
-  ShieldCheck,
-  Send,
-  PiggyBank,
-  Zap,
-  CheckCircle2,
-  DollarSign,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+import { Sparkles, PiggyBank, CheckCircle2 } from 'lucide-react';
 import { calculateRevenueForecast } from '@/lib/ai/forecasting';
 import { predictMemberChurn } from '@/lib/ai/churn-detector';
 import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
-import { RevenueForecastResult, ChurnPredictionResult, ExpenseLeakResult, CostSavingPlaybook } from '@/types/ai';
+import { RevenueForecastResult, ChurnPredictionResult, ChurnPredictionMember, ExpenseLeakResult } from '@/types/ai';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { UserProfile } from '@/types/database';
 import { showAlert, showToast, showError } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
+import { formatCompactAmount } from '@/lib/ui/format';
 import {
   ResponsiveContainer,
   LineChart,
@@ -48,12 +33,19 @@ export const AnalyticsView: React.FC = () => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isCostSavingAiLoading, setIsCostSavingAiLoading] = useState(false);
 
-  useEffect(() => {
+  const loadAnalytics = () => {
     setProfile(DBService.getProfile());
     setForecast(calculateRevenueForecast(false));
     setChurn(predictMemberChurn());
     setLeaks(detectExpenseLeaks());
+  };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
+    loadAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useGymDataRefresh(loadAnalytics);
 
   const handleGenerateAiBrief = async () => {
     setIsAiLoading(true);
@@ -71,8 +63,6 @@ export const AnalyticsView: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gymName: profile?.gym_name || 'IronPeak Fitness & Gym',
-          currency,
           totalRevenue: kpis.totalRevenue,
           totalExpenses: kpis.totalExpenses,
           netProfit: kpis.netProfit,
@@ -106,14 +96,14 @@ export const AnalyticsView: React.FC = () => {
         confirmButtonText: 'Done',
         confirmButtonColor: '#6366f1',
       });
-    } catch (err: any) {
-      showError('AI Generation Notice', err.message || 'Unable to generate brief at this time.');
+    } catch (err) {
+      showError('AI Generation Notice', err instanceof Error ? err.message : 'Unable to generate brief at this time.');
     } finally {
       setIsAiLoading(false);
     }
   };
 
-  const handleAiDraftMessage = async (member: any) => {
+  const handleAiDraftMessage = async (member: ChurnPredictionMember) => {
     try {
       showToast('Generating personalized message with Gemini...');
       const res = await fetch('/api/ai/narrative', {
@@ -124,7 +114,6 @@ export const AnalyticsView: React.FC = () => {
           memberName: member.memberName,
           daysInactive: member.daysSinceLastVisit,
           daysUntilExpiry: member.daysUntilExpiration,
-          gymName: profile?.gym_name || 'IronPeak Fitness',
         }),
       });
       const data = await res.json();
@@ -155,8 +144,8 @@ export const AnalyticsView: React.FC = () => {
           setContactedMemberId(member.memberId);
         }
       });
-    } catch (err: any) {
-      handleContactMember(member.memberId);
+    } catch {
+      handleContactMember(member);
     }
   };
 
@@ -177,8 +166,6 @@ export const AnalyticsView: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'cost-saving-plan',
-          gymName: profile?.gym_name || 'Fitness Center',
-          currency,
           totalExpenses: kpis.totalExpenses,
           potentialMonthlySavings: leaks?.potentialMonthlySavings || 0,
           potentialAnnualSavings: leaks?.potentialAnnualSavings || 0,
@@ -215,8 +202,8 @@ export const AnalyticsView: React.FC = () => {
         confirmButtonText: 'Adopt Plan',
         confirmButtonColor: '#059669',
       });
-    } catch (err: any) {
-      showError('AI Optimization Notice', err.message || 'Unable to generate cost-saving plan at this time.');
+    } catch (err) {
+      showError('AI Optimization Notice', err instanceof Error ? err.message : 'Unable to generate cost-saving plan at this time.');
     } finally {
       setIsCostSavingAiLoading(false);
     }
@@ -243,10 +230,20 @@ export const AnalyticsView: React.FC = () => {
           { month: 'Sep', historical: null, forecast: 0 },
         ];
 
-  const handleContactMember = (memberId: string) => {
-    setContactedMemberId(memberId);
-    showToast('Message copied to clipboard!');
-    setTimeout(() => setContactedMemberId(null), 3000);
+  const handleContactMember = async (member: ChurnPredictionMember) => {
+    const gymName = profile?.gym_name || 'our gym';
+    const message =
+      member.daysUntilExpiration < 0
+        ? `Hi ${member.memberName}, we miss you at ${gymName}! Your membership ended on ${member.expirationDate}. Come back and renew anytime.`
+        : `Hi ${member.memberName}, this is ${gymName}. Your membership ends on ${member.expirationDate}. Renew early so you don't miss a session!`;
+    try {
+      await navigator.clipboard.writeText(message);
+      setContactedMemberId(member.memberId);
+      showToast('Message copied to clipboard!');
+      setTimeout(() => setContactedMemberId(null), 3000);
+    } catch {
+      showError('Copy Failed', 'Could not copy the message. Please check your browser permissions.');
+    }
   };
 
   const handleViewForecastDetails = () => {
@@ -286,10 +283,7 @@ export const AnalyticsView: React.FC = () => {
         ? Math.max(...forecastPoints.map((p) => p.upperConfidence))
         : Math.round(forecast.forecastedNextMonthRevenue * 1.1);
 
-    const formatVal = (val: number) => {
-      if (val >= 1000) return `${currency}${(val / 1000).toFixed(0)}k`;
-      return `${currency}${val.toLocaleString()}`;
-    };
+    const formatVal = (val: number) => formatCompactAmount(val, currency);
 
     showAlert({
       icon: 'info',
@@ -366,16 +360,18 @@ export const AnalyticsView: React.FC = () => {
 
       {/* 2. Apple macOS/iOS Segmented Navigation Controls */}
       <ScrollReveal delay={40}>
-        <div style={{ display: 'inline-flex', backgroundColor: 'rgba(118, 118, 128, 0.12)', padding: '3px', borderRadius: '10px', gap: '2px', width: 'fit-content' }}>
-          {[
+        <div style={{ display: 'inline-flex', backgroundColor: 'rgba(118, 118, 128, 0.12)', padding: '3px', borderRadius: '10px', gap: '2px', width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
+          {([
             { key: 'forecast', label: 'Revenue Forecast' },
             { key: 'churn', label: 'Churn Prediction' },
-            { key: 'leaks', label: 'Cost Optimization & Leaks' },
-          ].map((tab) => (
+            { key: 'leaks', label: 'Spending & Savings' },
+          ] as const).map((tab) => (
             <button
               key={tab.key}
-              onClick={() => setActiveTab(tab.key as any)}
+              onClick={() => setActiveTab(tab.key)}
               style={{
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 padding: '0.4rem 1.15rem',
                 borderRadius: '8px',
                 fontSize: '0.825rem',
@@ -469,7 +465,7 @@ export const AnalyticsView: React.FC = () => {
                   <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `${currency}${(val / 1000).toFixed(0)}k`} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
-                    formatter={(val: any) => [`${currency}${Number(val).toLocaleString()}`, '']}
+                    formatter={(val) => [`${currency}${Number(val).toLocaleString()}`, '']}
                   />
                   <Line type="monotone" dataKey="historical" stroke="#0284c7" strokeWidth={2.5} dot={{ r: 3, fill: '#0284c7' }} />
                   <Line type="monotone" dataKey="forecast" stroke="#0284c7" strokeWidth={2.5} strokeDasharray="4 4" dot={{ r: 4, fill: '#ffffff', stroke: '#0284c7', strokeWidth: 2 }} />
@@ -529,6 +525,7 @@ export const AnalyticsView: React.FC = () => {
                   <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Risk Level</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Days Inactive</th>
+                  <th style={{ padding: '0.9rem 1.25rem' }}>Visits (30 days)</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Primary Factor</th>
                   <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Outreach</th>
                 </tr>
@@ -536,7 +533,7 @@ export const AnalyticsView: React.FC = () => {
               <tbody>
                 {churn.highRiskMembers.length === 0 ? (
                   <tr>
-                    <td colSpan={5} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#94a3b8' }}>
+                    <td colSpan={6} style={{ padding: '3rem 1.5rem', textAlign: 'center', color: '#94a3b8' }}>
                       No members at risk. All active memberships are in good standing or no members are registered yet.
                     </td>
                   </tr>
@@ -551,6 +548,9 @@ export const AnalyticsView: React.FC = () => {
                       </td>
                       <td style={{ padding: '1rem 1.25rem', color: '#ef4444', fontWeight: 600 }}>
                         {m.daysSinceLastVisit} days
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', color: '#334155' }}>
+                        {m.visitsLast30Days}
                       </td>
                       <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
                         {m.factors[0] || 'Prolonged attendance drop'}
@@ -567,7 +567,7 @@ export const AnalyticsView: React.FC = () => {
                             <span>AI Draft</span>
                           </button>
                           <button
-                            onClick={() => handleContactMember(m.memberId)}
+                            onClick={() => handleContactMember(m)}
                             className="btn btn-secondary btn-sm"
                             style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
                           >
@@ -585,7 +585,7 @@ export const AnalyticsView: React.FC = () => {
         </ScrollReveal>
       )}
 
-      {/* 5. Tab: Cost Optimization & Leaks */}
+      {/* 5. Tab: Spending & Savings (spending checks + money-saving tips) */}
       {activeTab === 'leaks' && (
         <ScrollReveal delay={70}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -643,7 +643,7 @@ export const AnalyticsView: React.FC = () => {
               </div>
             </div>
 
-            {/* B. Spending Status / Leaks (Compact) */}
+            {/* B. Spending checks: categories higher than the gym's usual months */}
             {leaks.anomalies.length === 0 ? (
               <div
                 style={{
@@ -660,13 +660,19 @@ export const AnalyticsView: React.FC = () => {
               >
                 <CheckCircle2 size={17} style={{ color: '#16a34a', flexShrink: 0 }} />
                 <span>
-                  <strong>All {leaks.totalCategoriesAnalyzed} expense categories</strong> are tracking within normal limits. No spending leaks detected.
+                  {leaks.hasEnoughHistory ? (
+                    <>
+                      <strong>All {leaks.totalCategoriesAnalyzed} expense categories</strong> are in line with your usual months.
+                    </>
+                  ) : (
+                    <>Spending checks start once you have 2 months of expenses recorded, so there&apos;s something to compare against.</>
+                  )}
                 </span>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                 <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-                  Spending Leaks & Overages
+                  Higher Than Usual
                 </h3>
                 {leaks.anomalies.map((leak) => (
                   <div
@@ -685,11 +691,11 @@ export const AnalyticsView: React.FC = () => {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
                         <span className={leak.severity === 'critical' ? 'badge badge-danger' : 'badge badge-warning'}>
-                          {leak.severity.toUpperCase()} LEAK
+                          {leak.isOneOff ? 'ONE-TIME' : leak.severity === 'critical' ? 'MUCH HIGHER' : 'HIGHER'}
                         </span>
                         <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>{leak.category}</strong>
                         <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
-                          +{leak.percentageIncrease}% vs Baseline
+                          +{leak.percentageIncrease}% vs usual ({currency}{leak.historicalAverage.toLocaleString()})
                         </span>
                       </div>
                       <p style={{ fontSize: '0.8rem', color: '#475569', margin: 0 }}>
@@ -705,7 +711,7 @@ export const AnalyticsView: React.FC = () => {
                         {currency}{leak.currentAmount.toLocaleString()}
                       </div>
                       <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>
-                        Recoverable: +{currency}{leak.differenceAmount.toLocaleString()}
+                        {leak.isOneOff ? 'One-time purchase' : `+${currency}${leak.differenceAmount.toLocaleString()} over usual`}
                       </div>
                     </div>
                   </div>
@@ -717,8 +723,13 @@ export const AnalyticsView: React.FC = () => {
             <div>
               <div style={{ marginBottom: '0.75rem' }}>
                 <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                  Practical Cost-Saving Recommendations (Open Gym)
+                  Money-Saving Tips
                 </h3>
+                {leaks.savingOpportunities.length === 0 && (
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.35rem' }}>
+                    Tips appear once you record utilities, supplies or maintenance expenses; savings are sized to what you actually spend.
+                  </p>
+                )}
               </div>
 
               <div

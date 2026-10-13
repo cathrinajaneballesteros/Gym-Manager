@@ -1,18 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  TrendingUp,
-  AlertTriangle,
-  UserX,
-  Sparkles,
-  ArrowUpRight,
-  ShieldAlert,
-  CheckCircle,
-  Activity,
-  Layers,
-  ArrowRight,
-} from 'lucide-react';
+import { AlertTriangle, CheckCircle } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 export const InteractiveProductShowcase: React.FC = () => {
@@ -83,14 +72,14 @@ export const InteractiveProductShowcase: React.FC = () => {
                 overflowX: 'auto',
               }}
             >
-              {[
+              {([
                 { id: 'forecast', label: '01 Predictive Cashflow' },
                 { id: 'churn', label: '02 Churn Radar' },
                 { id: 'leaks', label: '03 Expense Sentinel' },
-              ].map((tab) => (
+              ] as const).map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id)}
                   style={{
                     padding: '0.55rem 1.35rem',
                     borderRadius: '9999px',
@@ -115,7 +104,7 @@ export const InteractiveProductShowcase: React.FC = () => {
         {/* Dynamic Interactive Glass Panel Stage */}
         <ScrollReveal delay={120} direction="up">
           <div
-            className="apple-glass-card"
+            className="apple-glass-card showcase-panel"
             style={{
               padding: '2.5rem',
               backgroundColor: 'rgba(245, 245, 247, 0.65)',
@@ -137,7 +126,7 @@ export const InteractiveProductShowcase: React.FC = () => {
                     Linear Regression with Seasonal Modifiers
                   </div>
                   <h3 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#1d1d1f', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: '1rem' }}>
-                    Forecast next quarter revenue with 98.4% precision.
+                    Forecast the next three months of revenue.
                   </h3>
                   <p style={{ color: '#424245', fontSize: '1rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
                     Never get surprised by seasonal gym dips. SGFM aggregates active plan expiries, new sign-up velocity, and historical retention curves to simulate your next 90 days of cash intake.
@@ -157,6 +146,7 @@ export const InteractiveProductShowcase: React.FC = () => {
 
                 {/* Simulated Graphic Card */}
                 <div
+                  className="showcase-graphic"
                   style={{
                     backgroundColor: '#ffffff',
                     borderRadius: '20px',
@@ -358,6 +348,14 @@ export const InteractiveProductShowcase: React.FC = () => {
           .showcase-grid {
             grid-template-columns: 1fr !important;
             gap: 2rem !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .showcase-panel {
+            padding: 1.25rem !important;
+          }
+          .showcase-graphic {
+            padding: 1.1rem !important;
           }
         }
       `}</style>

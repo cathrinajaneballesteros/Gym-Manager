@@ -5,28 +5,26 @@ import {
   Receipt,
   Search,
   Plus,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   Trash2,
   Edit,
   ArrowDownRight,
   ArrowUpRight,
-  TrendingDown,
   History,
-  Layers,
-  BarChart3,
   Download,
-  CalendarDays,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { Expense, UserProfile } from '@/types/database';
 import { CategoryExpenseChart } from '@/components/charts/CategoryExpenseChart';
 import { ExpenseModal } from './ExpenseModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { showConfirm, showToast } from '@/lib/ui/swal';
-import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
+import { showConfirm, showError, showToast } from '@/lib/ui/swal';
+import { getRecentMonthKeys, getTodayKey, formatDisplayDate } from '@/lib/ui/date';
+import { downloadCSV } from '@/lib/ui/csv';
 import { escapeHtml } from '@/lib/ui/escape';
+import { getPageWindow } from '@/lib/ui/pagination';
 
 export const ExpenseList: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -46,7 +44,10 @@ export const ExpenseList: React.FC = () => {
     setProfile(DBService.getProfile());
   };
 
+  useGymDataRefresh(refreshData);
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     refreshData();
   }, []);
 
@@ -83,18 +84,22 @@ export const ExpenseList: React.FC = () => {
       } else if (timeframeFilter === 'last-month') {
         matchesTime = (e.expense_date || '').startsWith(lastMonthKey);
       } else if (timeframeFilter === 'last-3-months') {
-        const last3Keys = historyMonths.slice(0, 3).map((m) => m.monthKey);
-        matchesTime = last3Keys.some((k) => (e.expense_date || '').startsWith(k));
+        matchesTime = getRecentMonthKeys(3).includes((e.expense_date || '').slice(0, 7));
       } else if (timeframeFilter === 'last-6-months') {
-        const last6Keys = historyMonths.slice(0, 6).map((m) => m.monthKey);
-        matchesTime = last6Keys.some((k) => (e.expense_date || '').startsWith(k));
+        matchesTime = getRecentMonthKeys(6).includes((e.expense_date || '').slice(0, 7));
       } else if (timeframeFilter !== 'all') {
         matchesTime = (e.expense_date || '').startsWith(timeframeFilter);
       }
 
       return matchesSearch && matchesCategory && matchesMethod && matchesTime;
-    });
-  }, [expenses, searchQuery, categoryFilter, methodFilter, timeframeFilter, thisMonthKey, lastMonthKey, historyMonths]);
+    })
+    // Newest expense date first; same-day entries by when they were added.
+    .sort(
+      (a, b) =>
+        (b.expense_date || '').localeCompare(a.expense_date || '') ||
+        (b.created_at || '').localeCompare(a.created_at || '')
+    );
+  }, [expenses, searchQuery, categoryFilter, methodFilter, timeframeFilter, thisMonthKey, lastMonthKey]);
 
   const periodExpensesTotal = filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
   const allTimeExpensesTotal = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -123,29 +128,23 @@ export const ExpenseList: React.FC = () => {
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
   const totalPages = Math.ceil(filteredExpenses.length / pageSize) || 1;
+  // After a delete the last page can disappear; go back to the last page that still exists.
+  if (currentPage > totalPages) setCurrentPage(totalPages);
   const paginated = filteredExpenses.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const exportHistoricalCSV = () => {
     const headers = ['ID', 'Date', 'Category', 'Title', 'Amount', 'Payment Method', 'Description'];
-    const rows = expenses.map((e) => [
+    const rows = filteredExpenses.map((e) => [
       e.id,
       e.expense_date,
       e.category,
-      `"${e.title.replace(/"/g, '""')}"`,
-      e.amount,
+      e.title,
+      Number(e.amount),
       e.payment_method,
-      `"${(e.description || '').replace(/"/g, '""')}"`,
+      e.description,
     ]);
-
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Gym_Expenses_History_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    showToast('Historical expenses CSV exported successfully!');
+    downloadCSV(`Gym_Expenses_${getTodayKey()}.csv`, [headers, ...rows]);
+    showToast('Expenses CSV exported successfully!');
   };
 
   const handleDelete = async (id: string, title: string) => {
@@ -156,18 +155,14 @@ export const ExpenseList: React.FC = () => {
       '#ef4444'
     );
     if (confirmed) {
-      DBService.deleteExpense(id);
+      try {
+        await DBService.deleteExpense(id);
+      } catch (err) {
+        showError('Delete Failed', err instanceof Error ? err.message : 'Could not delete the expense.');
+        return;
+      }
       refreshData();
       showToast(`Expense "${escapeHtml(title)}" deleted`);
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch {
-      return dateStr;
     }
   };
 
@@ -229,7 +224,7 @@ export const ExpenseList: React.FC = () => {
                 const diff = thisMonthExpenses - lastMonthExpenses;
                 const isPos = diff >= 0;
                 return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: isPos ? '#059669' : '#ef4444', fontWeight: 600 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: isPos ? '#ef4444' : '#059669', fontWeight: 600 }}>
                     {isPos ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                     <span>
                       {isPos ? '+' : '-'}{Math.abs(Math.round((diff / lastMonthExpenses) * 100))}% vs last month ({currency}{lastMonthExpenses.toLocaleString()})
@@ -239,7 +234,7 @@ export const ExpenseList: React.FC = () => {
               })()
             ) : (
               <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                First month on record
+                No expenses last month
               </div>
             )}
           </div>
@@ -253,7 +248,11 @@ export const ExpenseList: React.FC = () => {
               -{currency}{historicalSummary.overallMonthlyAverage.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-              Average across {historicalSummary.monthlyTotals.length} recorded months
+              {(() => {
+                // Same months the average is divided by: months in the window that have expenses.
+                const recorded = historicalSummary.monthlyTotals.filter((m) => m.total > 0).length;
+                return `Average across ${recorded} recorded ${recorded === 1 ? 'month' : 'months'}`;
+              })()}
             </div>
           </div>
         </div>
@@ -333,7 +332,7 @@ export const ExpenseList: React.FC = () => {
             }}
           >
             <Download size={14} />
-            <span>Export Historical Ledger CSV</span>
+            <span>Export CSV</span>
           </button>
         </div>
       </ScrollReveal>
@@ -347,7 +346,7 @@ export const ExpenseList: React.FC = () => {
               <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem' }}>
                 Monthly Historical Trajectory (Last 6 Months)
               </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, historicalSummary.monthlyTotals.length)}, 1fr)`, gap: '0.85rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.85rem' }}>
                 {historicalSummary.monthlyTotals.map((m) => (
                   <div
                     key={m.monthKey}
@@ -615,7 +614,7 @@ export const ExpenseList: React.FC = () => {
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
                     <td style={{ padding: '1rem 1.5rem', color: '#64748b' }}>
-                      {formatDate(exp.expense_date)}
+                      {formatDisplayDate(exp.expense_date)}
                     </td>
 
                     <td style={{ padding: '1rem 1.25rem' }}>
@@ -723,7 +722,7 @@ export const ExpenseList: React.FC = () => {
                 <ChevronLeft size={14} />
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 5).map((page) => (
+              {getPageWindow(currentPage, totalPages).map((page) => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}

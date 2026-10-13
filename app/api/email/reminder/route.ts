@@ -1,14 +1,36 @@
 import { NextResponse } from 'next/server';
+import { cleanText, requireGymMember } from '@/lib/supabase/require-user';
 import { ResendService } from '@/lib/email/resend-service';
 
 export async function POST(req: Request) {
+  const access = await requireGymMember('email', 20, '1 hour');
+  if (access.error) return access.error;
+  const { supabase, gym } = access;
+
   try {
     const body = await req.json();
-    const { to, memberName, gymName, amount, planName, dueDate, customNote } = body;
-
-    if (!to) {
-      return NextResponse.json({ error: 'Recipient email is required' }, { status: 400 });
+    const memberId = cleanText(body.memberId, 64);
+    if (!memberId) {
+      return NextResponse.json({ error: 'Choose a member to remind.' }, { status: 400 });
     }
+
+    // Read through the signed-in client, so only this gym's members are found.
+    const { data: member } = await supabase
+      .from('members')
+      .select('first_name, last_name, email')
+      .eq('id', memberId)
+      .maybeSingle();
+    if (!member) {
+      return NextResponse.json({ error: 'Member not found.' }, { status: 404 });
+    }
+    if (!member.email) {
+      return NextResponse.json({ error: 'This member has no email address on file.' }, { status: 400 });
+    }
+
+    const memberName = `${member.first_name} ${member.last_name}`.trim() || 'Valued Member';
+    const amount = cleanText(body.amount, 40) || `${gym.currency}0.00`;
+    const planName = cleanText(body.planName, 100) || 'Gym Membership';
+    const dueDate = cleanText(body.dueDate, 10) || new Date().toISOString().split('T')[0];
 
     if (!ResendService.isConfigured()) {
       // Return simulated success with note if key is not configured,
@@ -17,26 +39,26 @@ export async function POST(req: Request) {
         success: true,
         simulated: true,
         message: 'Resend API key not configured in .env.local — Reminder email logged and simulated successfully.',
-        details: { to, memberName, amount, dueDate, planName },
+        details: { to: member.email, memberName, amount, dueDate, planName },
       });
     }
 
     const result = await ResendService.sendPaymentReminder({
-      to,
-      memberName: memberName || 'Valued Member',
-      gymName: gymName || 'IronPeak Fitness & Gym',
-      amount: amount || '₱0.00',
-      planName: planName || 'Gym Membership',
-      dueDate: dueDate || new Date().toISOString().split('T')[0],
-      customNote,
+      to: member.email,
+      memberName,
+      gymName: gym.name,
+      amount,
+      planName,
+      dueDate,
+      customNote: cleanText(body.customNote, 300) || undefined,
+      gymPhone: gym.phone || undefined,
+      gymAddress: gym.address || undefined,
+      gymEmail: gym.email || undefined,
     });
 
     return NextResponse.json({ success: true, simulated: false, result });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error sending reminder email via Resend:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to send payment reminder email' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to send the reminder email. Please try again.' }, { status: 500 });
   }
 }

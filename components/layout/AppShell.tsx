@@ -1,19 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import {
-  LayoutDashboard,
-  Users,
-  CreditCard,
-  Receipt,
-  Settings,
-  Sparkles,
-  Calendar,
-} from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
+import { LayoutDashboard, Users, CreditCard, Calendar, LogIn, Menu } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { DBService } from '@/lib/data/db-service';
+import { STAFF_HOME, canOpen } from '@/lib/ui/roles';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -21,17 +15,94 @@ interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [ready, setReady] = useState(() => DBService.isLoaded());
+  const [loadError, setLoadError] = useState('');
   const pathname = usePathname();
+  const router = useRouter();
 
+  // Every page reads this gym's data, so load it before showing any of them.
+  useEffect(() => {
+    if (ready) return;
+    let cancelled = false;
+    DBService.load()
+      .then(() => !cancelled && setReady(true))
+      .catch((err: Error) => {
+        if (cancelled) return;
+        if (err.message === 'Not signed in') router.replace('/login?mode=signin');
+        else setLoadError(err.message || 'Could not load your gym data.');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, router]);
+
+  // Pick up changes made on other devices: when the tab comes back into view (at most every 30s) and every 2 minutes.
+  const [, setDataVersion] = useState(0);
+  useEffect(() => {
+    if (!ready) return;
+    let lastRefresh = Date.now();
+    const refresh = (minGapMs: number) => {
+      if (document.visibilityState !== 'visible' || Date.now() - lastRefresh < minGapMs) return;
+      lastRefresh = Date.now();
+      DBService.refresh();
+    };
+    const onFocus = () => refresh(30_000);
+    const timer = window.setInterval(() => refresh(0), 120_000);
+    // Re-check redirects (e.g. a removed staff member) after each refresh.
+    const onData = () => setDataVersion((v) => v + 1);
+    document.addEventListener('visibilitychange', onFocus);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('sgfm_data_updated', onData);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', onFocus);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('sgfm_data_updated', onData);
+    };
+  }, [ready]);
+
+  // A gym that isn't set up goes to onboarding; staff on an owner-only page go to their home page.
+  const redirectTo = !ready
+    ? null
+    : DBService.needsOnboarding()
+      ? '/onboarding'
+      : !canOpen(DBService.getRole(), pathname)
+        ? STAFF_HOME
+        : null;
+
+  useEffect(() => {
+    if (redirectTo) router.replace(redirectTo);
+  }, [redirectTo, router]);
+
+  if (!ready || redirectTo) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f7', padding: '1rem' }}>
+        {loadError ? (
+          <div style={{ textAlign: 'center', maxWidth: '360px' }}>
+            <p style={{ fontWeight: 600, color: '#1d1d1f', marginBottom: '0.5rem' }}>Couldn&apos;t load your gym data</p>
+            <p style={{ fontSize: '0.875rem', color: '#6e6e73', marginBottom: '1rem' }}>{loadError}</p>
+            <button className="btn btn-primary" onClick={() => window.location.reload()}>Try again</button>
+          </div>
+        ) : (
+          <p style={{ fontSize: '0.9rem', color: '#6e6e73' }}>Loading your gym…</p>
+        )}
+      </div>
+    );
+  }
+
+  // Four tabs fit a phone; everything else is under More, which opens the full menu.
+  const role = DBService.getRole();
   const mobileNavItems = [
-    { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    // Staff can't open the dashboard, so their home page (check-ins) takes its place.
+    role === 'staff'
+      ? { name: 'Check-in', href: STAFF_HOME, icon: LogIn }
+      : { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Members', href: '/members', icon: Users },
     { name: 'Payments', href: '/payments', icon: CreditCard },
     { name: 'Calendar', href: '/calendar', icon: Calendar },
-    { name: 'Expenses', href: '/expenses', icon: Receipt },
-    { name: 'AI', href: '/analytics', icon: Sparkles },
-    { name: 'Settings', href: '/settings', icon: Settings },
-  ];
+  ].filter((item) => canOpen(role, item.href));
+  const isTabActive = (href: string) => pathname === href || (href !== '/dashboard' && pathname.startsWith(href));
+  const moreActive = !mobileNavItems.some((item) => isTabActive(item.href));
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f7' }}>
@@ -72,7 +143,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       </div>
 
       {/* Main Content Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, paddingBottom: '75px' }} className="main-content-wrapper">
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }} className="main-content-wrapper">
         <Header onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
         <main style={{ flex: 1, padding: '2rem 2.25rem', overflowY: 'auto' }} className="main-content-inner">
           <div key={pathname} className="page-transition-content" style={{ maxWidth: '1320px', margin: '0 auto', width: '100%' }}>
@@ -81,11 +152,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         </main>
       </div>
 
-      {/* iPhone iOS Frosted Glass Tab Bar with Home Indicator */}
+      {/* iPhone iOS Frosted Glass Tab Bar */}
       <div className="ios-tab-bar-container">
         <nav className="ios-tab-bar">
           {mobileNavItems.map((item) => {
-            const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href));
+            const isActive = isTabActive(item.href);
             const Icon = item.icon;
 
             return (
@@ -99,9 +170,16 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
               </Link>
             );
           })}
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className={`ios-tab-item ${moreActive ? 'active' : ''}`}
+            aria-label="More pages"
+          >
+            <Menu size={19} color={moreActive ? '#34c759' : '#8e8e93'} strokeWidth={moreActive ? 2.2 : 1.9} />
+            <span>More</span>
+          </button>
         </nav>
-        {/* iOS Home Indicator Bar */}
-        <div className="ios-home-indicator" />
       </div>
 
       <style jsx global>{`
@@ -131,16 +209,23 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             -webkit-backdrop-filter: blur(25px);
             border-top: 0.5px solid rgba(0, 0, 0, 0.12);
             z-index: 40;
-            padding-bottom: 5px;
+            padding-bottom: env(safe-area-inset-bottom);
           }
           .ios-tab-bar {
             display: flex;
             height: 52px;
             align-items: center;
             justify-content: space-around;
-            padding: 0 0.5rem;
+            padding: 0 0.25rem;
           }
           .ios-tab-item {
+            flex: 1;
+            min-width: 0;
+            height: 100%;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -150,20 +235,18 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             font-weight: 500;
             color: #8e8e93;
             text-decoration: none;
-            padding: 4px 6px;
+            padding: 4px 2px;
             transition: color 0.12s ease;
+          }
+          .ios-tab-item span {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
           }
           .ios-tab-item.active {
             color: #34c759;
             font-weight: 600;
-          }
-          .ios-home-indicator {
-            width: 134px;
-            height: 4.5px;
-            background-color: #000000;
-            border-radius: 3px;
-            margin: 2px auto 4px;
-            opacity: 0.28;
           }
         }
 

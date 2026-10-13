@@ -30,6 +30,7 @@ export default function LoginPage() {
       const isAuth = sessionStorage.getItem('sgfm_authenticated') === 'true';
 
       if (urlMode === 'signin') {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage and the URL are only readable in the browser
         setMode('signin');
       } else if (urlMode === 'signup') {
         setMode('signup');
@@ -37,6 +38,12 @@ export default function LoginPage() {
         setMode('signin');
       } else {
         setMode('signup');
+      }
+
+      // Sent back here by /auth/callback when Google sign-in or an email confirmation link didn't work.
+      if (params.get('error') === 'auth_callback_failed') {
+        const reason = params.get('reason');
+        setError(`Sign-in didn't finish. Please try again.${reason ? ` (${reason})` : ''}`);
       }
     }
   }, []);
@@ -48,6 +55,11 @@ export default function LoginPage() {
 
     if (!email || !password) {
       setError('Please provide both email and password.');
+      setLoading(false);
+      return;
+    }
+    if (mode === 'signup' && !fullName.trim()) {
+      setError('Please enter your full name.');
       setLoading(false);
       return;
     }
@@ -64,35 +76,8 @@ export default function LoginPage() {
         }
 
         if (data.user) {
-          // Sync profile if available
-          try {
-            const { data: prof } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', data.user.id)
-              .single();
-
-            if (prof) {
-              DBService.updateProfile({
-                id: prof.id,
-                email: prof.email,
-                full_name: prof.full_name || 'Gym Administrator',
-                gym_name: prof.gym_name || 'My Fitness Gym',
-                currency: prof.currency || '₱',
-                phone: prof.phone || '',
-              });
-            } else {
-              DBService.updateProfile({
-                id: data.user.id,
-                email: data.user.email || '',
-                full_name: 'Gym Administrator',
-                gym_name: 'My Fitness Gym',
-              });
-            }
-          } catch (pErr) {
-            console.warn('Profile fetch note:', pErr);
-          }
-
+          // Drop anything cached from an account that used this browser before.
+          DBService.clear();
           if (typeof window !== 'undefined') {
             sessionStorage.setItem('sgfm_authenticated', 'true');
           }
@@ -104,9 +89,12 @@ export default function LoginPage() {
           email: email.trim(),
           password,
           options: {
+            // The confirmation link finishes signing them in through the app, not Supabase's default page.
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
             data: {
-              full_name: fullName.trim() || 'Gym Administrator',
-              gym_name: gymName.trim() || 'My Fitness Gym',
+              full_name: fullName.trim(),
+              // Only used to prefill onboarding; invited staff leave it blank.
+              gym_name: gymName.trim() || undefined,
             },
           },
         });
@@ -116,36 +104,17 @@ export default function LoginPage() {
         }
 
         if (data.user) {
-          // Create or link profile in Supabase table
-          try {
-            await supabase.from('profiles').upsert({
-              id: data.user.id,
-              email: data.user.email || email.trim(),
-              full_name: fullName.trim() || 'Gym Administrator',
-              gym_name: gymName.trim() || 'My Fitness Gym',
-              currency: '₱',
-              role: 'admin',
-            });
-
-            DBService.updateProfile({
-              id: data.user.id,
-              email: data.user.email || email.trim(),
-              full_name: fullName.trim() || 'Gym Administrator',
-              gym_name: gymName.trim() || 'My Fitness Gym',
-              currency: '₱',
-            });
-          } catch (pErr) {
-            console.warn('Profile setup note:', pErr);
-          }
-
-          DBService.recordAudit({
-            action: 'auth.signup',
-            entity_type: 'auth',
-            entity_label: data.user.email || email.trim() || 'Unknown user',
-          });
+          // The signup trigger creates the profile from the metadata above; the app fills in any gap on first load.
+          DBService.clear();
 
           // If session is already created (auto-confirm enabled in Supabase)
           if (data.session) {
+            // Only a signed-in account can write to its audit log.
+            DBService.recordAudit({
+              action: 'auth.signup',
+              entity_type: 'auth',
+              entity_label: data.user.email || email.trim() || 'Unknown user',
+            });
             if (typeof window !== 'undefined') {
               sessionStorage.setItem('sgfm_authenticated', 'true');
             }
@@ -173,8 +142,8 @@ export default function LoginPage() {
           setMode('signin');
         }
       }
-    } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please verify your credentials.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Authentication failed. Please verify your credentials.');
     } finally {
       setLoading(false);
     }
@@ -195,8 +164,8 @@ export default function LoginPage() {
         },
       });
       if (oAuthError) throw oAuthError;
-    } catch (err: any) {
-      setError(err.message || 'Google authentication failed.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google authentication failed.');
       setLoading(false);
     }
   };
@@ -236,6 +205,7 @@ export default function LoginPage() {
 
       {/* Top Back-to-Home Nav */}
       <div
+        className="login-back-link"
         style={{
           position: 'absolute',
           top: '1.75rem',
@@ -269,7 +239,7 @@ export default function LoginPage() {
 
       {/* Centered Card */}
       <div
-        className="apple-glass-card"
+        className="apple-glass-card login-card"
         style={{
           width: '100%',
           maxWidth: '430px',
@@ -287,8 +257,8 @@ export default function LoginPage() {
         {/* Brand Icon & Heading */}
         <div style={{ textAlign: 'center', marginBottom: '1.75rem' }}>
           <img
-            src="/logo.png"
-            alt="Smart Gym Logo"
+            src="/logo.svg"
+            alt="Smart Gym Finance Manager"
             width={48}
             height={48}
             style={{
@@ -427,6 +397,7 @@ export default function LoginPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="e.g. John Doe"
+                    maxLength={80}
                     required
                     style={{
                       width: '100%',
@@ -452,7 +423,8 @@ export default function LoginPage() {
                     marginBottom: '0.45rem',
                   }}
                 >
-                  Gym / Fitness Center Name
+                  Gym / Fitness Center Name{' '}
+                  <span style={{ fontWeight: 400, color: '#86868b' }}>(leave blank if you were invited as staff)</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <div
@@ -474,7 +446,6 @@ export default function LoginPage() {
                     value={gymName}
                     onChange={(e) => setGymName(e.target.value)}
                     placeholder="e.g. IronPeak Fitness Club"
-                    required
                     style={{
                       width: '100%',
                       paddingLeft: '2.4rem',
@@ -613,7 +584,8 @@ export default function LoginPage() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  padding: 0,
+                  padding: '12px',
+                  marginRight: '-12px',
                 }}
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -734,6 +706,20 @@ export default function LoginPage() {
       >
         <span>© 2026 Smart Gym Finance Manager. All rights reserved.</span>
       </div>
+
+      <style jsx>{`
+        @media (max-width: 640px) {
+          /* In the page flow above the card, so it can't sit on top of it. */
+          .login-back-link {
+            position: static !important;
+            align-self: flex-start;
+            margin-bottom: 1rem;
+          }
+          .login-card {
+            padding: 1.75rem 1.25rem !important;
+          }
+        }
+      `}</style>
     </div>
   );
 }

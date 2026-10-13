@@ -1,7 +1,19 @@
 import { NextResponse } from 'next/server';
+import { cleanText, requireGymMember } from '@/lib/supabase/require-user';
 import { GeminiService, ExecutiveReportRequest } from '@/lib/ai/gemini-service';
 
+const toNumber = (value: unknown) => Number(value) || 0;
+
 export async function POST(req: Request) {
+  const access = await requireGymMember('ai', 30, '1 hour');
+  if (access.error) return access.error;
+  const { role, gym } = access;
+
+  // Only Analytics asks the AI, and Analytics is owner-only.
+  if (role !== 'owner') {
+    return NextResponse.json({ error: 'Only the gym owner can use AI insights.' }, { status: 403 });
+  }
+
   try {
     if (!GeminiService.isConfigured()) {
       return NextResponse.json(
@@ -17,51 +29,53 @@ export async function POST(req: Request) {
     const action = body.action || 'executive-report';
 
     if (action === 'retention-message') {
-      const { memberName, daysInactive, daysUntilExpiry, gymName } = body;
       const message = await GeminiService.generateRetentionMessage(
-        memberName || 'Valued Member',
-        Number(daysInactive) || 14,
-        Number(daysUntilExpiry) || 7,
-        gymName || 'IronPeak Fitness'
+        cleanText(body.memberName, 80) || 'Valued Member',
+        toNumber(body.daysInactive) || 14,
+        toNumber(body.daysUntilExpiry) || 7,
+        gym.name
       );
       return NextResponse.json({ success: true, message });
     }
 
     if (action === 'cost-saving-plan') {
+      const anomalies = (Array.isArray(body.anomalies) ? body.anomalies : []).slice(0, 10).map(
+        (a: Record<string, unknown>) => ({
+          category: cleanText(a?.category, 60) || 'Other',
+          currentAmount: toNumber(a?.currentAmount),
+          baseline: toNumber(a?.baseline),
+          difference: toNumber(a?.difference),
+        })
+      );
       const plan = await GeminiService.generateCostSavingPlan({
-        gymName: body.gymName,
-        currency: body.currency,
-        totalExpenses: Number(body.totalExpenses) || 0,
-        potentialMonthlySavings: Number(body.potentialMonthlySavings) || 0,
-        potentialAnnualSavings: Number(body.potentialAnnualSavings) || 0,
-        topExpenseCategory: body.topExpenseCategory,
-        anomalies: body.anomalies || [],
+        gymName: gym.name,
+        currency: gym.currency,
+        totalExpenses: toNumber(body.totalExpenses),
+        potentialMonthlySavings: toNumber(body.potentialMonthlySavings),
+        potentialAnnualSavings: toNumber(body.potentialAnnualSavings),
+        topExpenseCategory: cleanText(body.topExpenseCategory, 60) || undefined,
+        anomalies,
       });
       return NextResponse.json({ success: true, report: plan });
     }
 
     // Default: Executive Financial Report
     const stats: ExecutiveReportRequest = {
-      gymName: body.gymName,
-      currency: body.currency,
-      totalRevenue: Number(body.totalRevenue) || 0,
-      totalExpenses: Number(body.totalExpenses) || 0,
-      netProfit: Number(body.netProfit) || 0,
-      profitMargin: Number(body.profitMargin) || 0,
-      activeMembers: Number(body.activeMembers) || 0,
-      churnRiskCount: Number(body.churnRiskCount) || 0,
-      topExpenseCategory: body.topExpenseCategory,
+      gymName: gym.name,
+      currency: gym.currency,
+      totalRevenue: toNumber(body.totalRevenue),
+      totalExpenses: toNumber(body.totalExpenses),
+      netProfit: toNumber(body.netProfit),
+      profitMargin: toNumber(body.profitMargin),
+      activeMembers: toNumber(body.activeMembers),
+      churnRiskCount: toNumber(body.churnRiskCount),
+      topExpenseCategory: cleanText(body.topExpenseCategory, 60) || undefined,
     };
 
     const report = await GeminiService.generateExecutiveReport(stats);
     return NextResponse.json({ success: true, report });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error generating AI narrative:', error);
-    return NextResponse.json(
-      {
-        error: error.message || 'Failed to generate AI insights',
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to generate AI insights. Please try again.' }, { status: 500 });
   }
 }

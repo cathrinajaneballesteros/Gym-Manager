@@ -7,8 +7,6 @@ import {
   Lock,
   Database,
   CreditCard,
-  Check,
-  Shield,
   Zap,
 } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
@@ -288,6 +286,13 @@ export const BentoFeatures: React.FC = () => {
           }
           .payment-pills-grid {
             grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .bento-span-8,
+          .bento-span-4,
+          .bento-span-6 {
+            padding: 1.25rem !important;
           }
         }
       `}</style>

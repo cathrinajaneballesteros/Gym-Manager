@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import {
   CreditCard,
   Search,
@@ -9,19 +8,21 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
-  MoreVertical,
-  Printer,
   FileCheck,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { Payment, UserProfile, Member } from '@/types/database';
 import { PaymentModal } from './PaymentModal';
+import { WalkInModal } from './WalkInModal';
 import { ReceiptCheckerModal } from './ReceiptCheckerModal';
 import { PaymentReminderModal } from './PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { showSuccess, showToast, showConfirm } from '@/lib/ui/swal';
-import { getCurrentMonthRangeLabel } from '@/lib/ui/date';
-import { Bell, CheckCircle2, Clock, AlertTriangle, FileText, Edit } from 'lucide-react';
+import { showToast, showConfirm, showError } from '@/lib/ui/swal';
+import { getCurrentMonthRangeLabel, formatDisplayDate } from '@/lib/ui/date';
+import { getPaymentMemberName } from '@/lib/ui/format';
+import { Bell, CheckCircle2, Clock, AlertTriangle, Edit, UserPlus, Trash2 } from 'lucide-react';
+import { getPageWindow } from '@/lib/ui/pagination';
 
 export const PaymentList: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -34,9 +35,13 @@ export const PaymentList: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  // Walk-ins have no member, so they use their own form (new: null with the modal open; edit: the payment).
+  const [isWalkInOpen, setIsWalkInOpen] = useState(false);
+  const [editingWalkIn, setEditingWalkIn] = useState<Payment | null>(null);
   const [checkingPayment, setCheckingPayment] = useState<Payment | null>(null);
   const [remindingPayment, setRemindingPayment] = useState<Payment | null>(null);
   const pageSize = 8;
+  const isOwner = DBService.isOwner();
 
   const refreshData = () => {
     setPayments(DBService.getPayments());
@@ -44,7 +49,10 @@ export const PaymentList: React.FC = () => {
     setProfile(DBService.getProfile());
   };
 
+  useGymDataRefresh(refreshData);
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     refreshData();
   }, []);
 
@@ -61,7 +69,7 @@ export const PaymentList: React.FC = () => {
 
   const filteredPayments = useMemo(() => {
     return payments.filter((p) => {
-      const memberName = p.member ? `${p.member.first_name} ${p.member.last_name}` : '';
+      const memberName = getPaymentMemberName(p);
       const matchesSearch =
         memberName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (p.reference_number || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -77,19 +85,12 @@ export const PaymentList: React.FC = () => {
   }, [payments, searchQuery, memberFilter, statusFilter, receiptFilter]);
 
   const totalPages = Math.ceil(filteredPayments.length / pageSize) || 1;
+  // After a delete the last page can disappear; go back to the last page that still exists.
+  if (currentPage > totalPages) setCurrentPage(totalPages);
   const paginated = filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
-  const formatDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
-  };
-
   const handleMarkAsPaid = async (p: Payment) => {
-    const memberName = p.member ? `${p.member.first_name} ${p.member.last_name}` : 'Member';
+    const memberName = getPaymentMemberName(p);
     const confirmed = await showConfirm(
       'Mark as Paid?',
       `Confirm that payment of ${currency}${Number(p.amount).toLocaleString()} for ${memberName} has been received.`,
@@ -97,15 +98,38 @@ export const PaymentList: React.FC = () => {
       '#059669'
     );
     if (confirmed) {
-      DBService.updatePayment(p.id, {
-        payment_status: 'completed',
-        receipt_status: 'verified',
-        verified_at: new Date().toISOString(),
-        verified_by: profile?.full_name || 'Admin',
-      });
+      try {
+        await DBService.updatePayment(p.id, {
+          payment_status: 'completed',
+          receipt_status: 'verified',
+          verified_at: new Date().toISOString(),
+          verified_by: profile?.full_name || 'Admin',
+        });
+      } catch (err) {
+        showError('Update Failed', err instanceof Error ? err.message : 'Could not update the payment.');
+        return;
+      }
       refreshData();
       showToast(`Payment of ${currency}${Number(p.amount).toLocaleString()} marked as paid!`);
     }
+  };
+
+  // Owner only (the database refuses staff too). Meant for payments recorded by mistake.
+  const handleDeletePayment = async (p: Payment) => {
+    const confirmed = await showConfirm(
+      'Delete this payment?',
+      `${currency}${Number(p.amount).toLocaleString()} from ${getPaymentMemberName(p)} on ${p.payment_date} will be removed from revenue. Membership dates are not changed. This can't be undone.`,
+      'Yes, Delete'
+    );
+    if (!confirmed) return;
+    try {
+      await DBService.deletePayment(p.id);
+    } catch (err) {
+      showError('Delete Failed', err instanceof Error ? err.message : 'Could not delete the payment.');
+      return;
+    }
+    refreshData();
+    showToast('Payment deleted');
   };
 
   return (
@@ -122,7 +146,17 @@ export const PaymentList: React.FC = () => {
             </p>
           </div>
 
-          <div style={{ position: 'relative', display: 'inline-flex' }}>
+          <div style={{ position: 'relative', display: 'inline-flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+            <button
+              onClick={() => {
+                setEditingWalkIn(null);
+                setIsWalkInOpen(true);
+              }}
+              className="btn btn-outline"
+            >
+              <UserPlus size={16} />
+              <span>Record Walk-in</span>
+            </button>
             <button
               onClick={() => {
                 setEditingPayment(null);
@@ -442,8 +476,10 @@ export const PaymentList: React.FC = () => {
               </thead>
               <tbody>
                 {paginated.map((p) => {
-                  const memberName = p.member ? `${p.member.first_name} ${p.member.last_name}` : 'Direct Guest';
-                  const initials = p.member ? `${p.member.first_name[0]}${p.member.last_name[0]}` : 'DG';
+                  const memberName = getPaymentMemberName(p);
+                  const initials = p.member
+                    ? `${p.member.first_name[0]}${p.member.last_name[0]}`
+                    : (p.member_name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
 
                   return (
                     <tr
@@ -490,7 +526,7 @@ export const PaymentList: React.FC = () => {
 
                       {/* Plan */}
                       <td style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
-                        {p.plan?.name || p.member?.plan?.name || 'Premium'}
+                        {p.is_walk_in ? 'Walk-in' : p.plan?.name || p.member?.plan?.name || 'Premium'}
                       </td>
 
                       {/* Amount */}
@@ -590,7 +626,7 @@ export const PaymentList: React.FC = () => {
 
                       {/* Date */}
                       <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
-                        {formatDate(p.payment_date)}
+                        {formatDisplayDate(p.payment_date)}
                       </td>
 
                       {/* Actions */}
@@ -619,6 +655,7 @@ export const PaymentList: React.FC = () => {
                             </button>
                           )}
 
+                          {p.member && (
                           <button
                             onClick={() => setRemindingPayment(p)}
                             title="Send Payment Reminder (SMS/Email)"
@@ -639,6 +676,7 @@ export const PaymentList: React.FC = () => {
                             <Bell size={13} />
                             <span>Remind</span>
                           </button>
+                          )}
 
                           <button
                             onClick={() => setCheckingPayment(p)}
@@ -672,6 +710,11 @@ export const PaymentList: React.FC = () => {
                           </button>
                           <button
                             onClick={() => {
+                              if (p.is_walk_in) {
+                                setEditingWalkIn(p);
+                                setIsWalkInOpen(true);
+                                return;
+                              }
                               setEditingPayment(p);
                               setIsModalOpen(true);
                             }}
@@ -693,6 +736,25 @@ export const PaymentList: React.FC = () => {
                             <Edit size={13} />
                             <span>Edit</span>
                           </button>
+                          {isOwner && (
+                            <button
+                              onClick={() => handleDeletePayment(p)}
+                              title="Delete Payment"
+                              aria-label="Delete payment"
+                              style={{
+                                padding: '0.35rem 0.5rem',
+                                borderRadius: '6px',
+                                border: '1px solid #fecaca',
+                                backgroundColor: '#ffffff',
+                                color: '#dc2626',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                              }}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -739,7 +801,7 @@ export const PaymentList: React.FC = () => {
                 <ChevronLeft size={14} />
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 5).map((page) => (
+              {getPageWindow(currentPage, totalPages).map((page) => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
@@ -792,6 +854,20 @@ export const PaymentList: React.FC = () => {
           setIsModalOpen(false);
           setEditingPayment(null);
           refreshData();
+        }}
+      />
+
+      {/* Walk-in Modal */}
+      <WalkInModal
+        isOpen={isWalkInOpen}
+        onClose={() => {
+          setIsWalkInOpen(false);
+          setEditingWalkIn(null);
+        }}
+        initialPayment={editingWalkIn}
+        onSuccess={(payment) => {
+          refreshData();
+          showToast(`Walk-in ${editingWalkIn ? 'updated' : 'recorded'} · ${currency}${Number(payment.amount).toLocaleString()}`);
         }}
       />
 

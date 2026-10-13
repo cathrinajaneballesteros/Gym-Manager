@@ -24,6 +24,7 @@ export const Modal: React.FC<ModalProps> = ({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- portals need document, which only exists after mount
     setMounted(true);
   }, []);
 
@@ -74,13 +75,14 @@ export const Modal: React.FC<ModalProps> = ({
           overflow: 'hidden',
           display: 'flex',
           flexDirection: 'column',
-          maxHeight: 'min(90vh, 760px)',
+          maxHeight: 'min(90dvh, 760px)',
           margin: 'auto',
           animation: 'modalSlideUp 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
         {/* Header */}
         <div
+          className="modal-header"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -105,7 +107,9 @@ export const Modal: React.FC<ModalProps> = ({
             onClick={onClose}
             type="button"
             style={{
-              padding: '0.45rem',
+              width: '40px',
+              height: '40px',
+              flexShrink: 0,
               color: '#64748b',
               backgroundColor: '#f1f5f9',
               borderRadius: '8px',
@@ -132,6 +136,7 @@ export const Modal: React.FC<ModalProps> = ({
 
         {/* Body */}
         <div
+          className="modal-body"
           style={{
             padding: '1.5rem',
             overflowY: 'auto',

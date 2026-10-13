@@ -4,26 +4,31 @@ import React from 'react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
 export const PerformanceMetrics: React.FC = () => {
+  // What the app actually does, not measured results.
   const metrics = [
     {
-      value: '98.4%',
-      label: 'Predictive Precision',
-      description: 'Historical quarterly revenue forecasts match actual ledger receipts within 1.6% margin.',
+      value: (
+        <>
+          Cash + <span style={{ color: '#007dfe' }}>GCash</span>
+        </>
+      ),
+      label: 'Payments Tracked',
+      description: 'Record on-site cash and GCash payments, and check GCash receipts against their reference numbers.',
     },
     {
-      value: '3.2x',
-      label: 'Faster Closing',
-      description: 'Automated multi-method payment verification reduces month-end bookkeeping from days to hours.',
+      value: '1 click',
+      label: 'PDF & Excel Reports',
+      description: 'Export income, expenses and profit for any month as a PDF report or an Excel workbook.',
     },
     {
-      value: '42%',
-      label: 'Churn Reduction',
-      description: 'Early inactivity alerts enable front-desk staff to re-engage members before contracts lapse.',
+      value: 'Early',
+      label: 'Churn Alerts',
+      description: 'Members who stop visiting or are close to expiring are flagged so staff can reach out in time.',
     },
     {
-      value: '₱0',
-      label: 'Hidden Leakage',
-      description: 'Category standard-deviation monitoring instantly highlights utility surges and duplicate vendor drafts.',
+      value: 'Owner + Staff',
+      label: 'Team Access',
+      description: 'Owners see the finances; staff handle check-ins, members and payments.',
     },
   ];
 
@@ -31,7 +36,7 @@ export const PerformanceMetrics: React.FC = () => {
     <section
       id="metrics"
       style={{
-        padding: '120px 0',
+        padding: '72px 0',
         backgroundColor: '#ffffff',
         borderTop: '1px solid rgba(0, 0, 0, 0.05)',
         borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
@@ -51,12 +56,13 @@ export const PerformanceMetrics: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div
                   style={{
-                    fontSize: 'clamp(2.75rem, 5vw, 4rem)',
+                    fontSize: 'clamp(1.75rem, 3vw, 2.4rem)',
                     fontWeight: 800,
                     letterSpacing: '-0.04em',
                     color: '#1d1d1f',
                     lineHeight: 1,
-                    marginBottom: '0.75rem',
+                    marginBottom: '0.6rem',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {m.value}

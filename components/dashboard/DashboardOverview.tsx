@@ -14,13 +14,9 @@ import {
   ArrowRight,
   Plus,
   X,
-  CheckCircle2,
-  AlertCircle,
   Bell,
   ArrowUpRight,
   ArrowDownRight,
-  ShieldCheck,
-  DollarSign,
   Building2,
   Zap,
   Package,
@@ -31,19 +27,23 @@ import {
   Smartphone,
   Banknote,
   Activity,
-  FileText,
-  Percent,
+  LogIn,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
+import { formatTimeAgo } from '@/lib/ui/date';
+import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
 import { DashboardKPIs, MonthlyTrendData, Member, UserProfile, Payment, Expense } from '@/types/database';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { RevenueExpenseChart } from '@/components/charts/RevenueExpenseChart';
 import { CategoryExpenseChart } from '@/components/charts/CategoryExpenseChart';
 import { MemberModal } from '@/components/members/MemberModal';
+import { CheckInModal } from '@/components/members/CheckInModal';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { ExpenseModal } from '@/components/expenses/ExpenseModal';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { formatCompactAmount, getPaymentMemberName } from '@/lib/ui/format';
 
 export const DashboardOverview: React.FC = () => {
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
@@ -58,12 +58,14 @@ export const DashboardOverview: React.FC = () => {
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isCheckInModalOpen, setIsCheckInModalOpen] = useState(false);
   const [activeBreakdown, setActiveBreakdown] = useState<'revenue' | 'expenses' | 'profit' | 'members' | null>(null);
   const [selectedMemberForReminder, setSelectedMemberForReminder] = useState<Member | null>(null);
   const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- portals need document, which only exists after mount
     setMounted(true);
   }, []);
 
@@ -93,7 +95,10 @@ export const DashboardOverview: React.FC = () => {
     setProfile(DBService.getProfile());
   };
 
+  useGymDataRefresh(refreshData);
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     refreshData();
     const handleProfileUpdate = () => {
       setProfile(DBService.getProfile());
@@ -113,7 +118,10 @@ export const DashboardOverview: React.FC = () => {
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good morning' : currentHour < 18 ? 'Good afternoon' : 'Good evening';
   const expiringMembers = members.filter((m) => m.status === 'expiring');
-  const recentPayments = payments.slice(0, 2);
+  const recentPayments = payments
+    .filter((p) => p.payment_status === 'completed')
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+    .slice(0, 2);
 
   const revenueTrend = lastMonthKpis && lastMonthKpis.totalRevenue > 0
     ? {
@@ -180,7 +188,7 @@ export const DashboardOverview: React.FC = () => {
   const plans = DBService.getPlans();
   const paymentsByPlan = activePaymentsList.reduce<Record<string, { total: number; count: number; name: string }>>((acc, p) => {
     const plan = plans.find((pl) => pl.id === p.membership_plan_id);
-    const planName = plan ? plan.name : 'Standard Pass';
+    const planName = p.is_walk_in ? 'Walk-ins' : plan ? plan.name : 'Standard Pass';
     if (!acc[planName]) acc[planName] = { total: 0, count: 0, name: planName };
     acc[planName].total += Number(p.amount);
     acc[planName].count += 1;
@@ -279,7 +287,14 @@ export const DashboardOverview: React.FC = () => {
           </div>
 
           {/* Quick Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setIsCheckInModalOpen(true)}
+              className="btn btn-outline btn-sm"
+            >
+              <LogIn size={14} />
+              <span>Check In</span>
+            </button>
             <button
               onClick={() => setIsPaymentModalOpen(true)}
               className="btn btn-outline btn-sm"
@@ -541,7 +556,7 @@ export const DashboardOverview: React.FC = () => {
                       Payment received • {currency}{Number(p.amount).toLocaleString()}
                     </div>
                     <div style={{ color: '#86868b', fontSize: '0.75rem', marginTop: '2px' }}>
-                      {p.member?.first_name} {p.member?.last_name} • {p.payment_method} • Just now
+                      {getPaymentMemberName(p)} • {p.payment_method} • {formatTimeAgo(p.created_at)}
                     </div>
                   </div>
                 ))}
@@ -593,6 +608,15 @@ export const DashboardOverview: React.FC = () => {
         onClose={() => setIsExpenseModalOpen(false)}
         onSuccess={() => {
           setIsExpenseModalOpen(false);
+          refreshData();
+        }}
+      />
+
+      <CheckInModal
+        isOpen={isCheckInModalOpen}
+        onClose={() => setIsCheckInModalOpen(false)}
+        onSuccess={() => {
+          setIsCheckInModalOpen(false);
           refreshData();
         }}
       />
@@ -767,7 +791,7 @@ export const DashboardOverview: React.FC = () => {
               {/* BREAKDOWN 1: TOTAL REVENUE */}
               {activeBreakdown === 'revenue' && activePaymentsList.length > 0 && (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                  <div className="breakdown-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.75rem' }}>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
                       <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Average Payment</span>
                       <strong style={{ fontSize: '1.15rem', color: '#059669' }}>
@@ -927,7 +951,7 @@ export const DashboardOverview: React.FC = () => {
               {/* BREAKDOWN 2: TOTAL EXPENSES */}
               {activeBreakdown === 'expenses' && activeExpensesList.length > 0 && (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                  <div className="breakdown-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.75rem' }}>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
                       <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Recorded Items</span>
                       <strong style={{ fontSize: '1.15rem', color: '#0f172a' }}>{activeExpensesList.length} Entries</strong>
@@ -1187,7 +1211,7 @@ export const DashboardOverview: React.FC = () => {
                         >
                           <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', display: 'block' }}>{t.month}</span>
                           <strong style={{ fontSize: '0.95rem', color: t.profit >= 0 ? '#059669' : '#e11d48', display: 'block', marginTop: '4px' }}>
-                            {currency}{(t.profit / 1000).toFixed(0)}k
+                            {formatCompactAmount(t.profit, currency)}
                           </strong>
                         </div>
                       ))}
@@ -1210,7 +1234,16 @@ export const DashboardOverview: React.FC = () => {
                       <Sparkles size={18} />
                     </div>
                     <div style={{ fontSize: '0.825rem', color: '#166534', lineHeight: 1.45 }}>
-                      <strong>AI Profit Maximizer:</strong> Your current operating margin is <strong>{kpis.profitMargin}%</strong>. Implementing HVAC automation and bulk supply procurement can immediately trim expenses by up to <strong>₱10,000/mo</strong>.
+                      <strong>AI Profit Maximizer:</strong> Your current operating margin is <strong>{kpis.profitMargin}%</strong>.{' '}
+                      {(() => {
+                        // Same estimate the AI Insights widget and Analytics page show.
+                        const savings = detectExpenseLeaks().potentialMonthlySavings;
+                        return savings > 0 ? (
+                          <>Following the cost-saving tips on the Analytics page could trim expenses by up to <strong>{currency}{savings.toLocaleString()}/mo</strong>.</>
+                        ) : (
+                          <>Record your expenses to get cost-saving tips.</>
+                        );
+                      })()}
                     </div>
                   </div>
                 </>
@@ -1219,7 +1252,7 @@ export const DashboardOverview: React.FC = () => {
               {/* BREAKDOWN 4: ACTIVE MEMBERS */}
               {activeBreakdown === 'members' && (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.65rem' }}>
+                  <div className="breakdown-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '0.65rem' }}>
                     <div style={{ padding: '0.85rem', borderRadius: '12px', backgroundColor: '#ecfdf5', border: '1px solid #d1fae5' }}>
                       <span style={{ fontSize: '0.7rem', color: '#065f46', fontWeight: 600, display: 'block' }}>Active Members</span>
                       <strong style={{ fontSize: '1.25rem', color: '#059669' }}>{kpis.activeMembers}</strong>
@@ -1407,6 +1440,11 @@ export const DashboardOverview: React.FC = () => {
         @media (max-width: 1024px) {
           .analytics-grid {
             grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .breakdown-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
           }
         }
       `}</style>

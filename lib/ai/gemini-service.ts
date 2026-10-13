@@ -46,7 +46,7 @@ export class GeminiService {
       'gemini-flash-latest',
     ];
 
-    let lastError: any = null;
+    let lastError: unknown = null;
 
     for (const model of candidateModels) {
       try {
@@ -94,7 +94,7 @@ export class GeminiService {
       }
     }
 
-    throw lastError || new Error('All Gemini model fallbacks failed.');
+    throw lastError instanceof Error ? lastError : new Error('All Gemini model fallbacks failed.');
   }
 
   /**

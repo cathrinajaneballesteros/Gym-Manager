@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
-  Users,
   Search,
   Plus,
   MoreVertical,
@@ -17,21 +16,30 @@ import {
   Dumbbell,
   Bell,
   Clock,
+  LogIn,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { Member, MembershipPlan } from '@/types/database';
 import { MemberModal } from './MemberModal';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
-import { showConfirm, showToast } from '@/lib/ui/swal';
+import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
+import { getPageWindow } from '@/lib/ui/pagination';
+import { formatDisplayDate } from '@/lib/ui/date';
+import { checkInWithPrompt } from '@/lib/ui/check-in';
 
-export const MemberList: React.FC = () => {
+interface MemberListProps {
+  initialStatus?: string;
+}
+
+export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' }) => {
   const [members, setMembers] = useState<Member[]>([]);
   const [plans, setPlans] = useState<MembershipPlan[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
   const [planFilter, setPlanFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'end_date' | 'created_at'>('end_date');
   const [currentPage, setCurrentPage] = useState(1);
@@ -47,6 +55,7 @@ export const MemberList: React.FC = () => {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- portals need document, which only exists after mount
     setMounted(true);
   }, []);
 
@@ -103,7 +112,10 @@ export const MemberList: React.FC = () => {
     setPlans(DBService.getPlans());
   };
 
+  useGymDataRefresh(refreshData);
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     refreshData();
   }, []);
 
@@ -133,17 +145,24 @@ export const MemberList: React.FC = () => {
   }, [members, searchQuery, statusFilter, planFilter, sortBy]);
 
   const totalPages = Math.ceil(filteredMembers.length / pageSize) || 1;
+  // After a delete the last page can disappear; go back to the last page that still exists.
+  if (currentPage > totalPages) setCurrentPage(totalPages);
   const paginatedMembers = filteredMembers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const handleDeleteMember = async (id: string, name: string) => {
     const confirmed = await showConfirm(
       'Remove Member?',
-      `Are you sure you want to remove member ${name}? This action cannot be undone.`,
+      `Are you sure you want to remove member ${name}? Their payments stay in your records and reports. This action cannot be undone.`,
       'Yes, remove',
       '#ef4444'
     );
     if (confirmed) {
-      DBService.deleteMember(id);
+      try {
+        await DBService.deleteMember(id);
+      } catch (err) {
+        showError('Delete Failed', err instanceof Error ? err.message : 'Could not remove the member.');
+        return;
+      }
       refreshData();
       setActiveMenuId(null);
       showToast(`${escapeHtml(name)} removed`);
@@ -152,16 +171,7 @@ export const MemberList: React.FC = () => {
 
   const getPlanName = (planId: string) => {
     const plan = plans.find((p) => p.id === planId);
-    return plan?.name || 'Standard';
-  };
-
-  const formatDate = (dateStr: string) => {
-    try {
-      const d = new Date(dateStr);
-      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    } catch {
-      return dateStr;
-    }
+    return plan?.name || 'Unknown plan';
   };
 
   return (
@@ -286,7 +296,7 @@ export const MemberList: React.FC = () => {
 
             <select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
               style={{
                 backgroundColor: '#ffffff',
                 border: '1px solid #e2e8f0',
@@ -453,7 +463,7 @@ export const MemberList: React.FC = () => {
 
                       {/* Expiration Date */}
                       <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
-                        {formatDate(member.end_date)}
+                        {formatDisplayDate(member.end_date)}
                       </td>
 
                       {/* Actions Menu Trigger */}
@@ -535,7 +545,7 @@ export const MemberList: React.FC = () => {
                 <ChevronLeft size={14} />
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).slice(0, 5).map((page) => (
+              {getPageWindow(currentPage, totalPages).map((page) => (
                 <button
                   key={page}
                   onClick={() => setCurrentPage(page)}
@@ -622,6 +632,36 @@ export const MemberList: React.FC = () => {
             <Eye size={15} color="#64748b" />
             <span>View Profile</span>
           </Link>
+
+          {/* Check In */}
+          <button
+            type="button"
+            onClick={async () => {
+              const member = activeMember;
+              setActiveMenuId(null);
+              if (await checkInWithPrompt(member)) refreshData();
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.65rem',
+              padding: '0.55rem 0.75rem',
+              fontSize: '0.825rem',
+              color: '#1e293b',
+              borderRadius: '7px',
+              width: '100%',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              fontWeight: 500,
+              transition: 'background-color 0.12s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+          >
+            <LogIn size={15} color="#64748b" />
+            <span>Check In</span>
+          </button>
 
           {/* Record Payment */}
           <button
@@ -733,43 +773,48 @@ export const MemberList: React.FC = () => {
             <span>Edit Details</span>
           </button>
 
-          <div style={{ height: '1px', backgroundColor: '#f1f5f9', margin: '0.25rem 0' }} />
+          {/* Only the owner can delete members. */}
+          {DBService.isOwner() && (
+            <>
+              <div style={{ height: '1px', backgroundColor: '#f1f5f9', margin: '0.25rem 0' }} />
 
-          {/* Delete */}
-          <button
-            type="button"
-            onClick={() => {
-              const name = `${activeMember.first_name} ${activeMember.last_name}`;
-              setActiveMenuId(null);
-              handleDeleteMember(activeMember.id, name);
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              padding: '0.55rem 0.75rem',
-              fontSize: '0.825rem',
-              color: '#ef4444',
-              borderRadius: '7px',
-              width: '100%',
-              border: 'none',
-              cursor: 'pointer',
-              textAlign: 'left',
-              fontWeight: 500,
-              transition: 'all 0.12s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#fef2f2';
-              e.currentTarget.style.color = '#dc2626';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#ef4444';
-            }}
-          >
-            <Trash2 size={15} color="#ef4444" />
-            <span>Delete Member</span>
-          </button>
+              {/* Delete */}
+              <button
+                type="button"
+                onClick={() => {
+                  const name = `${activeMember.first_name} ${activeMember.last_name}`;
+                  setActiveMenuId(null);
+                  handleDeleteMember(activeMember.id, name);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.65rem',
+                  padding: '0.55rem 0.75rem',
+                  fontSize: '0.825rem',
+                  color: '#ef4444',
+                  borderRadius: '7px',
+                  width: '100%',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontWeight: 500,
+                  transition: 'all 0.12s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fef2f2';
+                  e.currentTarget.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#ef4444';
+                }}
+              >
+                <Trash2 size={15} color="#ef4444" />
+                <span>Delete Member</span>
+              </button>
+            </>
+          )}
         </div>,
         document.body
       )}

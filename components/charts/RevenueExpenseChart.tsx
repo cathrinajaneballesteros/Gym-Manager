@@ -71,7 +71,7 @@ export const RevenueExpenseChart: React.FC<RevenueExpenseChartProps> = ({
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.08)',
               color: '#0f172a',
             }}
-            formatter={(value: any) => [`${currency}${Number(value).toLocaleString()}`, '']}
+            formatter={(value) => [`${currency}${Number(value).toLocaleString()}`, '']}
             labelStyle={{ color: '#64748b', fontWeight: 600, marginBottom: '4px' }}
           />
           <Area

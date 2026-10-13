@@ -16,7 +16,8 @@ export default function ForgotPasswordPage() {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
       await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/settings` : undefined,
+        // The link signs them in through /auth/callback, then lets them choose a new password.
+        redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback?next=/reset-password` : undefined,
       });
     } catch (err) {
       console.warn('Password reset notice:', err);
@@ -50,15 +51,15 @@ export default function ForgotPasswordPage() {
       >
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <img
-            src="/logo.png"
-            alt="Smart Gym Logo"
+            src="/logo.svg"
+            alt="Smart Gym Finance Manager"
             width={48}
             height={48}
             style={{
               borderRadius: '12px',
               objectFit: 'contain',
               marginBottom: '1rem',
-              boxShadow: '0 4px 14px rgba(0, 0, 0, 0.25)',
+              boxShadow: '0 3px 10px rgba(0, 0, 0, 0.08)',
             }}
           />
 

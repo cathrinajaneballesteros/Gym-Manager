@@ -14,6 +14,61 @@ export interface UserProfile {
   updated_at?: string;
 }
 
+export type GymRole = 'owner' | 'staff';
+
+export type WeekDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+export const WEEK_DAYS: { key: WeekDay; label: string }[] = [
+  { key: 'mon', label: 'Monday' },
+  { key: 'tue', label: 'Tuesday' },
+  { key: 'wed', label: 'Wednesday' },
+  { key: 'thu', label: 'Thursday' },
+  { key: 'fri', label: 'Friday' },
+  { key: 'sat', label: 'Saturday' },
+  { key: 'sun', label: 'Sunday' },
+];
+
+export interface DayHours {
+  open: string; // HH:MM
+  close: string; // HH:MM
+  closed: boolean;
+}
+
+export type OpeningHours = Record<WeekDay, DayHours>;
+
+export interface Gym {
+  id: string;
+  owner_id: string;
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  currency: string;
+  opening_hours: OpeningHours | null;
+  /** Usual fee for a one-time visitor; prefilled on the walk-in form. */
+  walk_in_price: number | null;
+  /** Public link to the gym's uploaded logo; the app logo is shown when empty. */
+  logo_url: string | null;
+  onboarded_at: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export type GymDetails = Pick<
+  Gym,
+  'name' | 'address' | 'phone' | 'email' | 'currency' | 'opening_hours' | 'walk_in_price'
+>;
+
+export interface StaffMember {
+  id: string;
+  gym_id: string;
+  user_id: string | null;
+  email: string;
+  full_name: string;
+  role: GymRole;
+  status: 'invited' | 'active';
+  created_at: string;
+}
+
 export interface MembershipPlan {
   id: string;
   admin_id: string;
@@ -57,6 +112,10 @@ export interface Payment {
   admin_id: string;
   member_id: string;
   member?: Member;
+  /** The member's name, saved when the member is deleted so their payments still show who paid. Also a walk-in's name. */
+  member_name?: string;
+  /** A one-time visitor who paid at the door; has no member. */
+  is_walk_in?: boolean;
   membership_plan_id?: string;
   plan?: MembershipPlan;
   amount: number;
@@ -112,6 +171,7 @@ export type AuditAction =
   | 'member.update'
   | 'member.delete'
   | 'member.reminder_sent'
+  | 'member.check_in_undo'
   | 'payment.create'
   | 'payment.update'
   | 'payment.delete'
@@ -121,9 +181,16 @@ export type AuditAction =
   | 'expense.create'
   | 'expense.update'
   | 'expense.delete'
-  | 'settings.update';
+  | 'plan.create'
+  | 'plan.update'
+  | 'plan.activate'
+  | 'plan.deactivate'
+  | 'settings.update'
+  | 'gym.onboard'
+  | 'staff.invite'
+  | 'staff.remove';
 
-export type AuditEntityType = 'auth' | 'member' | 'payment' | 'expense' | 'settings';
+export type AuditEntityType = 'auth' | 'member' | 'payment' | 'expense' | 'plan' | 'settings' | 'staff';
 
 export interface AuditLogEntry {
   id: string;

@@ -11,6 +11,7 @@ export const AppleNavbar: React.FC = () => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage and the URL are only readable in the browser
       setIsLoggedIn(sessionStorage.getItem('sgfm_authenticated') === 'true');
     }
     const handleScroll = () => {
@@ -23,8 +24,8 @@ export const AppleNavbar: React.FC = () => {
   const navLinks = [
     { name: 'Overview', href: '#overview' },
     { name: 'Intelligence', href: '#intelligence' },
-    { name: 'Architecture', href: '#architecture' },
-    { name: 'Metrics', href: '#metrics' },
+    { name: 'Features', href: '#architecture' },
+    { name: 'Highlights', href: '#metrics' },
   ];
 
   return (
@@ -67,8 +68,8 @@ export const AppleNavbar: React.FC = () => {
           }}
         >
           <img
-            src="/logo.png"
-            alt="Smart Gym Logo"
+            src="/logo.svg"
+            alt="Smart Gym Finance Manager"
             width={28}
             height={28}
             style={{

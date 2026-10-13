@@ -8,6 +8,8 @@ import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Expense } from '@/types/database';
 import { showError } from '@/lib/ui/swal';
+import { getTodayKey } from '@/lib/ui/date';
+import { amountField, MAX_AMOUNT, pastDateField } from '@/lib/ui/validation';
 
 const expenseSchema = z.object({
   category: z.enum([
@@ -20,11 +22,11 @@ const expenseSchema = z.object({
     'Marketing',
     'Other',
   ]),
-  title: z.string().min(3, 'Expense title must be at least 3 characters'),
-  amount: z.number().positive('Expense amount must be greater than 0'),
-  expense_date: z.string().min(10, 'Expense date is required'),
+  title: z.string().trim().min(3, 'Expense title must be at least 3 characters').max(100, 'Expense title is too long'),
+  amount: amountField('Expense amount'),
+  expense_date: pastDateField('Expense date'),
   payment_method: z.enum(['Cash', 'GCash'], { message: 'Payment method is required' }),
-  description: z.string().optional(),
+  description: z.string().max(500, 'Notes can be up to 500 characters').optional(),
 });
 
 type ExpenseFormData = z.infer<typeof expenseSchema>;
@@ -42,7 +44,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
   onSuccess,
   initialExpense,
 }) => {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getTodayKey();
 
   const buildDefaultValues = (): ExpenseFormData =>
     initialExpense
@@ -57,7 +59,8 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
       : {
           category: 'Utilities',
           title: '',
-          amount: 0,
+          // Starts empty so the user types the amount instead of editing a 0.
+          amount: undefined as unknown as number,
           expense_date: todayStr,
           payment_method: 'GCash',
           description: '',
@@ -80,19 +83,19 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialExpense?.id]);
 
-  const onSubmit = (data: ExpenseFormData) => {
+  const onSubmit = async (data: ExpenseFormData) => {
     try {
       if (initialExpense) {
-        const updated = DBService.updateExpense(initialExpense.id, data);
+        const updated = await DBService.updateExpense(initialExpense.id, data);
         onSuccess(updated);
       } else {
-        const created = DBService.addExpense(data);
+        const created = await DBService.addExpense(data);
         onSuccess(created);
       }
       reset();
       onClose();
-    } catch (err: any) {
-      showError('Save Failed', err.message || 'Failed to save expense');
+    } catch (err) {
+      showError('Save Failed', err instanceof Error ? err.message : 'Failed to save expense');
     }
   };
 
@@ -128,11 +131,13 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
 
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-              Amount (₱) *
+              Amount ({DBService.getGym()?.currency || '₱'}) *
             </label>
             <input
               type="number"
               step="0.01"
+              min="0.01"
+              max={MAX_AMOUNT}
               placeholder="e.g. 15000"
               {...register('amount', { valueAsNumber: true })}
               style={{ width: '100%' }}
@@ -152,6 +157,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
           <input
             type="text"
             placeholder="e.g. Commercial Meralco Electricity Bill"
+            maxLength={100}
             {...register('title')}
             style={{ width: '100%' }}
           />
@@ -167,7 +173,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
               Disbursement Date *
             </label>
-            <input type="date" {...register('expense_date')} style={{ width: '100%' }} />
+            <input type="date" max={todayStr} {...register('expense_date')} style={{ width: '100%' }} />
             {errors.expense_date && (
               <span style={{ fontSize: '0.725rem', color: 'var(--danger)', marginTop: '0.2rem', display: 'block' }}>
                 {errors.expense_date.message}
@@ -198,6 +204,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
           <textarea
             rows={2}
             placeholder="e.g. Invoice #2026-9901 from supplier. Includes delivery and labor."
+            maxLength={500}
             {...register('description')}
             style={{ width: '100%' }}
           />

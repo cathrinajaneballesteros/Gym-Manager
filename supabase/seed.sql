@@ -1,38 +1,70 @@
--- Smart Gym Finance Manager Seed Data
--- Aligned with Project Proposal metrics: 180 members, utilities, equipment, rent, P&L
+-- Smart Gym Finance Manager demo data, for presentations.
+-- 1. Sign up in the app with the demo email below (or change it to the account you present with).
+-- 2. Run this in the Supabase SQL editor (after all the migrations). Running it again replaces this month's sample expenses.
+-- Other accounts are not touched: real gym owners start with no data and go through onboarding.
 
--- Note: In production Supabase, replace '00000000-0000-0000-0000-000000000001' with your auth.uid()
 DO $$
 DECLARE
-  v_admin_id UUID := '00000000-0000-0000-0000-000000000001';
-  v_plan_basic UUID := '11111111-1111-1111-1111-111111111111';
-  v_plan_regular UUID := '22222222-2222-2222-2222-222222222222';
-  v_plan_vip UUID := '33333333-3333-3333-3333-333333333333';
-  v_plan_student UUID := '44444444-4444-4444-4444-444444444444';
-  v_member_1 UUID := '55555555-5555-5555-5555-555555555551';
-  v_member_2 UUID := '55555555-5555-5555-5555-555555555552';
-  v_member_3 UUID := '55555555-5555-5555-5555-555555555553';
-  v_member_4 UUID := '55555555-5555-5555-5555-555555555554';
-  v_member_5 UUID := '55555555-5555-5555-5555-555555555555';
+  v_demo_email TEXT := 'demo@smartgym.com';
+  v_admin_id UUID;
+  v_gym_id UUID;
+  v_month DATE := date_trunc('month', CURRENT_DATE)::date;
+  v_hours JSONB := '{
+    "mon": {"open": "06:00", "close": "22:00", "closed": false},
+    "tue": {"open": "06:00", "close": "22:00", "closed": false},
+    "wed": {"open": "06:00", "close": "22:00", "closed": false},
+    "thu": {"open": "06:00", "close": "22:00", "closed": false},
+    "fri": {"open": "06:00", "close": "22:00", "closed": false},
+    "sat": {"open": "07:00", "close": "20:00", "closed": false},
+    "sun": {"open": "08:00", "close": "17:00", "closed": true}
+  }';
 BEGIN
-  -- 1. Profile
-  INSERT INTO public.profiles (id, email, full_name, role, gym_name, currency, phone)
-  VALUES (v_admin_id, 'admin@smartgym.com', 'Limar Glen Calderon', 'admin', 'IronPeak Fitness & Gym', '₱', '+63 917 123 4567')
-  ON CONFLICT (id) DO UPDATE SET
-    full_name = EXCLUDED.full_name,
-    gym_name = EXCLUDED.gym_name,
-    currency = EXCLUDED.currency;
+  SELECT id INTO v_admin_id FROM auth.users WHERE email = v_demo_email;
+  IF v_admin_id IS NULL THEN
+    RAISE EXCEPTION 'No account for %. Sign up with that email in the app first.', v_demo_email;
+  END IF;
 
-  -- 2. Membership Plans
-  INSERT INTO public.membership_plans (id, admin_id, name, price, duration_months, description, is_active)
+  UPDATE public.profiles SET full_name = 'Limar Glen Calderon' WHERE id = v_admin_id;
+
+  -- The demo gym, already onboarded
+  SELECT gym_id INTO v_gym_id FROM public.gym_staff WHERE user_id = v_admin_id;
+  IF v_gym_id IS NULL THEN
+    INSERT INTO public.gyms (owner_id, name) VALUES (v_admin_id, 'IronPeak Fitness & Gym') RETURNING id INTO v_gym_id;
+    INSERT INTO public.gym_staff (gym_id, user_id, email, full_name, role, status)
+    VALUES (v_gym_id, v_admin_id, v_demo_email, 'Limar Glen Calderon', 'owner', 'active');
+  END IF;
+  UPDATE public.gyms SET
+    name = 'IronPeak Fitness & Gym',
+    address = '123 Rizal Avenue, Brgy. San Roque, Quezon City',
+    phone = '+63 917 123 4567',
+    email = v_demo_email,
+    currency = '₱',
+    opening_hours = v_hours,
+    walk_in_price = 100.00,
+    onboarded_at = COALESCE(onboarded_at, timezone('utc'::text, now()))
+  WHERE id = v_gym_id;
+
+  -- Membership plans (only added if the demo gym has none yet)
+  IF NOT EXISTS (SELECT 1 FROM public.membership_plans WHERE gym_id = v_gym_id) THEN
+    INSERT INTO public.membership_plans (gym_id, admin_id, name, price, duration_months, description, is_active)
+    VALUES
+      (v_gym_id, v_admin_id, 'Monthly Regular', 1500.00, 1, 'Full access to gym equipment and locker rooms', true),
+      (v_gym_id, v_admin_id, 'Quarterly Pro', 4200.00, 3, 'Includes group classes and free body composition analysis', true),
+      (v_gym_id, v_admin_id, 'Annual VIP Access', 15000.00, 12, 'Unlimited access, free sauna, guest passes, and 2 PT sessions', true),
+      (v_gym_id, v_admin_id, 'Student Monthly Discount', 1100.00, 1, 'Valid student ID required. Gym hours 6AM - 5PM', true);
+  END IF;
+
+  -- This month's running costs
+  DELETE FROM public.expenses
+  WHERE gym_id = v_gym_id
+    AND expense_date >= v_month AND expense_date < (v_month + INTERVAL '1 month')
+    AND title IN ('Rent', 'Internet', 'Electric', 'Mineral water', 'Drinks & snacks');
+
+  INSERT INTO public.expenses (gym_id, admin_id, category, title, amount, expense_date, payment_method, description)
   VALUES
-    (v_plan_basic, v_admin_id, 'Monthly Regular', 1500.00, 1, 'Full access to gym equipment and locker rooms', true),
-    (v_plan_regular, v_admin_id, 'Quarterly Pro', 4200.00, 3, 'Includes group classes and free body composition analysis', true),
-    (v_plan_vip, v_admin_id, 'Annual VIP Access', 15000.00, 12, 'Unlimited access, free sauna, guest passes, and 2 PT sessions', true),
-    (v_plan_student, v_admin_id, 'Student Monthly Discount', 1100.00, 1, 'Valid student ID required. Gym hours 6AM - 5PM', true)
-  ON CONFLICT (id) DO NOTHING;
-
-  -- 3. Starting on Zero (No sample members, payments, or expenses seeded)
-
+    (v_gym_id, v_admin_id, 'Rent', 'Rent', 10000.00, v_month, 'Cash', 'Monthly facility lease / rent (₱10,000 per month).'),
+    (v_gym_id, v_admin_id, 'Utilities', 'Internet', 1399.00, v_month + 1, 'GCash', 'Monthly internet subscription (₱1,399 per month).'),
+    (v_gym_id, v_admin_id, 'Utilities', 'Electric', 1500.00, v_month + 2, 'Cash', 'Monthly electricity bill (₱1,500 per month).'),
+    (v_gym_id, v_admin_id, 'Supplies', 'Mineral water', 500.00, v_month + 3, 'Cash', 'Monthly mineral water refill and dispenser supply (₱500 monthly).'),
+    (v_gym_id, v_admin_id, 'Supplies', 'Drinks & snacks', 500.00, v_month + 4, 'Cash', 'Monthly drinks & snacks inventory (₱500 monthly).');
 END $$;
-

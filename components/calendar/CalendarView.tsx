@@ -11,15 +11,14 @@ import {
   Users,
   Bell,
   Plus,
-  CheckCircle2,
-  AlertTriangle,
   ArrowUpRight,
   ArrowDownRight,
   X,
-  Sparkles,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
+import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { Member, Payment, Expense, UserProfile } from '@/types/database';
+import { getPaymentMemberName } from '@/lib/ui/format';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { PaymentModal } from '@/components/payments/PaymentModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
@@ -51,7 +50,10 @@ export const CalendarView: React.FC = () => {
     setExpenses(DBService.getExpenses());
   };
 
+  useGymDataRefresh(loadData);
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     loadData();
     const handleUpdate = () => loadData();
     window.addEventListener('storage', handleUpdate);
@@ -344,7 +346,7 @@ export const CalendarView: React.FC = () => {
             }}
           >
             {/* Month title + Navigation */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <button
                   onClick={handlePrevMonth}
@@ -364,7 +366,7 @@ export const CalendarView: React.FC = () => {
                 </button>
               </div>
 
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a', minWidth: '180px' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: '#0f172a' }}>
                 {monthName} {currentYear}
               </h2>
 
@@ -411,7 +413,7 @@ export const CalendarView: React.FC = () => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(7, 1fr)',
+              gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
               gap: '4px',
               textAlign: 'center',
               marginBottom: '6px',
@@ -438,7 +440,7 @@ export const CalendarView: React.FC = () => {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(7, 1fr)',
+              gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
               gap: '6px',
             }}
           >
@@ -459,6 +461,7 @@ export const CalendarView: React.FC = () => {
                 <div
                   key={cell.dateStr}
                   onClick={() => setSelectedDateStr(cell.dateStr)}
+                  className="calendar-cell"
                   style={{
                     minHeight: '92px',
                     padding: '0.5rem',
@@ -527,8 +530,8 @@ export const CalendarView: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Pills Container */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
+                  {/* Pills Container (phones show only the dots above; tap a day for details) */}
+                  <div className="calendar-pills" style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
                     {showExpirations && (
                       <div
                         style={{
@@ -655,7 +658,7 @@ export const CalendarView: React.FC = () => {
             </div>
 
             {/* Daily Summary Metric Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <div className="calendar-day-summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
               <div style={{ backgroundColor: '#fffbeb', padding: '0.75rem', borderRadius: '8px', border: '1px solid #fef3c7' }}>
                 <span style={{ fontSize: '0.725rem', color: '#92400e', fontWeight: 600, display: 'block' }}>Expiring Members</span>
                 <strong style={{ fontSize: '1.2rem', color: '#b45309' }}>{selectedDayData?.expirations.length || 0}</strong>
@@ -756,6 +759,7 @@ export const CalendarView: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {selectedDayData.payments.map((p) => {
                     const member = members.find((m) => m.id === p.member_id);
+                    const memberName = getPaymentMemberName({ ...p, member });
                     return (
                       <div
                         key={p.id}
@@ -772,7 +776,7 @@ export const CalendarView: React.FC = () => {
                       >
                         <div>
                           <strong style={{ color: '#0f172a' }}>
-                            {member ? `${member.first_name} ${member.last_name}` : 'Unknown Member'}
+                            {memberName}
                           </strong>
                           <div style={{ color: '#64748b', fontSize: '0.75rem', marginTop: '1px' }}>
                             {p.payment_method} {p.reference_number ? `• Ref: #${p.reference_number}` : ''}
@@ -897,6 +901,21 @@ export const CalendarView: React.FC = () => {
           loadData();
         }}
       />
+
+      <style jsx>{`
+        @media (max-width: 640px) {
+          .calendar-cell {
+            min-height: 52px !important;
+            padding: 0.3rem !important;
+          }
+          .calendar-pills {
+            display: none !important;
+          }
+          .calendar-day-summary {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

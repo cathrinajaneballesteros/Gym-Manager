@@ -14,9 +14,12 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
 
   const activeMonthsWithRevenue = historicalTrends.filter((pt) => pt.revenue > 0);
   const activeMembers = members.filter((m) => m.status === 'active').length;
+  const currency = DBService.getProfile().currency || '₱';
+  // No members means no new sign-ups to extrapolate from.
+  const newMembersAt = (rate: number) => (activeMembers > 0 ? Math.max(1, Math.round(activeMembers * rate)) : 0);
 
-  // 1. Zero-data state: no members or no recorded revenue
-  if (members.length === 0 || (payments.length === 0 && kpis.totalRevenue === 0)) {
+  // 1. Zero-data state: no recorded revenue (a walk-in-only gym still has revenue to forecast)
+  if (payments.length === 0 && kpis.totalRevenue === 0) {
     return {
       currentMonthlyRevenue: 0,
       forecastedNextMonthRevenue: 0,
@@ -41,18 +44,19 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
     };
   }
 
-  // 2. Early data state: only 1 month with revenue
+  // 2. Early data state: only 1 month with revenue. Too little to see a trend, so assume next month
+  // matches this one instead of inventing growth.
   if (activeMonthsWithRevenue.length < 2 && !useDemoData) {
     const currentRevenue = kpis.totalRevenue;
-    const projectedNext = Math.round(currentRevenue * 1.05);
+    const projectedNext = currentRevenue;
     const expectedRenewals = Math.round(activeMembers * (kpis.renewalRate > 0 ? kpis.renewalRate / 100 : 0.85));
-    const predictedNew = Math.max(1, Math.round(activeMembers * 0.1));
+    const predictedNew = newMembersAt(0.1);
 
     return {
       currentMonthlyRevenue: currentRevenue,
       forecastedNextMonthRevenue: projectedNext,
-      projectedGrowthPercent: 5.0,
-      confidenceScore: 50,
+      projectedGrowthPercent: 0,
+      confidenceScore: 25,
       expectedRenewals,
       predictedNewMembers: predictedNew,
       trendSeries: historicalTrends.map((pt) => ({
@@ -66,9 +70,9 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
       })),
       hasSufficientData: true,
       explanation:
-        'Initial predictive calibration based on current month activity. Forecast precision will increase as multiple months of transaction history accumulate.',
+        "Not enough history yet: there's only one month of revenue, so next month is shown at this month's level. A real trend appears once two or more months are recorded.",
       dataPointsCount: activeMonthsWithRevenue.length,
-      seasonalFactors: ['Initial operational run rate established'],
+      seasonalFactors: ['Based on this month only'],
     };
   }
 
@@ -97,7 +101,7 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
   const rawProjected = Math.max(0, Math.round(slope * nextMonthIndex + intercept));
 
   const expectedRenewals = Math.round(activeMembers * (kpis.renewalRate > 0 ? kpis.renewalRate / 100 : 0.85));
-  const predictedNewMembers = Math.max(1, Math.round(activeMembers * 0.12));
+  const predictedNewMembers = newMembersAt(0.12);
 
   const currentRevenue = historicalTrends[historicalTrends.length - 1]?.revenue || kpis.totalRevenue;
   const forecastedRevenue = rawProjected > 0 ? rawProjected : currentRevenue;
@@ -150,7 +154,7 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
     predictedNewMembers,
     trendSeries: series,
     hasSufficientData: true,
-    explanation: `Based on ${activeMonthsWithRevenue.length} months of transaction trends and retention patterns across ${activeMembers} active members, revenue is projected to reach ₱${forecastedRevenue.toLocaleString()} next month (${growthPercent >= 0 ? '+' : ''}${growthPercent}%).`,
+    explanation: `Based on ${activeMonthsWithRevenue.length} months of transaction trends and retention patterns across ${activeMembers} active members, revenue is projected to reach ${currency}${forecastedRevenue.toLocaleString()} next month (${growthPercent >= 0 ? '+' : ''}${growthPercent}%).`,
     dataPointsCount: activeMonthsWithRevenue.length,
     seasonalFactors: [
       'Active member renewal rate projection',

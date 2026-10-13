@@ -14,9 +14,13 @@ import {
   ScrollText,
   LogOut,
   Calendar,
+  Layers,
+  LogIn,
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
+import { getTodayKey, toDateKey } from '@/lib/ui/date';
+import { canOpen } from '@/lib/ui/roles';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -28,8 +32,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [pendingPaymentsCount, setPendingPaymentsCount] = useState(0);
+  const [todayCheckInsCount, setTodayCheckInsCount] = useState(0);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     setProfile(DBService.getProfile());
     const handleProfileUpdate = () => {
       setProfile(DBService.getProfile());
@@ -43,14 +49,32 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       }
     };
     updatePendingCount();
+    const updateCheckInsCount = () => {
+      try {
+        const today = getTodayKey();
+        setTodayCheckInsCount(
+          DBService.getAttendance().filter((a) => toDateKey(new Date(a.check_in_time)) === today).length
+        );
+      } catch {
+        // Ignore
+      }
+    };
+    updateCheckInsCount();
 
     window.addEventListener('sgfm_profile_updated', handleProfileUpdate);
     window.addEventListener('sgfm_data_updated', updatePendingCount);
+    // Every save writes an audit entry, so this also fires after any data change.
+    window.addEventListener('sgfm_audit_updated', updatePendingCount);
     window.addEventListener('storage', handleProfileUpdate);
     window.addEventListener('storage', updatePendingCount);
+    window.addEventListener('sgfm_attendance_updated', updateCheckInsCount);
+    window.addEventListener('storage', updateCheckInsCount);
     return () => {
+      window.removeEventListener('sgfm_attendance_updated', updateCheckInsCount);
+      window.removeEventListener('storage', updateCheckInsCount);
       window.removeEventListener('sgfm_profile_updated', handleProfileUpdate);
       window.removeEventListener('sgfm_data_updated', updatePendingCount);
+      window.removeEventListener('sgfm_audit_updated', updatePendingCount);
       window.removeEventListener('storage', handleProfileUpdate);
       window.removeEventListener('storage', updatePendingCount);
     };
@@ -66,6 +90,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       entity_label: profile?.email || 'Unknown user',
     });
     try {
+      await DBService.flushAudit();
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
       await supabase.auth.signOut();
@@ -76,15 +101,21 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       sessionStorage.removeItem('sgfm_authenticated');
       sessionStorage.removeItem('sgfm_login_logged');
     }
+    DBService.clear();
     router.push('/login');
   };
 
-  const navItems = [
+  const role = DBService.getRole();
+  // Read on every render; the profile-updated event re-renders the sidebar when the owner changes the logo.
+  const gymLogo = DBService.getGym()?.logo_url;
+  const allNavItems = [
     { section: 'OVERVIEW', items: [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }] },
     {
       section: 'MANAGEMENT',
       items: [
         { name: 'Members', href: '/members', icon: Users },
+        { name: 'Attendance', href: '/attendance', icon: LogIn },
+        { name: 'Plans', href: '/plans', icon: Layers },
         { name: 'Payments', href: '/payments', icon: CreditCard },
         { name: 'Expenses', href: '/expenses', icon: Receipt },
         { name: 'Calendar', href: '/calendar', icon: Calendar },
@@ -105,6 +136,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       ],
     },
   ];
+  // Staff only see the pages they can use; sections left empty are dropped.
+  const navItems = allNavItems
+    .map((group) => ({ ...group, items: group.items.filter((item) => canOpen(role, item.href)) }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <aside
@@ -114,7 +149,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         borderRight: '1px solid rgba(255, 255, 255, 0.08)',
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        // dvh: on phones, vh includes the area under the browser toolbar and hides Sign out.
+        height: '100dvh',
         position: 'sticky',
         top: 0,
         zIndex: 40,
@@ -178,14 +214,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
           gap: '0.75rem',
         }}
       >
+        {/* The gym's own logo when the owner has uploaded one, otherwise the app logo. */}
         <img
-          src="/logo.png"
-          alt="Smart Gym Logo"
+          src={gymLogo || '/logo.svg'}
+          alt={gymLogo ? `${profile?.gym_name || 'Gym'} logo` : 'Smart Gym Finance Manager'}
           width={32}
           height={32}
           style={{
             borderRadius: '8px',
-            objectFit: 'contain',
+            objectFit: gymLogo ? 'cover' : 'contain',
+            backgroundColor: gymLogo ? '#ffffff' : undefined,
             boxShadow: '0 2px 5px rgba(0, 0, 0, 0.25)',
           }}
         />
@@ -284,6 +322,23 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
                         {pendingPaymentsCount}
                       </span>
                     )}
+                    {item.href === '/attendance' && todayCheckInsCount > 0 && (
+                      <span
+                        title={`${todayCheckInsCount} check-in${todayCheckInsCount > 1 ? 's' : ''} today`}
+                        style={{
+                          marginLeft: 'auto',
+                          backgroundColor: 'rgba(52, 199, 89, 0.18)',
+                          color: '#34c759',
+                          fontSize: '0.67rem',
+                          fontWeight: 700,
+                          padding: '1px 6px',
+                          borderRadius: '9999px',
+                          lineHeight: '1.4',
+                        }}
+                      >
+                        {todayCheckInsCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
@@ -337,7 +392,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               {adminName}
             </div>
             <div style={{ fontSize: '0.685rem', color: '#8e8e93', whiteSpace: 'nowrap' }}>
-              Administrator
+              {role === 'staff' ? 'Staff' : 'Owner'}
             </div>
           </div>
         </Link>
