@@ -62,13 +62,15 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   const planName = payment.plan?.name || 'Membership Plan';
 
   // Automated Fraud / Sanity Verification Checks
-  const ref = payment.reference_number || '';
+  // GCash reference numbers are 13 digits; spaces are ignored so "1012 345 678901" matches "1012345678901".
+  const normalizeRef = (value?: string) => (value || '').replace(/\s+/g, '');
+  const ref = normalizeRef(payment.reference_number);
   const allPayments = DBService.getPayments();
   const duplicatePayments = ref
-    ? allPayments.filter((p) => p.id !== payment.id && p.reference_number?.trim() === ref.trim())
+    ? allPayments.filter((p) => p.id !== payment.id && normalizeRef(p.reference_number) === ref)
     : [];
   const isDuplicateRef = duplicatePayments.length > 0;
-  const isFormatValid = ref.length >= 6;
+  const isFormatValid = /^\d{13}$/.test(ref);
   const isAmountMatching = payment.plan ? payment.amount === payment.plan.price : true;
 
   const handleVerify = async () => {
@@ -229,7 +231,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
                 <span>Ref Format</span>
               </div>
               <div style={{ color: '#64748b', marginTop: '0.2rem' }}>
-                {isFormatValid ? 'Valid ref length' : 'Short / missing ref'}
+                {isFormatValid ? '13-digit GCash ref' : ref ? 'Not 13 digits; double-check it' : 'No reference entered'}
               </div>
             </div>
 

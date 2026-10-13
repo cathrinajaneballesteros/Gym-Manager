@@ -56,6 +56,10 @@ const WalkInForm: React.FC<Omit<WalkInModalProps, 'isOpen'>> = ({ onClose, onSuc
       showError('Amount needed', 'Enter how much the walk-in paid.');
       return;
     }
+    if (method === 'GCash' && !reference.trim()) {
+      showError('Reference needed', 'Enter the GCash reference number so the receipt can be checked.');
+      return;
+    }
     setSaving(true);
     try {
       const fields = {
@@ -114,16 +118,16 @@ const WalkInForm: React.FC<Omit<WalkInModalProps, 'isOpen'>> = ({ onClose, onSuc
 
       {method === 'GCash' && (
         <div>
-          <label style={labelStyle}>Reference / Transaction ID</label>
+          <label style={labelStyle}>GCash Reference No. *</label>
           <input
             type="text"
             value={reference}
             onChange={(e) => setReference(e.target.value)}
-            placeholder="e.g. GC-902148X"
+            placeholder="e.g. 1012 345 678901"
             style={{ width: '100%' }}
           />
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
-            GCash walk-ins wait for receipt checking on the Payments page, like any GCash payment.
+            Pending until the receipt is verified on the Payments page; it counts as revenue once verified.
           </p>
         </div>
       )}

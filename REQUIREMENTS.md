@@ -23,7 +23,8 @@ Progress as of Oct 13, 2026.
 ## Receipt checker (manual) — Done
 - GCash payments are flagged "Needs Verification", with a count and a filter on the Payments page.
 - A receipt can be verified (with notes) or rejected (with a required reason). Rejecting sets the payment back to pending.
-- Warns when another payment already uses the same reference number.
+- Warns when another payment already uses the same reference number (spaces ignored), and when the reference isn't a 13-digit GCash number.
+- New GCash payments (including walk-ins) need a reference number and stay pending until verified. Only then do they count as revenue and activate or extend the membership, so a rejected receipt never gives free time.
 - Receipts can be printed.
 
 ## Expense historical data — Done

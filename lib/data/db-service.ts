@@ -20,7 +20,7 @@ import {
 import { INITIAL_PROFILE } from './mock-data';
 import { createClient } from '@/lib/supabase/client';
 import { getPaymentMemberName } from '@/lib/ui/format';
-import { getRecentMonthKeys, getTodayKey, toDateKey } from '@/lib/ui/date';
+import { addMonthsToDateKey, getRecentMonthKeys, getTodayKey, toDateKey } from '@/lib/ui/date';
 
 /** Only Cash and GCash are supported; anything else (legacy data) is treated as Cash. */
 const normalizeMethod = (method: string | undefined): PaymentMethod =>
@@ -832,6 +832,35 @@ export class DBService {
     return saved;
   }
 
+  /**
+   * A completed membership payment activates a new member, or extends a renewing or expired one by the plan's months.
+   * Runs only when a payment becomes completed, so an unverified GCash payment changes nothing until it's verified.
+   */
+  private static async applyPaymentToMembership(payment: Payment): Promise<void> {
+    if (payment.payment_status !== 'completed' || payment.is_walk_in || !payment.membership_plan_id) return;
+    const member = data.members.find((m) => m.id === payment.member_id);
+    const plan = data.plans.find((p) => p.id === payment.membership_plan_id);
+    if (!member || !plan) return;
+
+    const today = getTodayKey();
+    const isRenewal = data.payments.some(
+      (p) => p.member_id === member.id && p.payment_status === 'completed' && p.id !== payment.id
+    );
+    const isExpired = Boolean(member.end_date) && member.end_date < today;
+
+    if (isRenewal || isExpired) {
+      const baseDate = member.end_date > today ? member.end_date : today;
+      await this.updateMember(member.id, {
+        end_date: addMonthsToDateKey(baseDate, plan.duration_months),
+        status: 'active',
+        membership_plan_id: plan.id,
+      });
+    } else {
+      // First payment for a newly registered member: their dates were set when they registered.
+      await this.updateMember(member.id, { status: 'active' });
+    }
+  }
+
   /** Walk-in payments (one-time visitors), newest first. Pass a date (YYYY-MM-DD) to get just that day's. */
   static getWalkIns(date?: string): Payment[] {
     return this.getPayments().filter((p) => p.is_walk_in && (!date || p.payment_date === date));
@@ -852,7 +881,8 @@ export class DBService {
       amount: input.amount,
       payment_date: getTodayKey(),
       payment_method: input.payment_method,
-      payment_status: 'completed',
+      // GCash only counts once someone checks the receipt.
+      payment_status: input.payment_method === 'GCash' ? 'pending' : 'completed',
       reference_number: input.reference_number,
       notes: input.notes,
     });
@@ -893,6 +923,7 @@ export class DBService {
       },
     });
 
+    await this.applyPaymentToMembership(newPayment);
     return newPayment;
   }
 
@@ -915,6 +946,7 @@ export class DBService {
       },
     });
 
+    if (previous.payment_status !== 'completed') await this.applyPaymentToMembership(updatedPayment);
     return updatedPayment;
   }
 
@@ -947,6 +979,7 @@ export class DBService {
       },
     });
 
+    if (current.payment_status !== 'completed') await this.applyPaymentToMembership(updatedPayment);
     return updatedPayment;
   }
 

@@ -17,7 +17,7 @@ import { UserProfile, UserRole } from '@/types/database';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { GymSettings } from './GymSettings';
 import { StaffSettings } from './StaffSettings';
-import { showError, showInfo } from '@/lib/ui/swal';
+import { showError } from '@/lib/ui/swal';
 
 export const SettingsView: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>(DBService.getProfile());
@@ -216,13 +216,6 @@ export const SettingsView: React.FC = () => {
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
                     {isOwner ? 'Owner' : 'Staff'} · {profile.gym_name}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => showInfo('Photo Upload', 'Photo upload dialog: file selector enabled.')}
-                    style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600, marginTop: '4px', cursor: 'pointer' }}
-                  >
-                    Change photo
-                  </button>
                 </div>
               </div>
 

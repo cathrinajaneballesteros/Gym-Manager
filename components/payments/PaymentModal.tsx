@@ -9,7 +9,7 @@ import { DBService } from '@/lib/data/db-service';
 import { Payment, Member, MembershipPlan } from '@/types/database';
 import { showError } from '@/lib/ui/swal';
 import { MemberPicker } from './MemberPicker';
-import { addMonthsToDateKey, getTodayKey } from '@/lib/ui/date';
+import { getTodayKey } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
 
 const paymentSchema = z.object({
@@ -21,6 +21,10 @@ const paymentSchema = z.object({
   payment_status: z.enum(['completed', 'pending', 'refunded']),
   reference_number: z.string().optional(),
   notes: z.string().optional(),
+}).refine((d) => d.payment_method !== 'GCash' || Boolean(d.reference_number?.trim()), {
+  // The reference number is what the receipt check is done against.
+  message: 'Enter the GCash reference number',
+  path: ['reference_number'],
 });
 
 type PaymentFormData = z.infer<typeof paymentSchema>;
@@ -126,41 +130,15 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     }
   };
 
+  const isNewGCash = !initialPayment && watch('payment_method') === 'GCash';
+
   const onSubmit = async (data: PaymentFormData) => {
     try {
-      let payment: Payment;
-      if (initialPayment) {
-        payment = await DBService.updatePayment(initialPayment.id, data);
-      } else {
-        payment = await DBService.addPayment(data);
-      }
-
-      // If it's a completed payment and not an edit, advance subscription date for renewals or expired memberships
-      if (!initialPayment && data.payment_status === 'completed' && data.membership_plan_id) {
-        const plan = plans.find((p) => p.id === data.membership_plan_id);
-        const member = members.find((m) => m.id === data.member_id);
-        if (member && plan) {
-          const priorPayments = DBService.getPayments().filter(
-            (p) => p.member_id === member.id && p.payment_status === 'completed' && p.id !== payment.id
-          );
-          const isExpired = new Date(member.end_date).getTime() < new Date(todayStr).getTime();
-
-          // Only extend if renewing (prior payment exists) or reactivating an expired membership
-          if (priorPayments.length > 0 || isExpired) {
-            const baseDate = member.end_date > todayStr ? member.end_date : todayStr;
-            await DBService.updateMember(member.id, {
-              end_date: addMonthsToDateKey(baseDate, plan.duration_months),
-              status: 'active',
-              membership_plan_id: plan.id,
-            });
-          } else {
-            // First payment recorded for pending member: activate membership status
-            await DBService.updateMember(member.id, {
-              status: 'active',
-            });
-          }
-        }
-      }
+      // A new GCash payment waits for its receipt to be verified before it counts or extends the membership.
+      // Activating or extending the membership happens in DBService once the payment is completed.
+      const payment = initialPayment
+        ? await DBService.updatePayment(initialPayment.id, data)
+        : await DBService.addPayment(data.payment_method === 'GCash' ? { ...data, payment_status: 'pending' } : data);
 
       onSuccess(payment);
       reset();
@@ -282,23 +260,35 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
               Status *
             </label>
-            <select {...register('payment_status')} style={{ width: '100%' }}>
-              <option value="completed">Completed / Settled</option>
-              <option value="pending">Pending Verification</option>
-              <option value="refunded">Refunded</option>
-            </select>
+            {isNewGCash ? (
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.45, paddingTop: '0.35rem' }}>
+                Pending until the receipt is verified on the Payments page. It counts as revenue, and extends the
+                membership, once verified.
+              </p>
+            ) : (
+              <select {...register('payment_status')} style={{ width: '100%' }}>
+                <option value="completed">Completed / Settled</option>
+                <option value="pending">Pending Verification</option>
+                <option value="refunded">Refunded</option>
+              </select>
+            )}
           </div>
 
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
-              Reference / Transaction ID
+              GCash Reference No.{watch('payment_method') === 'GCash' ? ' *' : ''}
             </label>
             <input
               type="text"
-              placeholder="e.g. GC-902148X"
+              placeholder="e.g. 1012 345 678901"
               {...register('reference_number')}
               style={{ width: '100%' }}
             />
+            {errors.reference_number && (
+              <span style={{ fontSize: '0.725rem', color: 'var(--danger)', marginTop: '0.2rem', display: 'block' }}>
+                {errors.reference_number.message}
+              </span>
+            )}
           </div>
         </div>
 
