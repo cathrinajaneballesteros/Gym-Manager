@@ -1,6 +1,6 @@
 -- Smart Gym Finance Manager demo data, for presentations.
 -- 1. Sign up in the app with the demo email below (or change it to the account you present with).
--- 2. Run this in the Supabase SQL editor (after all the migrations, including 003). Running it again replaces this month's sample expenses.
+-- 2. Run this in the Supabase SQL editor (after all the migrations). Running it again replaces this month's sample expenses.
 -- Other accounts are not touched: real gym owners start with no data and go through onboarding.
 
 DO $$
@@ -35,8 +35,7 @@ BEGIN
   END IF;
   UPDATE public.gyms SET
     name = 'IronPeak Fitness & Gym',
-    address = '123 Rizal Avenue',
-    city = 'Quezon City',
+    address = '123 Rizal Avenue, Brgy. San Roque, Quezon City',
     phone = '+63 917 123 4567',
     email = v_demo_email,
     currency = '₱',
