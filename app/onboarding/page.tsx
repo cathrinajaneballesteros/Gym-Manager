@@ -327,7 +327,7 @@ export default function OnboardingPage() {
               </p>
             )}
             {plans.length > 0 && (
-              <div className="onboarding-plan-row" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 90px 32px', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 600, color: '#86868b' }}>
+              <div className="onboarding-plan-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 110px 90px 40px', gap: '0.5rem', fontSize: '0.75rem', fontWeight: 600, color: '#86868b' }}>
                 <span>Plan name</span>
                 <span>Price ({details.currency})</span>
                 <span>Months</span>
@@ -335,15 +335,15 @@ export default function OnboardingPage() {
               </div>
             )}
             {plans.map((p, i) => (
-              <div key={i} className="onboarding-plan-row" style={{ display: 'grid', gridTemplateColumns: '1fr 110px 90px 32px', gap: '0.5rem', alignItems: 'center' }}>
-                <input type="text" value={p.name} onChange={(e) => setPlan(i, { name: e.target.value })} placeholder="e.g. Monthly Pass" aria-label="Plan name" maxLength={60} />
-                <input type="number" min="0.01" max={MAX_AMOUNT} step="0.01" value={p.price} onChange={(e) => setPlan(i, { price: e.target.value })} placeholder="1500" aria-label="Price" />
-                <input type="number" min="1" step="1" value={p.months} onChange={(e) => setPlan(i, { months: e.target.value })} aria-label="Duration in months" />
+              <div key={i} className="onboarding-plan-row" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 110px 90px 40px', gap: '0.5rem', alignItems: 'center' }}>
+                <input type="text" value={p.name} onChange={(e) => setPlan(i, { name: e.target.value })} placeholder="e.g. Monthly Pass" aria-label="Plan name" maxLength={60} style={{ width: '100%', minWidth: 0 }} />
+                <input type="number" min="0.01" max={MAX_AMOUNT} step="0.01" value={p.price} onChange={(e) => setPlan(i, { price: e.target.value })} placeholder="1500" aria-label="Price" style={{ width: '100%', minWidth: 0 }} />
+                <input type="number" min="1" step="1" value={p.months} onChange={(e) => setPlan(i, { months: e.target.value })} aria-label="Duration in months" style={{ width: '100%', minWidth: 0 }} />
                 <button
                   type="button"
                   onClick={() => setPlans((list) => list.filter((_, j) => j !== i))}
                   aria-label="Remove plan"
-                  style={{ color: '#ef4444', cursor: 'pointer', display: 'flex', justifyContent: 'center' }}
+                  style={{ color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '40px', height: '40px' }}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -393,7 +393,7 @@ export default function OnboardingPage() {
             padding: 1.75rem 1.25rem !important;
           }
           .onboarding-plan-row {
-            grid-template-columns: 1fr 80px 60px 28px !important;
+            grid-template-columns: minmax(0, 1fr) 80px 56px 40px !important;
           }
         }
       `}</style>

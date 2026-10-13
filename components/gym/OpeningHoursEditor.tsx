@@ -26,7 +26,7 @@ export const OpeningHoursEditor: React.FC<OpeningHoursEditorProps> = ({ value, o
         const day = value[key];
         return (
           <div key={key} className="opening-hours-row" style={{ display: 'grid', gridTemplateColumns: '100px 1fr 1fr auto', gap: '0.6rem', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600, color: day.closed ? '#94a3b8' : '#334155' }}>{label}</span>
+            <span className="opening-hours-day" style={{ fontSize: '0.85rem', fontWeight: 600, color: day.closed ? '#94a3b8' : '#334155' }}>{label}</span>
             <input
               type="time"
               value={day.open}
@@ -59,8 +59,13 @@ export const OpeningHoursEditor: React.FC<OpeningHoursEditorProps> = ({ value, o
       </button>
       <style jsx>{`
         @media (max-width: 520px) {
+          /* Day name on its own line, then open / close / Closed for that day underneath. */
           .opening-hours-row {
-            grid-template-columns: 1fr 1fr !important;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto !important;
+            row-gap: 0.3rem !important;
+          }
+          .opening-hours-day {
+            grid-column: 1 / -1;
           }
         }
       `}</style>

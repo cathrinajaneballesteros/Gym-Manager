@@ -346,7 +346,7 @@ export const ExpenseList: React.FC = () => {
               <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem' }}>
                 Monthly Historical Trajectory (Last 6 Months)
               </h2>
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.max(1, historicalSummary.monthlyTotals.length)}, 1fr)`, gap: '0.85rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.85rem' }}>
                 {historicalSummary.monthlyTotals.map((m) => (
                   <div
                     key={m.monthKey}

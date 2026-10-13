@@ -287,7 +287,7 @@ export const DashboardOverview: React.FC = () => {
           </div>
 
           {/* Quick Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
             <button
               onClick={() => setIsCheckInModalOpen(true)}
               className="btn btn-outline btn-sm"
@@ -791,7 +791,7 @@ export const DashboardOverview: React.FC = () => {
               {/* BREAKDOWN 1: TOTAL REVENUE */}
               {activeBreakdown === 'revenue' && activePaymentsList.length > 0 && (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                  <div className="breakdown-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.75rem' }}>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
                       <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Average Payment</span>
                       <strong style={{ fontSize: '1.15rem', color: '#059669' }}>
@@ -951,7 +951,7 @@ export const DashboardOverview: React.FC = () => {
               {/* BREAKDOWN 2: TOTAL EXPENSES */}
               {activeBreakdown === 'expenses' && activeExpensesList.length > 0 && (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                  <div className="breakdown-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.75rem' }}>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
                       <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Recorded Items</span>
                       <strong style={{ fontSize: '1.15rem', color: '#0f172a' }}>{activeExpensesList.length} Entries</strong>
@@ -1252,7 +1252,7 @@ export const DashboardOverview: React.FC = () => {
               {/* BREAKDOWN 4: ACTIVE MEMBERS */}
               {activeBreakdown === 'members' && (
                 <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.65rem' }}>
+                  <div className="breakdown-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '0.65rem' }}>
                     <div style={{ padding: '0.85rem', borderRadius: '12px', backgroundColor: '#ecfdf5', border: '1px solid #d1fae5' }}>
                       <span style={{ fontSize: '0.7rem', color: '#065f46', fontWeight: 600, display: 'block' }}>Active Members</span>
                       <strong style={{ fontSize: '1.25rem', color: '#059669' }}>{kpis.activeMembers}</strong>
@@ -1440,6 +1440,11 @@ export const DashboardOverview: React.FC = () => {
         @media (max-width: 1024px) {
           .analytics-grid {
             grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .breakdown-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
           }
         }
       `}</style>

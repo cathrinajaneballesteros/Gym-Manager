@@ -215,7 +215,8 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
             Automated Checker Checklist
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.65rem' }}>
+          {/* Three across in the modal on wider screens, stacked on phones. */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.65rem' }}>
             {/* Check 1: Ref format */}
             <div
               style={{
