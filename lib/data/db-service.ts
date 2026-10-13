@@ -521,6 +521,8 @@ export class DBService {
       actor_email: profile.email,
       created_at: new Date().toISOString(),
     };
+    // The log belongs to a gym; before onboarding (or after being removed as staff) there is none to write to.
+    if (!data.gym) return entry;
     data.audit = [entry, ...data.audit].slice(0, MAX_AUDIT_ENTRIES);
     emit('sgfm_audit_updated', entry);
 
