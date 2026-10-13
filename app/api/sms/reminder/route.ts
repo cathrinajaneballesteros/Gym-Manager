@@ -1,36 +1,46 @@
 import { NextResponse } from 'next/server';
-import { requireSignedIn } from '@/lib/supabase/require-user';
+import { cleanText, requireGymMember } from '@/lib/supabase/require-user';
 import { SmsService } from '@/lib/sms/sms-service';
 
 export async function POST(req: Request) {
-  const unauthorized = await requireSignedIn();
-  if (unauthorized) return unauthorized;
+  const access = await requireGymMember('sms', 20, '1 hour');
+  if (access.error) return access.error;
+  const { supabase, gym } = access;
 
   try {
     const body = await req.json();
-    const { phone, memberName, gymName, amount, planName, dueDate, customMessage, gymPhone } = body;
+    const memberId = cleanText(body.memberId, 64);
+    if (!memberId) {
+      return NextResponse.json({ error: 'Choose a member to remind.' }, { status: 400 });
+    }
 
-    if (!phone) {
-      return NextResponse.json({ error: 'Recipient phone number is required' }, { status: 400 });
+    // Read through the signed-in client, so only this gym's members are found.
+    const { data: member } = await supabase
+      .from('members')
+      .select('first_name, last_name, phone')
+      .eq('id', memberId)
+      .maybeSingle();
+    if (!member) {
+      return NextResponse.json({ error: 'Member not found.' }, { status: 404 });
+    }
+    if (!member.phone) {
+      return NextResponse.json({ error: 'This member has no phone number on file.' }, { status: 400 });
     }
 
     const result = await SmsService.sendReminderSMS({
-      phone,
-      memberName: memberName || 'Valued Member',
-      gymName: gymName || 'IronPeak Fitness & Gym',
-      amount: amount || '₱0.00',
-      planName: planName || 'Gym Membership',
-      dueDate: dueDate || new Date().toISOString().split('T')[0],
-      customMessage,
-      gymPhone,
+      phone: member.phone,
+      memberName: `${member.first_name} ${member.last_name}`.trim() || 'Valued Member',
+      gymName: gym.name,
+      amount: cleanText(body.amount, 40) || `${gym.currency}0.00`,
+      planName: cleanText(body.planName, 100) || 'Gym Membership',
+      dueDate: cleanText(body.dueDate, 10) || new Date().toISOString().split('T')[0],
+      customMessage: cleanText(body.customMessage, 300) || undefined,
+      gymPhone: gym.phone || undefined,
     });
 
     return NextResponse.json(result);
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error sending reminder SMS:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to send payment reminder SMS' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to send the reminder SMS. Please try again.' }, { status: 500 });
   }
 }

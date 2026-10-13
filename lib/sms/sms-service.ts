@@ -95,9 +95,9 @@ export class SmsService {
           text,
           sentAt: new Date().toISOString(),
         };
-      } catch (err: any) {
+      } catch (err) {
         // A real key is set, so report the failure instead of pretending it was sent.
-        throw new Error(`SMS was not sent: ${err.message}`);
+        throw new Error(`SMS was not sent: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
 

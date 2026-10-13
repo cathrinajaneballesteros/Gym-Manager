@@ -1,24 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import {
-  Bell,
-  Mail,
-  MessageSquare,
-  Send,
-  CheckCircle,
-  AlertCircle,
-  Calendar,
-  DollarSign,
-  User,
-  Smartphone,
-} from 'lucide-react';
+import React, { useState } from 'react';
+import { Mail, MessageSquare, Send, Smartphone } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
-import { Member, Payment, UserProfile } from '@/types/database';
+import { Member, Payment } from '@/types/database';
 import { getPaymentMemberName } from '@/lib/ui/format';
 import { buildReminderSms } from '@/lib/ui/reminder-text';
-import { showToast, showAlert, showError } from '@/lib/ui/swal';
+import { getTodayKey } from '@/lib/ui/date';
+import { showAlert, showError } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
 
 interface PaymentReminderModalProps {
@@ -36,57 +26,32 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
   payment,
   onSuccess,
 }) => {
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [channel, setChannel] = useState<'both' | 'sms' | 'email'>('both');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [amount, setAmount] = useState('');
-  const [dueDate, setDueDate] = useState('');
-  const [planName, setPlanName] = useState('');
   const [customNote, setCustomNote] = useState('');
   const [isSending, setIsSending] = useState(false);
 
-  useEffect(() => {
-    const prof = DBService.getProfile();
-    setProfile(prof);
+  // Everything below comes from the member or payment; the server looks the contact details up again.
+  const profile = DBService.getProfile();
+  const gym = DBService.getGym();
+  const targetMember = member || (payment?.member_id ? DBService.getMemberById(payment.member_id) : null);
+  const targetPlan =
+    targetMember?.plan ||
+    (payment?.membership_plan_id ? DBService.getPlans().find((p) => p.id === payment.membership_plan_id) : null);
+  const memberId = targetMember?.id || payment?.member_id || '';
+  const email = targetMember?.email || '';
+  const phone = targetMember?.phone || '';
+  const dueDate = targetMember?.end_date || payment?.payment_date || getTodayKey();
+  const amount = payment ? String(payment.amount) : targetPlan ? String(targetPlan.price) : '0';
+  const planName = targetPlan?.name || 'Gym Membership';
 
-    // Populate data based on member or payment
-    const targetMember = member || (payment?.member_id ? DBService.getMemberById(payment.member_id) : null);
-    const targetPlan = targetMember?.plan || (payment?.membership_plan_id ? DBService.getPlans().find(p => p.id === payment.membership_plan_id) : null);
-
-    // Local YYYY-MM-DD. toISOString() is UTC and can be a day off in the Philippines.
-    const today = new Date();
-    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-    if (targetMember) {
-      setEmail(targetMember.email || '');
-      setPhone(targetMember.phone || '');
-    }
-
-    const resolvedDueDate =
-      (targetMember && targetMember.end_date) || (payment && payment.payment_date) || todayStr;
-    setDueDate(resolvedDueDate);
-
-    if (payment) {
-      setAmount(String(payment.amount));
-    } else if (targetPlan) {
-      setAmount(String(targetPlan.price));
-    } else {
-      setAmount('1500');
-    }
-
-    setPlanName(targetPlan?.name || 'Monthly Gym Membership');
-  }, [member, payment, isOpen]);
-
-  const currency = profile?.currency || '₱';
-  const gymName = profile?.gym_name || 'IronPeak Fitness & Gym';
-  const memberFullName = member
-    ? `${member.first_name} ${member.last_name}`
+  const currency = gym?.currency || profile.currency || '₱';
+  const gymName = gym?.name || profile.gym_name || 'Your Gym';
+  const memberFullName = targetMember
+    ? `${targetMember.first_name} ${targetMember.last_name}`
     : payment?.member
     ? getPaymentMemberName(payment)
     : 'Valued Member';
 
-  const gym = DBService.getGym();
   const amountText = `${currency}${Number(amount || 0).toLocaleString()}`;
   // Same text the server sends, including the gym's phone so members can call back.
   const smsPreview = buildReminderSms({
@@ -100,16 +65,20 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
   });
 
   const handleSendReminder = async () => {
+    if (!memberId) {
+      showError('No Member', 'This reminder is not linked to a member.');
+      return;
+    }
     if (channel === 'email' && !email) {
-      showError('Missing Email', 'Please enter a valid member email address.');
+      showError('Missing Email', 'This member has no email address. Edit the member to add one.');
       return;
     }
     if (channel === 'sms' && !phone) {
-      showError('Missing Phone', 'Please enter a valid member phone number.');
+      showError('Missing Phone', 'This member has no phone number. Edit the member to add one.');
       return;
     }
     if (channel === 'both' && !email && !phone) {
-      showError('Missing Contacts', 'Please provide at least a phone number or email address.');
+      showError('Missing Contacts', 'This member has no phone number or email. Edit the member to add one.');
       return;
     }
 
@@ -125,16 +94,11 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              to: email,
-              memberName: memberFullName,
-              gymName,
-              amount: `${currency}${Number(amount).toLocaleString()}`,
+              memberId,
+              amount: amountText,
               planName,
               dueDate,
               customNote,
-              gymPhone: gym?.phone || undefined,
-              gymAddress: gym?.address || undefined,
-              gymEmail: gym?.email || undefined,
             }),
           });
           const data: { success?: boolean; error?: string; simulated?: boolean } = await res
@@ -156,14 +120,11 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              phone,
-              memberName: memberFullName,
-              gymName,
-              amount: `${currency}${Number(amount).toLocaleString()}`,
+              memberId,
+              amount: amountText,
               planName,
               dueDate,
               customMessage: customNote || undefined,
-              gymPhone: gym?.phone || undefined,
             }),
           });
           const data: { success?: boolean; error?: string; simulated?: boolean } = await res
@@ -188,7 +149,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
       DBService.recordAudit({
         action: 'member.reminder_sent',
         entity_type: 'member',
-        entity_id: member?.id || payment?.member_id || 'unknown',
+        entity_id: memberId,
         entity_label: `${memberFullName} · ${channel.toUpperCase()}`,
         metadata: {
           channel,
@@ -222,8 +183,8 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
 
       onSuccess?.();
       onClose();
-    } catch (err: any) {
-      showError('Sending Failed', err.message || 'Failed to dispatch reminder');
+    } catch (err) {
+      showError('Sending Failed', err instanceof Error ? err.message : 'Failed to dispatch reminder');
     } finally {
       setIsSending(false);
     }
@@ -357,10 +318,10 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
             <input
               type="text"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="09171234567"
+              readOnly
+              placeholder="No phone on file"
               className="input-field"
-              style={{ width: '100%', fontSize: '0.85rem', padding: '0.55rem 0.75rem' }}
+              style={{ width: '100%', fontSize: '0.85rem', padding: '0.55rem 0.75rem', backgroundColor: '#f8fafc' }}
             />
           </div>
 
@@ -371,12 +332,15 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
             <input
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="member@example.com"
+              readOnly
+              placeholder="No email on file"
               className="input-field"
-              style={{ width: '100%', fontSize: '0.85rem', padding: '0.55rem 0.75rem' }}
+              style={{ width: '100%', fontSize: '0.85rem', padding: '0.55rem 0.75rem', backgroundColor: '#f8fafc' }}
             />
           </div>
+          <p style={{ gridColumn: '1 / -1', fontSize: '0.75rem', color: '#64748b', margin: 0 }}>
+            Reminders go to the contact details saved on the member. Edit the member to change them.
+          </p>
         </div>
 
         {/* Custom Note */}
@@ -387,6 +351,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
           <textarea
             value={customNote}
             onChange={(e) => setCustomNote(e.target.value)}
+            maxLength={300}
             rows={2}
             placeholder="e.g. Pay before Friday to claim your free 1-week gym buddy pass!"
             className="input-field"

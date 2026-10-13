@@ -79,8 +79,6 @@ export const AnalyticsView: React.FC = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gymName: profile?.gym_name || 'IronPeak Fitness & Gym',
-          currency,
           totalRevenue: kpis.totalRevenue,
           totalExpenses: kpis.totalExpenses,
           netProfit: kpis.netProfit,
@@ -132,7 +130,6 @@ export const AnalyticsView: React.FC = () => {
           memberName: member.memberName,
           daysInactive: member.daysSinceLastVisit,
           daysUntilExpiry: member.daysUntilExpiration,
-          gymName: profile?.gym_name || 'IronPeak Fitness',
         }),
       });
       const data = await res.json();
@@ -185,8 +182,6 @@ export const AnalyticsView: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'cost-saving-plan',
-          gymName: profile?.gym_name || 'Fitness Center',
-          currency,
           totalExpenses: kpis.totalExpenses,
           potentialMonthlySavings: leaks?.potentialMonthlySavings || 0,
           potentialAnnualSavings: leaks?.potentialAnnualSavings || 0,
