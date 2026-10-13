@@ -349,12 +349,14 @@ export const ReportsView: React.FC = () => {
 
       {/* 2. Apple macOS/iOS Segmented Navigation Controls */}
       <ScrollReveal delay={40}>
-        <div style={{ display: 'inline-flex', backgroundColor: 'rgba(118, 118, 128, 0.12)', padding: '3px', borderRadius: '10px', gap: '2px', width: 'fit-content' }}>
+        <div style={{ display: 'inline-flex', backgroundColor: 'rgba(118, 118, 128, 0.12)', padding: '3px', borderRadius: '10px', gap: '2px', width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
           {tabs.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               style={{
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
                 padding: '0.4rem 1rem',
                 borderRadius: '8px',
                 fontSize: '0.825rem',

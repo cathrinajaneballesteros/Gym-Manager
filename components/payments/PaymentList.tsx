@@ -146,7 +146,7 @@ export const PaymentList: React.FC = () => {
             </p>
           </div>
 
-          <div style={{ position: 'relative', display: 'inline-flex', gap: '0.6rem' }}>
+          <div style={{ position: 'relative', display: 'inline-flex', flexWrap: 'wrap', gap: '0.6rem' }}>
             <button
               onClick={() => {
                 setEditingWalkIn(null);

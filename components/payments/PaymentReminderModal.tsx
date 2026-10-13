@@ -384,7 +384,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
         )}
 
         {/* Buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '0.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '0.75rem', marginTop: '0.5rem' }}>
           <button
             type="button"
             onClick={onClose}
@@ -398,7 +398,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
             onClick={handleSendReminder}
             disabled={isSending}
             className="btn btn-primary"
-            style={{ minWidth: '160px' }}
+            style={{ minWidth: '160px', maxWidth: '100%' }}
           >
             {isSending ? (
               <span>Sending...</span>
