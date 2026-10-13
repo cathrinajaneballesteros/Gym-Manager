@@ -93,17 +93,17 @@ export const AIInsightsWidget: React.FC = () => {
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.3rem' }}>
                 <AlertTriangle size={14} />
-                <span>SPENDING LEAK DETECTED</span>
+                <span>HIGHER THAN USUAL SPENDING</span>
               </div>
               <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: '0.2rem' }}>
-                {topLeak.category} Bill Surge (+{topLeak.percentageIncrease}%)
+                {topLeak.category} +{topLeak.percentageIncrease}% vs usual
               </div>
               <p style={{ fontSize: '0.775rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>
                 {topLeak.detectionReason}
               </p>
             </div>
             <div style={{ marginTop: '0.75rem', fontSize: '0.725rem', color: 'var(--text-dim)' }}>
-              Action: {topLeak.suggestedAction.slice(0, 95)}...
+              Tip: {topLeak.suggestedAction.length > 95 ? `${topLeak.suggestedAction.slice(0, 95)}…` : topLeak.suggestedAction}
             </div>
           </div>
         ) : (
@@ -115,7 +115,11 @@ export const AIInsightsWidget: React.FC = () => {
               padding: '1rem',
             }}
           >
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No abnormal expense spikes detected.</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+              {leaks.hasEnoughHistory
+                ? 'Spending is in line with your usual months.'
+                : 'Spending checks start once you have 2 months of expenses recorded.'}
+            </div>
           </div>
         )}
 

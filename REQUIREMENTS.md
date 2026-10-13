@@ -8,7 +8,7 @@ Progress as of Oct 13, 2026.
 | Receipt checker (manual) | Done |
 | Expense historical data | Done |
 | User auditing | Done |
-| AI analytics that help owners save money | Mostly done |
+| AI analytics that help owners save money | Done |
 | Test with at least 5 gym owners | — |
 | 5 gym owners, each with their own gym profile | Mostly done |
 | Calendar method | Done |
@@ -38,12 +38,12 @@ Progress as of Oct 13, 2026.
 - Filters by action, entity, and date range; search also looks inside event details. Exports to CSV.
 - Saved in Supabase per gym. Staff actions are recorded under the staff member's email; only the owner can read the log.
 
-## AI analytics that help owners save money — Mostly done
+## AI analytics that help owners save money — Done
 - Analytics page with a revenue forecast, member churn risk, and expense leak detection with estimated monthly and yearly savings.
 - Churn risk uses recorded check-ins: staff check members in from the Attendance page (or from Members, a member's page, or the Dashboard), and a drop in visits over the last 30 days raises the risk. The Attendance page also lists current members not seen in 14+ days.
 - Gemini writes an executive brief and personalised member messages.
 - The dashboard shows the top AI insights.
-- Left: when a gym has no expense history yet, leak detection compares against fixed peso amounts instead of the gym's own numbers, and one-off equipment purchases count as savings that would repeat every month.
+- Spending checks compare each month with the gym's own earlier months (after 2 months of expenses), treat equipment as one-time purchases, and size the money-saving tips to what the gym actually spends.
 
 ## Test with at least 5 gym owners
 

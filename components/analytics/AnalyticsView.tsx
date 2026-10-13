@@ -385,7 +385,7 @@ export const AnalyticsView: React.FC = () => {
           {[
             { key: 'forecast', label: 'Revenue Forecast' },
             { key: 'churn', label: 'Churn Prediction' },
-            { key: 'leaks', label: 'Cost Optimization & Leaks' },
+            { key: 'leaks', label: 'Spending & Savings' },
           ].map((tab) => (
             <button
               key={tab.key}
@@ -604,7 +604,7 @@ export const AnalyticsView: React.FC = () => {
         </ScrollReveal>
       )}
 
-      {/* 5. Tab: Cost Optimization & Leaks */}
+      {/* 5. Tab: Spending & Savings (spending checks + money-saving tips) */}
       {activeTab === 'leaks' && (
         <ScrollReveal delay={70}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -662,7 +662,7 @@ export const AnalyticsView: React.FC = () => {
               </div>
             </div>
 
-            {/* B. Spending Status / Leaks (Compact) */}
+            {/* B. Spending checks: categories higher than the gym's usual months */}
             {leaks.anomalies.length === 0 ? (
               <div
                 style={{
@@ -679,13 +679,19 @@ export const AnalyticsView: React.FC = () => {
               >
                 <CheckCircle2 size={17} style={{ color: '#16a34a', flexShrink: 0 }} />
                 <span>
-                  <strong>All {leaks.totalCategoriesAnalyzed} expense categories</strong> are tracking within normal limits. No spending leaks detected.
+                  {leaks.hasEnoughHistory ? (
+                    <>
+                      <strong>All {leaks.totalCategoriesAnalyzed} expense categories</strong> are in line with your usual months.
+                    </>
+                  ) : (
+                    <>Spending checks start once you have 2 months of expenses recorded, so there&apos;s something to compare against.</>
+                  )}
                 </span>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                 <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-                  Spending Leaks & Overages
+                  Higher Than Usual
                 </h3>
                 {leaks.anomalies.map((leak) => (
                   <div
@@ -704,11 +710,11 @@ export const AnalyticsView: React.FC = () => {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
                         <span className={leak.severity === 'critical' ? 'badge badge-danger' : 'badge badge-warning'}>
-                          {leak.severity.toUpperCase()} LEAK
+                          {leak.isOneOff ? 'ONE-TIME' : leak.severity === 'critical' ? 'MUCH HIGHER' : 'HIGHER'}
                         </span>
                         <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>{leak.category}</strong>
                         <span style={{ fontSize: '0.75rem', color: '#ef4444', fontWeight: 600 }}>
-                          +{leak.percentageIncrease}% vs Baseline
+                          +{leak.percentageIncrease}% vs usual ({currency}{leak.historicalAverage.toLocaleString()})
                         </span>
                       </div>
                       <p style={{ fontSize: '0.8rem', color: '#475569', margin: 0 }}>
@@ -724,7 +730,7 @@ export const AnalyticsView: React.FC = () => {
                         {currency}{leak.currentAmount.toLocaleString()}
                       </div>
                       <div style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600 }}>
-                        Recoverable: +{currency}{leak.differenceAmount.toLocaleString()}
+                        {leak.isOneOff ? 'One-time purchase' : `+${currency}${leak.differenceAmount.toLocaleString()} over usual`}
                       </div>
                     </div>
                   </div>
@@ -736,8 +742,13 @@ export const AnalyticsView: React.FC = () => {
             <div>
               <div style={{ marginBottom: '0.75rem' }}>
                 <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                  Practical Cost-Saving Recommendations (Open Gym)
+                  Money-Saving Tips
                 </h3>
+                {leaks.savingOpportunities.length === 0 && (
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.35rem' }}>
+                    Tips appear once you record utilities, supplies or maintenance expenses; savings are sized to what you actually spend.
+                  </p>
+                )}
               </div>
 
               <div
