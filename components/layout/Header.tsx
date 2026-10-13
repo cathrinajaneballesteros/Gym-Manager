@@ -51,7 +51,10 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
           onClick={onToggleMobileMenu}
           style={{
             display: 'none',
-            padding: '0.4rem',
+            width: '40px',
+            height: '40px',
+            alignItems: 'center',
+            justifyContent: 'center',
             color: '#636366',
             borderRadius: '8px',
             backgroundColor: 'rgba(118, 118, 128, 0.08)',
@@ -68,9 +71,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
         {/* Profile Avatar */}
         <Link
           href="/settings"
+          aria-label="Account settings"
           style={{
             display: 'flex',
             alignItems: 'center',
+            justifyContent: 'center',
+            width: '40px',
+            height: '40px',
             textDecoration: 'none',
           }}
         >

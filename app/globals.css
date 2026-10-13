@@ -396,26 +396,22 @@ input[type='number'] {
   color: var(--danger-text);
 }
 
-/* Mobile Navigation Bottom Bar */
-.mobile-nav-bar {
-  display: none;
+/* Phones: 16px inputs stop iOS from zooming in on every tap, and cards get tighter padding. */
+@media (max-width: 900px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
 }
 
-@media (max-width: 900px) {
-  .mobile-nav-bar {
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 64px;
-    background: #ffffff;
-    border-top: 1px solid var(--border-light);
-    align-items: center;
-    justify-content: space-around;
-    z-index: 50;
-    padding: 0 0.5rem;
-    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+@media (max-width: 640px) {
+  .card {
+    padding: 1rem;
+  }
+  .modal-header,
+  .modal-body {
+    padding: 1rem !important;
   }
 }
 

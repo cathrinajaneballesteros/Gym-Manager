@@ -149,7 +149,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
         borderRight: '1px solid rgba(255, 255, 255, 0.08)',
         display: 'flex',
         flexDirection: 'column',
-        height: '100vh',
+        // dvh: on phones, vh includes the area under the browser toolbar and hides Sign out.
+        height: '100dvh',
         position: 'sticky',
         top: 0,
         zIndex: 40,
