@@ -1,6 +1,6 @@
 -- Smart Gym Finance Manager demo data, for presentations.
 -- 1. Sign up in the app with the demo email below (or change it to the account you present with).
--- 2. Run this in the Supabase SQL editor (after the migrations). Running it again replaces this month's sample expenses.
+-- 2. Run this in the Supabase SQL editor (after all the migrations, including 003). Running it again replaces this month's sample expenses.
 -- Other accounts are not touched: real gym owners start with no data and go through onboarding.
 
 DO $$
@@ -41,6 +41,7 @@ BEGIN
     email = v_demo_email,
     currency = '₱',
     opening_hours = v_hours,
+    walk_in_price = 100.00,
     onboarded_at = COALESCE(onboarded_at, timezone('utc'::text, now()))
   WHERE id = v_gym_id;
 
