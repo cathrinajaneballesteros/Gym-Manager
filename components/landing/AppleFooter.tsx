@@ -16,16 +16,6 @@ export const AppleFooter: React.FC = () => {
       }}
     >
       <div className="container" style={{ maxWidth: '1060px' }}>
-        {/* Footnote Disclaimers */}
-        <div style={{ paddingBottom: '2rem', borderBottom: '1px solid rgba(0, 0, 0, 0.08)', marginBottom: '2.5rem' }}>
-          <p style={{ marginBottom: '0.75rem' }}>
-            1. Predictive accuracy metrics are based on backtested historical linear regressions of 12-month fitness club billing cycles across Philippine fitness hubs. Actual cash flow performance may vary depending on local membership renewal policies.
-          </p>
-          <p>
-            2. Smart Gym is completely free to use. All forecasting models, automated payment reconciliations, and member analytics are available with zero subscription fees or locked tiers.
-          </p>
-        </div>
-
         {/* Directory Columns */}
         <div
           style={{
