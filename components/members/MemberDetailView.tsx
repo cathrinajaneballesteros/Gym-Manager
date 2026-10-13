@@ -350,13 +350,16 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
                 <CreditCard size={15} />
                 <span>Renew Membership</span>
               </button>
-              <button
-                onClick={handleDelete}
-                className="btn btn-danger btn-sm"
-                title="Deactivate Member"
-              >
-                <Trash2 size={16} />
-              </button>
+              {/* Only the owner can delete members. */}
+              {DBService.isOwner() && (
+                <button
+                  onClick={handleDelete}
+                  className="btn btn-danger btn-sm"
+                  title="Deactivate Member"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
             </div>
           </div>
 

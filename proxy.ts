@@ -49,5 +49,6 @@ export const config = {
     '/analytics/:path*',
     '/audit/:path*',
     '/settings/:path*',
+    '/onboarding/:path*',
   ],
 };

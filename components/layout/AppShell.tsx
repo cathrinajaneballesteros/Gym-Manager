@@ -11,10 +11,12 @@ import {
   Settings,
   Sparkles,
   Calendar,
+  LogIn,
 } from 'lucide-react';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { DBService } from '@/lib/data/db-service';
+import { STAFF_HOME, canOpen } from '@/lib/ui/roles';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -27,7 +29,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const pathname = usePathname();
   const router = useRouter();
 
-  // Every page reads this owner's gym data, so load it before showing any of them.
+  // Every page reads this gym's data, so load it before showing any of them.
   useEffect(() => {
     if (ready) return;
     let cancelled = false;
@@ -43,7 +45,20 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     };
   }, [ready, router]);
 
-  if (!ready) {
+  // A gym that isn't set up goes to onboarding; staff on an owner-only page go to their home page.
+  const redirectTo = !ready
+    ? null
+    : DBService.needsOnboarding()
+      ? '/onboarding'
+      : !canOpen(DBService.getRole(), pathname)
+        ? STAFF_HOME
+        : null;
+
+  useEffect(() => {
+    if (redirectTo) router.replace(redirectTo);
+  }, [redirectTo, router]);
+
+  if (!ready || redirectTo) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f7', padding: '1rem' }}>
         {loadError ? (
@@ -59,7 +74,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     );
   }
 
-  const mobileNavItems = [
+  const allMobileNavItems = [
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: 'Members', href: '/members', icon: Users },
     { name: 'Payments', href: '/payments', icon: CreditCard },
@@ -68,6 +83,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     { name: 'AI', href: '/analytics', icon: Sparkles },
     { name: 'Settings', href: '/settings', icon: Settings },
   ];
+  const role = DBService.getRole();
+  const allowedMobileItems = allMobileNavItems.filter((item) => canOpen(role, item.href));
+  // Staff lose the Dashboard tab, so their home page (check-ins) takes its place.
+  const mobileNavItems =
+    role === 'staff' ? [{ name: 'Check-in', href: STAFF_HOME, icon: LogIn }, ...allowedMobileItems] : allowedMobileItems;
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: '#f5f5f7' }}>

@@ -769,43 +769,48 @@ export const MemberList: React.FC<MemberListProps> = ({ initialStatus = 'all' })
             <span>Edit Details</span>
           </button>
 
-          <div style={{ height: '1px', backgroundColor: '#f1f5f9', margin: '0.25rem 0' }} />
+          {/* Only the owner can delete members. */}
+          {DBService.isOwner() && (
+            <>
+              <div style={{ height: '1px', backgroundColor: '#f1f5f9', margin: '0.25rem 0' }} />
 
-          {/* Delete */}
-          <button
-            type="button"
-            onClick={() => {
-              const name = `${activeMember.first_name} ${activeMember.last_name}`;
-              setActiveMenuId(null);
-              handleDeleteMember(activeMember.id, name);
-            }}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.65rem',
-              padding: '0.55rem 0.75rem',
-              fontSize: '0.825rem',
-              color: '#ef4444',
-              borderRadius: '7px',
-              width: '100%',
-              border: 'none',
-              cursor: 'pointer',
-              textAlign: 'left',
-              fontWeight: 500,
-              transition: 'all 0.12s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#fef2f2';
-              e.currentTarget.style.color = '#dc2626';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#ef4444';
-            }}
-          >
-            <Trash2 size={15} color="#ef4444" />
-            <span>Delete Member</span>
-          </button>
+              {/* Delete */}
+              <button
+                type="button"
+                onClick={() => {
+                  const name = `${activeMember.first_name} ${activeMember.last_name}`;
+                  setActiveMenuId(null);
+                  handleDeleteMember(activeMember.id, name);
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.65rem',
+                  padding: '0.55rem 0.75rem',
+                  fontSize: '0.825rem',
+                  color: '#ef4444',
+                  borderRadius: '7px',
+                  width: '100%',
+                  border: 'none',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontWeight: 500,
+                  transition: 'all 0.12s ease',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = '#fef2f2';
+                  e.currentTarget.style.color = '#dc2626';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = '#ef4444';
+                }}
+              >
+                <Trash2 size={15} color="#ef4444" />
+                <span>Delete Member</span>
+              </button>
+            </>
+          )}
         </div>,
         document.body
       )}

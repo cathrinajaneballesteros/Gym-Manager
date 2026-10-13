@@ -79,7 +79,8 @@ export default function LoginPage() {
           options: {
             data: {
               full_name: fullName.trim() || 'Gym Administrator',
-              gym_name: gymName.trim() || 'My Fitness Gym',
+              // Only used to prefill onboarding; invited staff leave it blank.
+              gym_name: gymName.trim() || undefined,
             },
           },
         });
@@ -406,7 +407,8 @@ export default function LoginPage() {
                     marginBottom: '0.45rem',
                   }}
                 >
-                  Gym / Fitness Center Name
+                  Gym / Fitness Center Name{' '}
+                  <span style={{ fontWeight: 400, color: '#86868b' }}>(leave blank if you were invited as staff)</span>
                 </label>
                 <div style={{ position: 'relative' }}>
                   <div
@@ -428,7 +430,6 @@ export default function LoginPage() {
                     value={gymName}
                     onChange={(e) => setGymName(e.target.value)}
                     placeholder="e.g. IronPeak Fitness Club"
-                    required
                     style={{
                       width: '100%',
                       paddingLeft: '2.4rem',

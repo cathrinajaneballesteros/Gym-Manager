@@ -1,6 +1,6 @@
 # Project Requirements
 
-Progress as of Oct 12, 2026.
+Progress as of Oct 13, 2026.
 
 | Requirement | Status |
 | --- | --- |
@@ -10,7 +10,7 @@ Progress as of Oct 12, 2026.
 | User auditing | Done |
 | AI analytics that help owners save money | Mostly done |
 | Test with at least 5 gym owners | — |
-| 5 gym owners, each with their own gym profile | Partly done |
+| 5 gym owners, each with their own gym profile | Mostly done |
 | Calendar method | Done |
 | Clickable dashboard | Done |
 
@@ -35,7 +35,7 @@ Progress as of Oct 12, 2026.
 - Records sign-in, sign-up, and sign-out, plus every create, edit, and delete for members, payments, expenses, plans, and settings. Also records receipt checks and reminders.
 - Edits show the old and new value of each field, and deleted records keep their key details.
 - Filters by action, entity, and date range; search also looks inside event details. Exports to CSV.
-- Left: the log is stored in the browser, so it can be cleared and isn't shared across devices (see the gym profiles section below).
+- Saved in Supabase per gym. Staff actions are recorded under the staff member's email; only the owner can read the log.
 
 ## AI analytics that help owners save money — Mostly done
 - Analytics page with a revenue forecast, member churn risk, and expense leak detection with estimated monthly and yearly savings.
@@ -46,10 +46,12 @@ Progress as of Oct 12, 2026.
 
 ## Test with at least 5 gym owners
 
-## 5 gym owners, each with their own gym profile — Partly done
-- Each owner signs up with their own account and gym profile (name, gym name, currency, phone), stored in Supabase.
-- The Supabase schema already has per-owner tables for plans, members, payments, and expenses, with row-level security.
-- Left: members, payments, expenses, plans, and the audit log are still saved in the browser, not in Supabase. Two owners using the same browser would see each other's data, and an owner's data doesn't follow them to another device.
+## 5 gym owners, each with their own gym profile — Mostly done
+- All data (plans, members, payments, expenses, check-ins, audit log) is saved in Supabase per gym. Row-level security keeps each gym's data to its own team, and app pages require login.
+- After signing up, a new owner goes through onboarding: gym name and address, contact details, opening hours, and their first membership plans. All of it can be edited later in Settings → Gym.
+- Owners invite staff by email in Settings → Staff. Staff join the gym when they sign up or sign in with that email. Staff can register and edit members, check members in, record payments, and approve GCash receipts. Expenses, reports, AI analytics, the audit log, plans, gym settings, and deleting members are owner-only.
+- New owners start with no data. Sample data for presentations is seeded into one demo account (`supabase/seed.sql`).
+- Left: not yet tested with real gym owners. Invites aren't emailed; the owner tells the staff member which email to sign up with. A person can belong to only one gym.
 
 ## Calendar method — Done
 - Monthly calendar of membership expirations, completed payments, and expenses, with a filter for each.

@@ -7,6 +7,7 @@ import {
   Bell,
   Sliders,
   Building2,
+  Users,
   CheckCircle,
   Database,
   Camera,
@@ -14,16 +15,17 @@ import {
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile, UserRole } from '@/types/database';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { GymSettings } from './GymSettings';
+import { StaffSettings } from './StaffSettings';
 import { showError, showInfo } from '@/lib/ui/swal';
 
 export const SettingsView: React.FC = () => {
   const [profile, setProfile] = useState<UserProfile>(DBService.getProfile());
-  const [activeTab, setActiveTab] = useState<'account' | 'security' | 'notifications' | 'appearance'>('account');
+  const [activeTab, setActiveTab] = useState<'account' | 'gym' | 'staff' | 'security' | 'notifications' | 'appearance'>('account');
+  const isOwner = DBService.isOwner();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [gymName, setGymName] = useState('');
-  const [currency, setCurrency] = useState('₱');
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Security password fields
@@ -37,8 +39,6 @@ export const SettingsView: React.FC = () => {
     setFullName(current.full_name || '');
     setEmail(current.email || '');
     setPhone(current.phone || '');
-    setGymName(current.gym_name || '');
-    setCurrency(current.currency || '₱');
 
     // Show the sign-in email, which can differ from the profile if it was changed in Supabase.
     import('@/lib/supabase/client').then(({ createClient }) => {
@@ -51,13 +51,7 @@ export const SettingsView: React.FC = () => {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const updated = await DBService.updateProfile({
-        full_name: fullName,
-        email,
-        gym_name: gymName,
-        currency,
-        phone,
-      });
+      const updated = await DBService.updateProfile({ full_name: fullName, phone });
       setProfile(updated);
     } catch (err) {
       showError('Save Failed', err instanceof Error ? err.message : 'Could not save your settings.');
@@ -129,6 +123,12 @@ export const SettingsView: React.FC = () => {
         >
           {[
             { key: 'account', label: 'Account', icon: User, color: '#0071e3' },
+            ...(isOwner
+              ? [
+                  { key: 'gym', label: 'Gym', icon: Building2, color: '#ff9500' },
+                  { key: 'staff', label: 'Staff', icon: Users, color: '#5ac8fa' },
+                ]
+              : []),
             { key: 'security', label: 'Security', icon: Lock, color: '#34c759' },
             { key: 'notifications', label: 'Notifications', icon: Bell, color: '#ff3b30' },
             { key: 'appearance', label: 'Appearance', icon: Sliders, color: '#af52de' },
@@ -187,7 +187,7 @@ export const SettingsView: React.FC = () => {
                   Profile Information
                 </h2>
                 <p style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                  Update your gym account identity and contact details.
+                  Your own name and contact details.{isOwner ? ' Gym details are under Gym.' : ''}
                 </p>
               </div>
 
@@ -214,7 +214,7 @@ export const SettingsView: React.FC = () => {
                     {fullName || profile.full_name || 'Admin'}
                   </div>
                   <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                    Admin
+                    {isOwner ? 'Owner' : 'Staff'} · {profile.gym_name}
                   </div>
                   <button
                     type="button"
@@ -248,9 +248,9 @@ export const SettingsView: React.FC = () => {
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    style={{ width: '100%' }}
-                    required
+                    readOnly
+                    title="This is the email you sign in with."
+                    style={{ width: '100%', backgroundColor: '#f8fafc', color: '#64748b' }}
                   />
                 </div>
 
@@ -266,34 +266,6 @@ export const SettingsView: React.FC = () => {
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
-                    Gym Facility Name
-                  </label>
-                  <input
-                    type="text"
-                    value={gymName}
-                    onChange={(e) => setGymName(e.target.value)}
-                    style={{ width: '100%' }}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.4rem' }}>
-                    Currency Symbol
-                  </label>
-                  <select
-                    value={currency}
-                    onChange={(e) => setCurrency(e.target.value)}
-                    style={{ width: '100%' }}
-                  >
-                    <option value="₱">₱ (PHP - Philippine Peso)</option>
-                    <option value="$">$ (USD - US Dollar)</option>
-                    <option value="€">€ (EUR - Euro)</option>
-                    <option value="£">£ (GBP - British Pound)</option>
-                  </select>
-                </div>
               </div>
 
               {/* Submit Button */}
@@ -314,6 +286,10 @@ export const SettingsView: React.FC = () => {
               </div>
             </form>
           )}
+
+          {activeTab === 'gym' && isOwner && <GymSettings />}
+
+          {activeTab === 'staff' && isOwner && <StaffSettings />}
 
           {activeTab === 'security' && (
             <form onSubmit={handleSavePassword} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', maxWidth: '500px' }}>

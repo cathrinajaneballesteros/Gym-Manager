@@ -14,6 +14,55 @@ export interface UserProfile {
   updated_at?: string;
 }
 
+export type GymRole = 'owner' | 'staff';
+
+export type WeekDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+export const WEEK_DAYS: { key: WeekDay; label: string }[] = [
+  { key: 'mon', label: 'Monday' },
+  { key: 'tue', label: 'Tuesday' },
+  { key: 'wed', label: 'Wednesday' },
+  { key: 'thu', label: 'Thursday' },
+  { key: 'fri', label: 'Friday' },
+  { key: 'sat', label: 'Saturday' },
+  { key: 'sun', label: 'Sunday' },
+];
+
+export interface DayHours {
+  open: string; // HH:MM
+  close: string; // HH:MM
+  closed: boolean;
+}
+
+export type OpeningHours = Record<WeekDay, DayHours>;
+
+export interface Gym {
+  id: string;
+  owner_id: string;
+  name: string;
+  address: string;
+  city: string;
+  phone: string;
+  email: string;
+  currency: string;
+  opening_hours: OpeningHours | null;
+  onboarded_at: string | null;
+  created_at: string;
+  updated_at?: string;
+}
+
+export type GymDetails = Pick<Gym, 'name' | 'address' | 'city' | 'phone' | 'email' | 'currency' | 'opening_hours'>;
+
+export interface StaffMember {
+  id: string;
+  gym_id: string;
+  user_id: string | null;
+  email: string;
+  full_name: string;
+  role: GymRole;
+  status: 'invited' | 'active';
+  created_at: string;
+}
+
 export interface MembershipPlan {
   id: string;
   admin_id: string;
@@ -128,9 +177,12 @@ export type AuditAction =
   | 'plan.update'
   | 'plan.activate'
   | 'plan.deactivate'
-  | 'settings.update';
+  | 'settings.update'
+  | 'gym.onboard'
+  | 'staff.invite'
+  | 'staff.remove';
 
-export type AuditEntityType = 'auth' | 'member' | 'payment' | 'expense' | 'plan' | 'settings';
+export type AuditEntityType = 'auth' | 'member' | 'payment' | 'expense' | 'plan' | 'settings' | 'staff';
 
 export interface AuditLogEntry {
   id: string;

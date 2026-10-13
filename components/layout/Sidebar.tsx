@@ -20,6 +20,7 @@ import {
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
 import { getTodayKey, toDateKey } from '@/lib/ui/date';
+import { canOpen } from '@/lib/ui/roles';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -103,7 +104,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     router.push('/login');
   };
 
-  const navItems = [
+  const role = DBService.getRole();
+  const allNavItems = [
     { section: 'OVERVIEW', items: [{ name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard }] },
     {
       section: 'MANAGEMENT',
@@ -131,6 +133,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       ],
     },
   ];
+  // Staff only see the pages they can use; sections left empty are dropped.
+  const navItems = allNavItems
+    .map((group) => ({ ...group, items: group.items.filter((item) => canOpen(role, item.href)) }))
+    .filter((group) => group.items.length > 0);
 
   return (
     <aside
@@ -380,7 +386,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
               {adminName}
             </div>
             <div style={{ fontSize: '0.685rem', color: '#8e8e93', whiteSpace: 'nowrap' }}>
-              Administrator
+              {role === 'staff' ? 'Staff' : 'Owner'}
             </div>
           </div>
         </Link>

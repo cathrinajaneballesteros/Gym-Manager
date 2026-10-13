@@ -12,6 +12,10 @@ import {
   MonthlyTrendData,
   AuditLogEntry,
   AttendanceLog,
+  Gym,
+  GymDetails,
+  GymRole,
+  StaffMember,
 } from '@/types/database';
 import { INITIAL_PROFILE } from './mock-data';
 import { createClient } from '@/lib/supabase/client';
@@ -38,12 +42,17 @@ const PAYMENT_COLUMNS = [
   'rejection_reason', 'reference_number', 'notes',
 ] as const;
 const EXPENSE_COLUMNS = ['category', 'title', 'amount', 'expense_date', 'payment_method', 'description'] as const;
-const PROFILE_COLUMNS = ['email', 'full_name', 'gym_name', 'currency', 'phone'] as const;
+const PROFILE_COLUMNS = ['full_name', 'phone'] as const;
+const GYM_COLUMNS = ['name', 'address', 'city', 'phone', 'email', 'currency', 'opening_hours'] as const;
 
 /** Everything the signed-in owner can see, loaded once per session and kept in step with each write. */
 interface GymData {
   userId: string | null;
+  /** The signed-in person, with gym_name and currency taken from their gym. */
   profile: UserProfile;
+  gym: Gym | null;
+  role: GymRole | null;
+  staff: StaffMember[];
   plans: MembershipPlan[];
   members: Member[];
   payments: Payment[];
@@ -55,6 +64,9 @@ interface GymData {
 const emptyData = (): GymData => ({
   userId: null,
   profile: INITIAL_PROFILE,
+  gym: null,
+  role: null,
+  staff: [],
   plans: [],
   members: [],
   payments: [],
@@ -128,6 +140,23 @@ const fromProfileRow = (r: Row): UserProfile => ({
   full_name: text(r.full_name),
   phone: text(r.phone),
 });
+
+const fromGymRow = (r: Row): Gym => ({
+  ...(r as unknown as Gym),
+  address: text(r.address),
+  city: text(r.city),
+  phone: text(r.phone),
+  email: text(r.email),
+});
+
+const fromStaffRow = (r: Row): StaffMember => ({
+  ...(r as unknown as StaffMember),
+  full_name: text(r.full_name),
+});
+
+// Screens read the gym's name and currency from the profile, so keep them in step with the gym.
+const withGym = (profile: UserProfile, gym: Gym | null): UserProfile =>
+  gym ? { ...profile, gym_name: gym.name, currency: gym.currency } : profile;
 
 const fromAuditRow = (r: Row): AuditLogEntry => ({
   ...(r as unknown as AuditLogEntry),
@@ -250,19 +279,12 @@ export class DBService {
     const user = auth.user;
     if (!user) throw new Error('Not signed in');
 
-    const [profileRow, plans, members, payments, expenses, attendance, audit] = await Promise.all([
+    // Someone the owner invited joins that gym the first time they sign in with the invited email.
+    check(await db().rpc('claim_invites'));
+
+    const [profileRow, myStaffRow] = await Promise.all([
       db().from('profiles').select('*').eq('id', user.id).maybeSingle().then(check),
-      fetchAll('membership_plans', 'created_at'),
-      fetchAll('members', 'created_at'),
-      fetchAll('payments', 'created_at'),
-      fetchAll('expenses', 'expense_date'),
-      fetchAll('attendance_logs', 'check_in_time'),
-      db()
-        .from('audit_logs')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(MAX_AUDIT_ENTRIES)
-        .then(check),
+      db().from('gym_staff').select('*').eq('user_id', user.id).eq('status', 'active').maybeSingle().then(check),
     ]);
 
     // An account made before the signup trigger existed may not have a profile row yet.
@@ -283,15 +305,46 @@ export class DBService {
       ) as Row;
     }
 
+    const staffRow = myStaffRow as Row | null;
+    const role = (staffRow?.role as GymRole | undefined) ?? null;
+    const isOwner = role === 'owner';
+    const none = Promise.resolve([] as Row[]);
+
+    // No gym yet: the person goes to onboarding, so there is nothing else to load.
+    const [gymRow, team, plans, members, payments, expenses, attendance, audit] = staffRow
+      ? await Promise.all([
+          db().from('gyms').select('*').eq('id', staffRow.gym_id as string).single().then(check),
+          isOwner ? fetchAll('gym_staff', 'created_at') : none,
+          fetchAll('membership_plans', 'created_at'),
+          fetchAll('members', 'created_at'),
+          fetchAll('payments', 'created_at'),
+          // Only the owner can see expenses and the audit log.
+          isOwner ? fetchAll('expenses', 'expense_date') : none,
+          fetchAll('attendance_logs', 'check_in_time'),
+          isOwner
+            ? db()
+                .from('audit_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(MAX_AUDIT_ENTRIES)
+                .then(check)
+            : none,
+        ])
+      : [null, [], [], [], [], [], [], []];
+
     // Signed out or switched accounts meanwhile: load again for whoever is signed in now.
     if (startedIn !== generation) return this.load();
+    const gym = gymRow ? fromGymRow(gymRow as Row) : null;
     data = {
       userId: user.id,
-      profile: fromProfileRow(profile),
-      plans: plans.map(fromPlanRow).reverse(),
-      members: members.map(fromMemberRow),
-      payments: payments.map(fromPaymentRow),
-      expenses: expenses.map(fromExpenseRow),
+      profile: withGym(fromProfileRow(profile), gym),
+      gym,
+      role,
+      staff: (team as Row[]).map(fromStaffRow).reverse(),
+      plans: (plans as Row[]).map(fromPlanRow).reverse(),
+      members: (members as Row[]).map(fromMemberRow),
+      payments: (payments as Row[]).map(fromPaymentRow),
+      expenses: (expenses as Row[]).map(fromExpenseRow),
       attendance: attendance as unknown as AttendanceLog[],
       audit: ((audit as Row[]) || []).map(fromAuditRow),
     };
@@ -317,12 +370,13 @@ export class DBService {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
-  static async updateProfile(updates: Partial<UserProfile>): Promise<UserProfile> {
+  /** Saves the signed-in person's own name and phone. Gym details go through updateGym. */
+  static async updateProfile(updates: Partial<Pick<UserProfile, 'full_name' | 'phone'>>): Promise<UserProfile> {
     const current = this.getProfile();
     const row = check(
       await db().from('profiles').update(toRow(updates, PROFILE_COLUMNS)).eq('id', current.id).select().single()
     ) as Row;
-    const updated = fromProfileRow(row);
+    const updated = withGym(fromProfileRow(row), data.gym);
     data.profile = updated;
     emit('sgfm_profile_updated', updated);
     if (changedFields(current, updates).length > 0) {
@@ -330,11 +384,124 @@ export class DBService {
         action: 'settings.update',
         entity_type: 'settings',
         entity_id: updated.id,
-        entity_label: updated.gym_name || updated.email || 'Settings',
+        entity_label: updated.full_name || updated.email || 'Profile',
         metadata: diffMetadata(current, updates),
       });
     }
     return updated;
+  }
+
+  // 1a. Gym and staff
+  static getGym(): Gym | null {
+    return data.gym;
+  }
+
+  static getRole(): GymRole | null {
+    return data.role;
+  }
+
+  static isOwner(): boolean {
+    return data.role === 'owner';
+  }
+
+  /** True until the owner has filled in their gym's details (also when the person has no gym at all). */
+  static needsOnboarding(): boolean {
+    return !data.gym || (data.role === 'owner' && !data.gym.onboarded_at);
+  }
+
+  /** Onboarding: creates the gym with the signed-in person as owner, then loads it. */
+  static async createGym(details: GymDetails): Promise<Gym> {
+    check(
+      await db().rpc('create_gym', {
+        p_name: details.name,
+        p_address: details.address,
+        p_city: details.city,
+        p_phone: details.phone,
+        p_email: details.email,
+        p_currency: details.currency,
+        p_opening_hours: details.opening_hours,
+      })
+    );
+    loading = null;
+    await this.load();
+    const gym = data.gym;
+    if (!gym) throw new Error('The gym was created but could not be loaded. Please refresh.');
+    this.recordAudit({
+      action: 'gym.onboard',
+      entity_type: 'settings',
+      entity_id: gym.id,
+      entity_label: gym.name,
+      metadata: { city: gym.city || null },
+    });
+    return gym;
+  }
+
+  static async updateGym(updates: Partial<GymDetails>): Promise<Gym> {
+    const current = data.gym;
+    if (!current) throw new Error('No gym to update');
+    const row = check(
+      await db().from('gyms').update(toRow(updates, GYM_COLUMNS)).eq('id', current.id).select().single()
+    ) as Row;
+    const gym = fromGymRow(row);
+    data.gym = gym;
+    data.profile = withGym(data.profile, gym);
+    emit('sgfm_profile_updated', data.profile);
+
+    // Opening hours are an object; compare them as text so an unchanged schedule isn't logged.
+    const flat = (g: Partial<GymDetails>) => ({ ...g, opening_hours: g.opening_hours ? JSON.stringify(g.opening_hours) : undefined });
+    if (changedFields(flat(current), flat(updates)).length > 0) {
+      this.recordAudit({
+        action: 'settings.update',
+        entity_type: 'settings',
+        entity_id: gym.id,
+        entity_label: gym.name,
+        metadata: diffMetadata(flat(current), flat(updates)),
+      });
+    }
+    return gym;
+  }
+
+  static getStaff(): StaffMember[] {
+    return data.staff;
+  }
+
+  /** The person joins this gym the first time they sign up or sign in with this email. */
+  static async inviteStaff(email: string): Promise<StaffMember> {
+    const address = email.trim().toLowerCase();
+    if (!address) throw new Error('Enter an email address');
+    if (data.staff.some((s) => s.email.toLowerCase() === address)) {
+      throw new Error('That email is already on your staff list');
+    }
+    const row = check(
+      await db().from('gym_staff').insert({ email: address, role: 'staff', status: 'invited' }).select().single()
+    ) as Row;
+    const invite = fromStaffRow(row);
+    data.staff = [...data.staff, invite];
+
+    this.recordAudit({
+      action: 'staff.invite',
+      entity_type: 'staff',
+      entity_id: invite.id,
+      entity_label: address,
+    });
+    return invite;
+  }
+
+  /** Removes a staff member or cancels an invite; they lose access straight away. */
+  static async removeStaff(id: string): Promise<void> {
+    const member = data.staff.find((s) => s.id === id);
+    if (!member) throw new Error('Staff member not found');
+    if (member.role === 'owner') throw new Error('The owner cannot be removed');
+    check(await db().from('gym_staff').delete().eq('id', id));
+    data.staff = data.staff.filter((s) => s.id !== id);
+
+    this.recordAudit({
+      action: 'staff.remove',
+      entity_type: 'staff',
+      entity_id: id,
+      entity_label: member.full_name || member.email,
+      metadata: { email: member.email, status: member.status },
+    });
   }
 
   // 1b. User Audit Trail

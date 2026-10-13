@@ -92,6 +92,9 @@ const ACTION_META: Record<AuditAction, ActionMeta> = {
   'plan.activate': { label: 'Plan activated', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
   'plan.deactivate': { label: 'Plan deactivated', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
   'settings.update': { label: 'Settings updated', color: '#4b5563', background: '#f3f4f6', border: '#e5e7eb' },
+  'gym.onboard': { label: 'Gym set up', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
+  'staff.invite': { label: 'Staff invited', color: '#0891b2', background: '#ecfeff', border: '#a5f3fc' },
+  'staff.remove': { label: 'Staff removed', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
 };
 
 const ENTITY_LABEL: Record<AuditEntityType, string> = {
@@ -101,6 +104,7 @@ const ENTITY_LABEL: Record<AuditEntityType, string> = {
   expense: 'Expense',
   plan: 'Plan',
   settings: 'Settings',
+  staff: 'Staff',
 };
 
 export const AuditLogView: React.FC = () => {
