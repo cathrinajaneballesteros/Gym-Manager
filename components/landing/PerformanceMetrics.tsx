@@ -32,7 +32,7 @@ export const PerformanceMetrics: React.FC = () => {
     <section
       id="metrics"
       style={{
-        padding: '120px 0',
+        padding: '72px 0',
         backgroundColor: '#ffffff',
         borderTop: '1px solid rgba(0, 0, 0, 0.05)',
         borderBottom: '1px solid rgba(0, 0, 0, 0.05)',
@@ -52,12 +52,13 @@ export const PerformanceMetrics: React.FC = () => {
               <div style={{ display: 'flex', flexDirection: 'column' }}>
                 <div
                   style={{
-                    fontSize: 'clamp(2.75rem, 5vw, 4rem)',
+                    fontSize: 'clamp(1.75rem, 3vw, 2.4rem)',
                     fontWeight: 800,
                     letterSpacing: '-0.04em',
                     color: '#1d1d1f',
                     lineHeight: 1,
-                    marginBottom: '0.75rem',
+                    marginBottom: '0.6rem',
+                    whiteSpace: 'nowrap',
                   }}
                 >
                   {m.value}

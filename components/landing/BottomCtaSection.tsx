@@ -17,7 +17,7 @@ export const BottomCtaSection: React.FC = () => {
   return (
     <section
       style={{
-        padding: '100px 0 120px',
+        padding: '64px 0 96px',
         backgroundColor: '#ffffff',
         position: 'relative',
         overflow: 'hidden',
