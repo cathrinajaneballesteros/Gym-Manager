@@ -267,6 +267,16 @@ export class PaymentSavedError extends Error {
   }
 }
 
+// Written by triggers in 008_invite_accept_and_server_audit.sql.
+const DATABASE_LOGGED_ACTIONS = new Set<AuditLogEntry['action']>([
+  'payment.create',
+  'payment.update',
+  'payment.delete',
+  'payment.receipt_verify',
+  'payment.receipt_reject',
+  'member.check_in_undo',
+]);
+
 export class DBService {
   // 0. Loading the signed-in owner's gym
   /** Loads this owner's data from Supabase (once per sign-in). Every getter reads from what this loaded. */
@@ -316,9 +326,6 @@ export class DBService {
     const { data: auth } = await db().auth.getUser();
     const user = auth.user;
     if (!user) throw new Error('Not signed in');
-
-    // Someone the owner invited joins that gym the first time they sign in with the invited email.
-    check(await db().rpc('claim_invites'));
 
     const [profileRow, myStaffRow] = await Promise.all([
       db().from('profiles').select('*').eq('id', user.id).maybeSingle().then(check),
@@ -451,6 +458,22 @@ export class DBService {
   }
 
   /** Onboarding: creates the gym with the signed-in person as owner, then loads it. */
+  /** An invite waiting for this account's email, shown on onboarding so they can choose to join. */
+  static async getPendingInvite(): Promise<{ invite_id: string; gym_name: string } | null> {
+    const rows = check(await db().rpc('pending_invite')) as { invite_id: string; gym_name: string }[] | null;
+    return rows?.[0] ?? null;
+  }
+
+  static async acceptInvite(inviteId: string): Promise<void> {
+    check(await db().rpc('accept_invite', { p_invite: inviteId }));
+    loading = null;
+    await this.load();
+  }
+
+  static async declineInvite(inviteId: string): Promise<void> {
+    check(await db().rpc('decline_invite', { p_invite: inviteId }));
+  }
+
   static async createGym(details: GymDetails): Promise<Gym> {
     check(
       await db().rpc('create_gym', {
@@ -601,6 +624,9 @@ export class DBService {
     if (!data.gym) return entry;
     data.audit = [entry, ...withoutId(data.audit, entry.id)].slice(0, MAX_AUDIT_ENTRIES);
     emit('sgfm_audit_updated', entry);
+
+    // The database logs these itself (so API calls are recorded too); saving them here would double them.
+    if (DATABASE_LOGGED_ACTIONS.has(entry.action)) return entry;
 
     const { admin_id, ...row } = entry;
     void admin_id; // filled in by the database from the signed-in account

@@ -38,6 +38,8 @@ export default function OnboardingPage() {
   const [plans, setPlans] = useState<PlanDraft[]>([emptyPlan()]);
   const [existingPlans, setExistingPlans] = useState(0);
   const [saving, setSaving] = useState(false);
+  // A gym that invited this email; they choose to join it or set up their own.
+  const [invite, setInvite] = useState<{ invite_id: string; gym_name: string } | null>(null);
   // Uploaded after the gym is created, since the logo is stored in the gym's own folder.
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -83,6 +85,10 @@ export default function OnboardingPage() {
       const planCount = DBService.getPlans().length;
       setExistingPlans(planCount);
       if (planCount > 0) setPlans([]);
+      if (!gym) {
+        const pending = await DBService.getPendingInvite().catch(() => null);
+        if (!cancelled) setInvite(pending);
+      }
       if (!cancelled) setReady(true);
     })();
     return () => {
@@ -179,6 +185,25 @@ export default function OnboardingPage() {
     );
   }
 
+  const answerInvite = async (join: boolean) => {
+    if (!invite) return;
+    setSaving(true);
+    try {
+      if (join) {
+        await DBService.acceptInvite(invite.invite_id);
+        sessionStorage.setItem('sgfm_authenticated', 'true');
+        showToast(`You joined ${escapeHtml(invite.gym_name)}`);
+        router.replace(STAFF_HOME);
+        return;
+      }
+      await DBService.declineInvite(invite.invite_id);
+      setInvite(null);
+    } catch (err) {
+      showError(join ? 'Could not join' : 'Could not decline', err instanceof Error ? err.message : 'Please try again.');
+    }
+    setSaving(false);
+  };
+
   const current = STEPS[step];
   const StepIcon = current.icon;
   const isLast = step === STEPS.length - 1;
@@ -198,6 +223,25 @@ export default function OnboardingPage() {
         }}
         className="onboarding-card"
       >
+        {invite && (
+          <div style={{ marginBottom: '1.75rem', padding: '1rem 1.1rem', borderRadius: '14px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
+            <p style={{ fontSize: '0.9rem', color: '#065f46', fontWeight: 600, marginBottom: '0.35rem' }}>
+              You&apos;ve been invited to join {invite.gym_name} as staff.
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#047857', marginBottom: '0.85rem' }}>
+              Join to work in their gym, or decline to set up your own gym below.
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn-primary" disabled={saving} onClick={() => answerInvite(true)}>
+                Join {invite.gym_name}
+              </button>
+              <button type="button" className="btn btn-secondary" disabled={saving} onClick={() => answerInvite(false)}>
+                Decline, set up my own gym
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Progress */}
         <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1.75rem' }}>
           {STEPS.map((s, i) => (
@@ -239,7 +283,7 @@ export default function OnboardingPage() {
               <input type="text" value={details.address} onChange={(e) => set('address', e.target.value)} maxLength={200} placeholder="e.g. 123 Rizal Ave., Brgy. San Roque, Quezon City" style={{ width: '100%' }} />
             </div>
             <p style={{ fontSize: '0.75rem', color: '#86868b' }}>
-              Were you invited as staff? Sign in with the email your gym owner invited, and you&apos;ll join their gym instead.
+              Were you invited as staff? Sign in with the email your gym owner invited, and you&apos;ll be asked to join their gym.
             </p>
           </div>
         )}
