@@ -9,8 +9,7 @@ import {
   ShieldCheck,
   Sparkles,
   CheckCircle2,
-  DollarSign,
-  Zap,
+  PhilippinePeso,
 } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
@@ -239,7 +238,7 @@ export const AppleHero: React.FC = () => {
                   className="hero-mockup-kpis"
                 >
                   {[
-                    { label: 'Total Revenue', value: '₱245,820', change: '+12.5%', icon: DollarSign, color: '#059669' },
+                    { label: 'Total Revenue', value: '₱245,820', change: '+12.5%', icon: PhilippinePeso, color: '#059669' },
                     { label: 'Active Members', value: '328', change: '+18 this mo', icon: Users, color: '#0071e3' },
                     { label: 'Net Profit Margin', value: '61.6%', change: '+3.4%', icon: TrendingUp, color: '#5856d6' },
                     { label: 'Churn Risk Radar', value: '2.4%', change: 'Lowest ever', icon: ShieldCheck, color: '#34c759' },
@@ -436,35 +435,7 @@ export const AppleHero: React.FC = () => {
               </div>
             </div>
 
-            {/* Floating Glass Chips with Real Depth */}
-            <div
-              className="floating-glass-chip chip-left"
-              style={{
-                position: 'absolute',
-                top: '25%',
-                left: '-28px',
-                zIndex: 2,
-                backgroundColor: 'rgba(255, 255, 255, 0.85)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
-                border: '1px solid rgba(0, 0, 0, 0.08)',
-                borderRadius: '14px',
-                padding: '0.75rem 1rem',
-                boxShadow: '0 12px 28px rgba(0, 0, 0, 0.08)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.65rem',
-              }}
-            >
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', backgroundColor: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Zap size={16} color="#059669" />
-              </div>
-              <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1d1d1f' }}>98.4% Accuracy</div>
-                <div style={{ fontSize: '0.685rem', color: '#86868b' }}>Linear regression model</div>
-              </div>
-            </div>
-
+            {/* Floating Glass Chip with Real Depth */}
             <div
               className="floating-glass-chip chip-right"
               style={{

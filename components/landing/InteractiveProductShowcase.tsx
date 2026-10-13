@@ -126,7 +126,7 @@ export const InteractiveProductShowcase: React.FC = () => {
                     Linear Regression with Seasonal Modifiers
                   </div>
                   <h3 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#1d1d1f', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: '1rem' }}>
-                    Forecast next quarter revenue with 98.4% precision.
+                    Forecast the next three months of revenue.
                   </h3>
                   <p style={{ color: '#424245', fontSize: '1rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
                     Never get surprised by seasonal gym dips. SGFM aggregates active plan expiries, new sign-up velocity, and historical retention curves to simulate your next 90 days of cash intake.
