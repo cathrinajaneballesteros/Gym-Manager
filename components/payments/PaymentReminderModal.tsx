@@ -17,6 +17,7 @@ import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Member, Payment, UserProfile } from '@/types/database';
 import { getPaymentMemberName } from '@/lib/ui/format';
+import { buildReminderSms } from '@/lib/ui/reminder-text';
 import { showToast, showAlert, showError } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
 
@@ -85,7 +86,18 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
     ? getPaymentMemberName(payment)
     : 'Valued Member';
 
-  const smsPreview = `[${gymName}] Hi ${memberFullName.split(' ')[0]}! Friendly reminder that your ${planName} renewal (${currency}${Number(amount || 0).toLocaleString()}) is due on ${dueDate}.${customNote ? ` Note: ${customNote}` : ''} Please renew at the front desk (Cash) or via GCash. Stay strong!`;
+  const gym = DBService.getGym();
+  const amountText = `${currency}${Number(amount || 0).toLocaleString()}`;
+  // Same text the server sends, including the gym's phone so members can call back.
+  const smsPreview = buildReminderSms({
+    gymName,
+    memberName: memberFullName,
+    planName,
+    amount: amountText,
+    dueDate,
+    note: customNote,
+    gymPhone: gym?.phone,
+  });
 
   const handleSendReminder = async () => {
     if (channel === 'email' && !email) {
@@ -120,6 +132,9 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
               planName,
               dueDate,
               customNote,
+              gymPhone: gym?.phone || undefined,
+              gymAddress: gym?.address || undefined,
+              gymEmail: gym?.email || undefined,
             }),
           });
           const data: { success?: boolean; error?: string; simulated?: boolean } = await res
@@ -147,7 +162,8 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
               amount: `${currency}${Number(amount).toLocaleString()}`,
               planName,
               dueDate,
-              customMessage: customNote ? `Hi ${memberFullName.split(' ')[0]}, reminder that your ${planName} renewal (${currency}${Number(amount).toLocaleString()}) is due on ${dueDate}. ${customNote}` : undefined,
+              customMessage: customNote || undefined,
+              gymPhone: gym?.phone || undefined,
             }),
           });
           const data: { success?: boolean; error?: string; simulated?: boolean } = await res

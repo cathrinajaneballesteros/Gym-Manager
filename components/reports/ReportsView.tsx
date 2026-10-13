@@ -250,8 +250,10 @@ export const ReportsView: React.FC = () => {
   const handleExportPDF = () => {
     setIsExporting(true);
     try {
+      const gym = DBService.getGym();
       generateFinancialPDFReport({
         gymName,
+        gymContact: [gym?.address, gym?.phone].filter(Boolean).join(' · ') || undefined,
         currency,
         reportPeriod: periodName,
         kpis: display,

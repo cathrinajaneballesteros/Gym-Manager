@@ -10,6 +10,8 @@ export interface EmailPayload {
   subject: string;
   html: string;
   from?: string;
+  /** Where the member's reply goes (the gym's own email). */
+  replyTo?: string;
 }
 
 export class ResendService {
@@ -46,6 +48,7 @@ export class ResendService {
         to: payload.to,
         subject: payload.subject,
         html: payload.html,
+        ...(payload.replyTo ? { reply_to: payload.replyTo } : {}),
       }),
     });
 
@@ -130,8 +133,16 @@ export class ResendService {
     planName: string;
     dueDate: string;
     customNote?: string;
+    gymPhone?: string;
+    gymAddress?: string;
+    gymEmail?: string;
   }) {
-    const { to, memberName, gymName, amount, planName, dueDate, customNote } = options;
+    const { to, memberName, gymName, amount, planName, dueDate, customNote, gymPhone, gymAddress, gymEmail } = options;
+    // How to reach the gym, shown in the footer; empty details are left out.
+    const contactLines = [gymAddress?.trim(), gymPhone?.trim() ? `Call ${gymPhone.trim()}` : '']
+      .filter(Boolean)
+      .map((line) => `<p style="margin: 4px 0 0 0;">${escapeHtml(line)}</p>`)
+      .join('');
 
     const html = `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
@@ -176,6 +187,7 @@ export class ResendService {
 
         <div style="text-align: center; border-top: 1px solid #e2e8f0; padding-top: 18px; font-size: 12px; color: #94a3b8;">
           <p style="margin: 0;">Stay dedicated, stay strong! See you at ${escapeHtml(gymName)}.</p>
+          ${contactLines}
         </div>
       </div>
     `;
@@ -184,6 +196,7 @@ export class ResendService {
       to,
       subject: `Payment Reminder: ${planName} due on ${dueDate} - ${gymName}`,
       html,
+      replyTo: gymEmail?.trim() || undefined,
     });
   }
 }

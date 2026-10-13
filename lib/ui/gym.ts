@@ -8,7 +8,6 @@ export const DEFAULT_OPENING_HOURS: OpeningHours = Object.fromEntries(
 export const emptyGymDetails = (): GymDetails => ({
   name: '',
   address: '',
-  city: '',
   phone: '',
   email: '',
   // The app is for Philippine gyms only.

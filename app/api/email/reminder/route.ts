@@ -8,7 +8,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json();
-    const { to, memberName, gymName, amount, planName, dueDate, customNote } = body;
+    const { to, memberName, gymName, amount, planName, dueDate, customNote, gymPhone, gymAddress, gymEmail } = body;
 
     if (!to) {
       return NextResponse.json({ error: 'Recipient email is required' }, { status: 400 });
@@ -33,6 +33,9 @@ export async function POST(req: Request) {
       planName: planName || 'Gym Membership',
       dueDate: dueDate || new Date().toISOString().split('T')[0],
       customNote,
+      gymPhone,
+      gymAddress,
+      gymEmail,
     });
 
     return NextResponse.json({ success: true, simulated: false, result });

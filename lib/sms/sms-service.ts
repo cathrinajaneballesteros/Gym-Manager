@@ -4,6 +4,8 @@
  * Supports Semaphore API (popular Philippine SMS gateway) and simulated delivery mode.
  */
 
+import { buildReminderSms } from '@/lib/ui/reminder-text';
+
 export interface SmsPayload {
   to: string;
   message: string;
@@ -16,7 +18,10 @@ export interface SmsReminderOptions {
   amount: string;
   planName: string;
   dueDate: string;
+  /** The member's own note from the reminder form, added to the standard message. */
   customMessage?: string;
+  /** The gym's phone, so members can call back. */
+  gymPhone?: string;
 }
 
 export class SmsService {
@@ -44,14 +49,8 @@ export class SmsService {
    * Generates standard gym payment reminder message text
    */
   static generateReminderText(options: SmsReminderOptions): string {
-    const { memberName, gymName, amount, planName, dueDate, customMessage } = options;
-    const firstName = memberName.trim().split(/\s+/)[0] || 'Member';
-
-    if (customMessage && customMessage.trim()) {
-      return `[${gymName}] ${customMessage.trim()}`;
-    }
-
-    return `[${gymName}] Hi ${firstName}! Friendly reminder that your ${planName} renewal (${amount}) is due on ${dueDate}. Please renew at the front desk or via GCash/online transfer to keep your access active. Stay strong!`;
+    const { memberName, gymName, amount, planName, dueDate, customMessage, gymPhone } = options;
+    return buildReminderSms({ gymName, memberName, planName, amount, dueDate, note: customMessage, gymPhone });
   }
 
   /**

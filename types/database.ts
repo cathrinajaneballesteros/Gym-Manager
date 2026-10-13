@@ -40,7 +40,6 @@ export interface Gym {
   owner_id: string;
   name: string;
   address: string;
-  city: string;
   phone: string;
   email: string;
   currency: string;
@@ -56,7 +55,7 @@ export interface Gym {
 
 export type GymDetails = Pick<
   Gym,
-  'name' | 'address' | 'city' | 'phone' | 'email' | 'currency' | 'opening_hours' | 'walk_in_price'
+  'name' | 'address' | 'phone' | 'email' | 'currency' | 'opening_hours' | 'walk_in_price'
 >;
 
 export interface StaffMember {

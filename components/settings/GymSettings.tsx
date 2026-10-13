@@ -17,7 +17,6 @@ const currentDetails = (): GymDetails => {
   return {
     name: gym.name,
     address: gym.address,
-    city: gym.city,
     phone: gym.phone,
     email: gym.email,
     currency: gym.currency,
@@ -72,7 +71,7 @@ export const GymSettings: React.FC = () => {
     <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxWidth: '620px' }}>
       <div>
         <h2 style={{ fontSize: '1.1rem', fontWeight: 600, color: '#0f172a', marginBottom: '0.25rem' }}>Gym Details</h2>
-        <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Shown to your staff and used on receipts and reminders.</p>
+        <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Your phone and address appear on reminders and receipts; replies to reminder emails go to the gym email.</p>
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.15rem' }}>
@@ -90,15 +89,9 @@ export const GymSettings: React.FC = () => {
           <label style={labelStyle}>Gym Name</label>
           <input type="text" value={details.name} onChange={(e) => set('name', e.target.value)} style={{ width: '100%' }} required />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label style={labelStyle}>Street Address</label>
-            <input type="text" value={details.address} onChange={(e) => set('address', e.target.value)} style={{ width: '100%' }} />
-          </div>
-          <div>
-            <label style={labelStyle}>City</label>
-            <input type="text" value={details.city} onChange={(e) => set('city', e.target.value)} style={{ width: '100%' }} />
-          </div>
+        <div>
+          <label style={labelStyle}>Address</label>
+          <input type="text" value={details.address} onChange={(e) => set('address', e.target.value)} placeholder="e.g. 123 Rizal Ave., Brgy. San Roque, Quezon City" style={{ width: '100%' }} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>

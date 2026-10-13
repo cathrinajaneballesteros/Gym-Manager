@@ -21,7 +21,7 @@ interface PlanDraft {
 
 const STEPS = [
   { title: 'Your gym', subtitle: 'What is your gym called, and where is it?', icon: Building2 },
-  { title: 'Contact details', subtitle: 'How members can reach the gym. Used on receipts and reminders.', icon: Phone },
+  { title: 'Contact details', subtitle: 'Shown on reminders and receipts so members can reach the gym. Replies to reminder emails go to the gym email.', icon: Phone },
   { title: 'Opening hours', subtitle: 'When is the gym open? You can change this later in Settings.', icon: Clock },
   { title: 'Prices', subtitle: 'What walk-ins pay, and the plans members can sign up for. You can also do this later.', icon: Layers },
 ];
@@ -225,12 +225,8 @@ export default function OnboardingPage() {
               <input type="text" value={details.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. IronPeak Fitness Club" style={{ width: '100%' }} autoFocus />
             </div>
             <div>
-              <label style={labelStyle}>Street address</label>
-              <input type="text" value={details.address} onChange={(e) => set('address', e.target.value)} placeholder="e.g. 123 Rizal Avenue" style={{ width: '100%' }} />
-            </div>
-            <div>
-              <label style={labelStyle}>City</label>
-              <input type="text" value={details.city} onChange={(e) => set('city', e.target.value)} placeholder="e.g. Quezon City" style={{ width: '100%' }} />
+              <label style={labelStyle}>Address</label>
+              <input type="text" value={details.address} onChange={(e) => set('address', e.target.value)} placeholder="e.g. 123 Rizal Ave., Brgy. San Roque, Quezon City" style={{ width: '100%' }} />
             </div>
             <p style={{ fontSize: '0.75rem', color: '#86868b' }}>
               Were you invited as staff? Sign in with the email your gym owner invited, and you&apos;ll join their gym instead.

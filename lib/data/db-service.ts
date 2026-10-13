@@ -43,7 +43,7 @@ const PAYMENT_COLUMNS = [
 ] as const;
 const EXPENSE_COLUMNS = ['category', 'title', 'amount', 'expense_date', 'payment_method', 'description'] as const;
 const PROFILE_COLUMNS = ['full_name', 'phone'] as const;
-const GYM_COLUMNS = ['name', 'address', 'city', 'phone', 'email', 'currency', 'opening_hours', 'walk_in_price', 'logo_url'] as const;
+const GYM_COLUMNS = ['name', 'address', 'phone', 'email', 'currency', 'opening_hours', 'walk_in_price', 'logo_url'] as const;
 const LOGO_BUCKET = 'gym-logos';
 const LOGO_TYPES: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' };
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
@@ -148,7 +148,6 @@ const fromProfileRow = (r: Row): UserProfile => ({
 const fromGymRow = (r: Row): Gym => ({
   ...(r as unknown as Gym),
   address: text(r.address),
-  city: text(r.city),
   phone: text(r.phone),
   email: text(r.email),
   walk_in_price: r.walk_in_price === null || r.walk_in_price === undefined ? null : Number(r.walk_in_price),
@@ -449,7 +448,6 @@ export class DBService {
       await db().rpc('create_gym', {
         p_name: details.name,
         p_address: details.address,
-        p_city: details.city,
         p_phone: details.phone,
         p_email: details.email,
         p_currency: details.currency,
@@ -466,7 +464,7 @@ export class DBService {
       entity_type: 'settings',
       entity_id: gym.id,
       entity_label: gym.name,
-      metadata: { city: gym.city || null },
+      metadata: { address: gym.address || null },
     });
     return gym;
   }

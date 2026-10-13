@@ -4,6 +4,8 @@ import { DashboardKPIs, MonthlyTrendData, Expense } from '@/types/database';
 
 interface PDFReportOptions {
   gymName: string;
+  /** "address · phone", shown under the gym name when the gym has filled them in. */
+  gymContact?: string;
   currency: string;
   reportPeriod: string;
   kpis: DashboardKPIs;
@@ -12,7 +14,7 @@ interface PDFReportOptions {
 }
 
 export function generateFinancialPDFReport(options: PDFReportOptions): void {
-  const { gymName, currency, reportPeriod, kpis, trends, expenses } = options;
+  const { gymName, gymContact, currency, reportPeriod, kpis, trends, expenses } = options;
   const pdfCurrency = currency === '₱' ? 'PHP ' : currency;
   const doc = new jsPDF({
     orientation: 'portrait',
@@ -34,8 +36,14 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(148, 163, 184); // slate-400
-  doc.text('SMART GYM FINANCIAL MANAGEMENT SYSTEM • OFFICIAL REPORT', 14, 25);
-  doc.text(`Generated on: ${new Date().toLocaleDateString('en-US', { dateStyle: 'long' })}`, 14, 32);
+  // With contact details the three lines sit closer together to fit the banner.
+  const lines = [
+    ...(gymContact ? [gymContact] : []),
+    'SMART GYM FINANCIAL MANAGEMENT SYSTEM • OFFICIAL REPORT',
+    `Generated on: ${new Date().toLocaleDateString('en-US', { dateStyle: 'long' })}`,
+  ];
+  const lineGap = gymContact ? 5.5 : 7;
+  lines.forEach((line, i) => doc.text(line, 14, 25 + i * lineGap));
 
   // Report Period Badge
   doc.setFillColor(37, 99, 235); // blue-600
