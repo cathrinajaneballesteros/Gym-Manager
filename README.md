@@ -1,92 +1,100 @@
 # Smart Gym Finance Manager (SGFM)
 
-An intelligent, cloud-based financial management platform and modern web application engineered for fitness center operators, gym owners, and studio managers. Built with an Apple-inspired minimalist design aesthetic, real-time analytics, and automated financial intelligence.
+A web app for gym owners in the Philippines to run their gym's money side: members and renewals, cash and GCash payments, walk-ins, expenses, check-ins, reports, and simple forecasts. Each gym's data is private to its owner and the staff they invite.
 
-![Smart Gym Finance Manager](public/logo.svg)
+<img src="public/logo.svg" alt="Smart Gym Finance Manager" width="96" />
 
 ---
 
-## 🌟 Key Features
+## 🌟 Features
 
-- **Apple-Grade Modern UI/UX**: Frosted glassmorphism, responsive spring animations, fluid micro-interactions, and tight typography hierarchy.
-- **AI-Powered Predictive Financials**:
-  - **90-Day Cash Flow Projections**: Automated Monte Carlo simulation forecasting future revenues and operating margins.
-  - **Member Churn Radar**: Risk scoring identifying at-risk renewals before revenue leakage occurs.
-  - **Expense Anomaly Sentinel**: Flagging irregular cost spikes across equipment maintenance, utilities, and payroll.
-- **Comprehensive Ledger & Payment Processing**: Real-time tracking of on-site Cash and GCash payments.
-- **Instant Board-Ready Reports**: 1-click export of structured Financial Statements, P&L, and Ledger summaries in Excel (`.xlsx`) and PDF formats.
-- **Role-Based Access Control**: Granular roles for Admins, Managers, and Staff with row-level security policies.
+- **Gym setup**: new owners go through a short onboarding (gym name, logo, contact details, opening hours, membership plans, walk-in price).
+- **Members**: register members on a plan, track active / expiring / expired status, check-ins (once per day), and send payment reminders by email or SMS.
+- **Payments**: record Cash and GCash payments and walk-ins. GCash payments stay pending until the receipt's reference number is checked. Print a receipt with the gym's logo and details.
+- **Expenses**: log running costs by category, with spending checks that compare each month to the gym's own past months.
+- **Reports**: revenue, expenses, profit and loss, and monthly/annual views, exported to PDF or Excel.
+- **Analytics**: a revenue forecast from past months, members at risk of not renewing (based on real visits), saving tips, and optional AI summaries (Google Gemini).
+- **Owner and Staff roles**: owners see everything; staff handle check-ins, members and payments. Staff are invited by email and choose to join. Access is enforced in the database (row-level security), not just the UI.
+- **Audit log**: who did what, written by the database so it can't be skipped or faked.
+- **Works on phones**: bottom tab bar, layouts that fit small screens.
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Framework**: [Next.js](https://nextjs.org/) (App Router, Turbopack)
-- **Frontend**: [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/)
-- **Styling**: Vanilla CSS with a custom design system (`app/globals.css`)
-- **Database & Auth**: [Supabase](https://supabase.com/) & PostgreSQL
-- **Icons**: [Lucide React](https://lucide.dev/)
-- **Data Exporting**: `xlsx`, `jspdf`, `jspdf-autotable`
+- **Framework**: [Next.js](https://nextjs.org/) 16 (App Router), [React](https://react.dev/) 19, [TypeScript](https://www.typescriptlang.org/)
+- **Styling**: plain CSS (`app/globals.css`) and inline styles
+- **Database & Auth**: [Supabase](https://supabase.com/) (PostgreSQL, Auth, Storage)
+- **Email / SMS / AI**: [Resend](https://resend.com/), [Semaphore](https://semaphore.co/), [Google Gemini](https://ai.google.dev/), all optional
+- **Exports**: `xlsx`, `jspdf`, `jspdf-autotable`
+- **Icons and charts**: [Lucide React](https://lucide.dev/), [Recharts](https://recharts.org/)
 
 ---
 
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-- Node.js 18.17+ or 20+ installed
-- Git installed
+- Node.js 20.9 or newer
+- A Supabase project
 
-### 2. Installation
+### 2. Install
 
-Clone the repository:
 ```bash
 git clone https://github.com/jastennx/Gym-Manager.git
 cd Gym-Manager
-```
-
-Install dependencies:
-```bash
 npm install
 ```
 
-### 3. Environment Variables
+### 3. Environment variables
 
-Create a `.env.local` file based on `.env.example`:
-```bash
-cp .env.example .env.local
-```
+Create `.env.local`:
 
-Fill in your Supabase credentials:
 ```env
+# Required
 NEXT_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_DEFAULT_CURRENCY=₱
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
+
+# Optional: without these the feature is simulated or turned off
+GEMINI_API_KEY=        # AI summaries on Analytics
+RESEND_API_KEY=        # reminder emails
+SEMAPHORE_API_KEY=     # reminder SMS
 ```
 
-### 4. Database Setup
+On Vercel, add the same variables under Project Settings → Environment Variables, then redeploy.
 
-Execute the schema script in the Supabase SQL Editor:
-```
-supabase/schema.sql
-```
+### 4. Database
 
-### 5. Running the Application
+In the Supabase SQL Editor, run these **in order**:
 
-Start the local development server:
+1. `supabase/schema.sql`
+2. Every file in `supabase/migrations/`, from `001_multi_tenant.sql` to `008_invite_accept_and_server_audit.sql`
+
+Each migration is safe to run again. Optional demo data: sign up in the app as `demo@smartgym.com`, then run `supabase/seed.sql`. It only fills that account; other accounts start empty.
+
+### 5. Supabase Auth settings
+
+Under **Authentication → URL Configuration**:
+
+- **Site URL**: your live site, e.g. `https://your-app.vercel.app`.
+- **Redirect URLs**: add `https://your-app.vercel.app/**`, plus `http://localhost:3000/**` for local development.
+
+This makes email confirmation, password reset and Google sign-in links return to the app. You can use `supabase/email-templates/confirm-signup.html` as the signup confirmation email.
+
+### 6. Run
+
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 🔒 Security & Privacy
+## 📝 Notes
 
-- Sensitive `.env` and environment configuration files are strictly excluded via `.gitignore`.
-- Authentication handled via secure encrypted sessions and Supabase Auth.
-- Strict Row Level Security (RLS) policies protecting tenant and financial ledger records.
+- **Resend test sender**: until you verify a domain in Resend, emails from `onboarding@resend.dev` are only delivered to the Resend account's own email.
+- **Usage limits**: each account can send up to 20 reminder emails, 20 SMS and 30 AI requests per hour.
+- **Vercel Hobby plan**: deployments are blocked for commits authored by someone other than the Vercel project owner. The owner can use **Redeploy** in the Vercel dashboard after merging.
 
 ---
 
