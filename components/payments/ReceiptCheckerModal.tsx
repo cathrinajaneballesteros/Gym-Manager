@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
+import { printReceipt } from '@/lib/export/receipt-print';
 import { Payment, UserProfile } from '@/types/database';
 import { showToast, showConfirm, showError, showAlert } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
@@ -113,7 +114,14 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    const opened = printReceipt({
+      payment: { ...payment, member },
+      gym: DBService.getGym(),
+      gymName: profile.gym_name || 'Gym',
+      currency,
+      validUntil: member?.end_date,
+    });
+    if (!opened) showError('Pop-up blocked', 'Allow pop-ups for this site to print the receipt.');
   };
 
   const copyRefNumber = () => {
