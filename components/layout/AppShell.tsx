@@ -221,9 +221,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
+            /* Solid instead of frosted: a live blur on a fixed bar repaints on every scroll frame on phones. */
+            background: rgba(255, 255, 255, 0.97);
             border-top: 0.5px solid rgba(0, 0, 0, 0.12);
             z-index: 40;
             padding-bottom: env(safe-area-inset-bottom);

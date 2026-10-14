@@ -561,6 +561,21 @@ input[type='number'] {
   }
 }
 
+/* App header: frosted on desktop, solid on phones where a live blur makes scrolling lag. */
+.app-header {
+  background-color: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+}
+
+@media (max-width: 900px) {
+  .app-header {
+    background-color: rgba(255, 255, 255, 0.97);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
 /* ==========================================================================
    APPLE GLASSMORPHISM & MICRO-INTERACTION UTILITIES
    Translucent depth, specular highlights, spring physics, and restrained calm
