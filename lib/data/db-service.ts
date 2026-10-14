@@ -323,8 +323,9 @@ export class DBService {
   private static async fetchGym({ background = false }: { background?: boolean } = {}): Promise<void> {
     const startedIn = generation;
     const revisionAtStart = revision;
-    const { data: auth } = await db().auth.getUser();
-    const user = auth.user;
+    // The local session saves a round trip to the Auth server; every query below is still checked by RLS.
+    const { data: auth } = await db().auth.getSession();
+    const user = auth.session?.user;
     if (!user) throw new Error('Not signed in');
 
     const [profileRow, myStaffRow] = await Promise.all([
