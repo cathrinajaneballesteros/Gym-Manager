@@ -122,17 +122,17 @@ export default function LoginPage() {
             return;
           }
 
-          // Prompt user to verify their Gmail via SweetAlert2
+          // Prompt user to verify their email via SweetAlert2
           showAlert({
             icon: 'info',
-            title: 'Check Your Gmail',
+            title: 'Check Your Email',
             html: `
               <div style="text-align: left; font-size: 0.9rem; line-height: 1.6; color: #334155;">
                 <p style="margin-bottom: 0.75rem;">
                   A confirmation link has been sent to <strong>${escapeHtml(email.trim())}</strong>.
                 </p>
                 <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 0.85rem; font-size: 0.85rem; color: #166534;">
-                  📬 Please open your Gmail to confirm your account before signing in.
+                  📬 Please open your email to confirm your account before signing in.
                 </div>
               </div>
             `,
@@ -278,12 +278,12 @@ export default function LoginPage() {
               marginBottom: '0.25rem',
             }}
           >
-            {mode === 'signin' ? 'Gym Manager Portal' : 'Create Gym Account'}
+            {mode === 'signin' ? 'Sign in to Smart Gym' : 'Create Gym Account'}
           </h1>
           <p style={{ fontSize: '0.875rem', color: '#86868b' }}>
             {mode === 'signin'
-              ? 'Sign in to access your gym operations ledger'
-              : 'Register your administrator credentials'}
+              ? "Manage your gym's members and money"
+              : 'Set up your account to get started'}
           </p>
         </div>
 
@@ -423,8 +423,7 @@ export default function LoginPage() {
                     marginBottom: '0.45rem',
                   }}
                 >
-                  Gym / Fitness Center Name{' '}
-                  <span style={{ fontWeight: 400, color: '#86868b' }}>(leave blank if you were invited as staff)</span>
+                  Gym Name
                 </label>
                 <div style={{ position: 'relative' }}>
                   <div
@@ -458,6 +457,9 @@ export default function LoginPage() {
                     }}
                   />
                 </div>
+                <p style={{ fontSize: '0.75rem', color: '#86868b', marginTop: '0.4rem' }}>
+                  Joining a gym as staff? Leave this blank.
+                </p>
               </div>
             </>
           )}
