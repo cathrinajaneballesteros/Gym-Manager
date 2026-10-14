@@ -84,7 +84,24 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             <button className="btn btn-primary" onClick={() => window.location.reload()}>Try again</button>
           </div>
         ) : (
-          <p style={{ fontSize: '0.9rem', color: '#6e6e73' }}>Loading your gym…</p>
+          <div className="gym-loader" role="status" aria-live="polite">
+            <div className="gym-loader-badge">
+              <svg className="gym-loader-dumbbell" viewBox="0 0 64 24" width="44" height="17" aria-hidden="true">
+                <rect x="17" y="10" width="30" height="4" rx="2" fill="#ffffff" />
+                <rect x="11" y="3" width="6" height="18" rx="2" fill="#ffffff" />
+                <rect x="4" y="6" width="5" height="12" rx="2" fill="#ffffff" />
+                <rect x="47" y="3" width="6" height="18" rx="2" fill="#ffffff" />
+                <rect x="55" y="6" width="5" height="12" rx="2" fill="#ffffff" />
+              </svg>
+              <span className="gym-loader-shadow" aria-hidden="true" />
+            </div>
+            <p style={{ fontSize: '0.9rem', color: '#6e6e73' }}>
+              Loading your gym
+              <span className="gym-loader-dot" aria-hidden="true">.</span>
+              <span className="gym-loader-dot" aria-hidden="true">.</span>
+              <span className="gym-loader-dot" aria-hidden="true">.</span>
+            </p>
+          </div>
         )}
       </div>
     );
