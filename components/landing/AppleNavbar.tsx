@@ -23,7 +23,7 @@ export const AppleNavbar: React.FC = () => {
 
   const navLinks = [
     { name: 'Overview', href: '#overview' },
-    { name: 'Intelligence', href: '#intelligence' },
+    { name: 'Insights', href: '#intelligence' },
     { name: 'Features', href: '#architecture' },
     { name: 'Highlights', href: '#metrics' },
   ];
@@ -43,7 +43,7 @@ export const AppleNavbar: React.FC = () => {
       }}
     >
       <div
-        className={`glass-nav ${scrolled ? 'glass-nav-scrolled' : ''}`}
+        className={`glass-nav nav-bar ${scrolled ? 'glass-nav-scrolled' : ''}`}
         style={{
           width: '100%',
           maxWidth: '1060px',
@@ -83,6 +83,7 @@ export const AppleNavbar: React.FC = () => {
               fontWeight: 700,
               letterSpacing: '-0.02em',
               color: '#1d1d1f',
+              whiteSpace: 'nowrap',
             }}
           >
             Smart Gym
@@ -138,7 +139,7 @@ export const AppleNavbar: React.FC = () => {
 
           <Link
             href={isLoggedIn ? '/dashboard' : '/login?mode=signup'}
-            className="apple-btn-primary"
+            className="apple-btn-primary nav-launch-btn"
             style={{
               fontSize: '0.825rem',
               padding: '0.45rem 1.15rem',
@@ -228,14 +229,19 @@ export const AppleNavbar: React.FC = () => {
         </div>
       )}
 
+      {/* :global because styled-jsx doesn't scope class names passed to <Link>. */}
       <style jsx>{`
         @media (max-width: 768px) {
-          .desktop-nav-links,
-          .desktop-signin-link {
+          :global(.desktop-nav-links),
+          :global(.desktop-signin-link),
+          :global(.nav-launch-btn) {
             display: none !important;
           }
-          .mobile-toggle-btn {
+          :global(.mobile-toggle-btn) {
             display: flex !important;
+          }
+          :global(.nav-bar) {
+            padding: 0 0.6rem 0 1rem !important;
           }
         }
       `}</style>
