@@ -410,8 +410,8 @@ export const AuditLogView: React.FC = () => {
                   <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     <th style={{ padding: '0.9rem 1.5rem' }}>Time</th>
                     <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Actor</th>
-                    <th style={{ padding: '0.9rem 1.25rem' }}>Action</th>
-                    <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Entity</th>
+                    <th style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>Action</th>
+                    <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>Entity</th>
                     <th style={{ padding: '0.9rem 1.5rem' }}>Details</th>
                   </tr>
                 </thead>
@@ -436,7 +436,7 @@ export const AuditLogView: React.FC = () => {
                           {entry.actor_email || 'Unknown'}
                         </td>
 
-                        <td style={{ padding: '1rem 1.25rem' }}>
+                        <td style={{ padding: '1rem 1.25rem', textAlign: 'center' }}>
                           <span
                             className="phone-wrap"
                             style={{
@@ -454,7 +454,7 @@ export const AuditLogView: React.FC = () => {
                           </span>
                         </td>
 
-                        <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.825rem' }}>
+                        <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.825rem', textAlign: 'center' }}>
                           {ENTITY_LABEL[entry.entity_type] || entry.entity_type}
                         </td>
 
