@@ -257,12 +257,12 @@ export const AttendanceView: React.FC = () => {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                 <thead>
                   <tr style={headRowStyle}>
                     <th style={thStyle}>Time</th>
                     <th style={thStyle}>Member</th>
-                    <th style={thStyle}>Status</th>
+                    <th className="hide-on-phone" style={thStyle}>Status</th>
                     <th style={{ ...thStyle, textAlign: 'right' }}></th>
                   </tr>
                 </thead>
@@ -275,7 +275,7 @@ export const AttendanceView: React.FC = () => {
                         <td style={tdStyle}>
                           {m ? <Link href={`/members/${m.id}`} style={linkStyle}>{memberName(m)}</Link> : memberName(m)}
                         </td>
-                        <td style={tdStyle}>
+                        <td className="hide-on-phone" style={tdStyle}>
                           {m && <span className={`badge ${STATUS_BADGE[m.status].className}`}>{STATUS_BADGE[m.status].label}</span>}
                         </td>
                         <td style={{ ...tdStyle, textAlign: 'right' }}>{undoButton(a)}</td>
@@ -286,7 +286,7 @@ export const AttendanceView: React.FC = () => {
                     <tr key={p.id} style={{ borderBottom: '1px solid #f8fafc' }}>
                       <td style={{ ...tdStyle, color: '#64748b' }}>{formatTime(p.created_at)}</td>
                       <td style={{ ...tdStyle, fontWeight: 600, color: '#0f172a' }}>{getPaymentMemberName(p)}</td>
-                      <td style={tdStyle}>
+                      <td className="hide-on-phone" style={tdStyle}>
                         <span className="badge badge-pending">
                           Walk-in · {DBService.getProfile().currency || '₱'}{Number(p.amount).toLocaleString()}
                         </span>
@@ -320,13 +320,13 @@ export const AttendanceView: React.FC = () => {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                 <thead>
                   <tr style={headRowStyle}>
                     <th style={thStyle}>Member</th>
-                    <th style={thStyle}>Last Visit</th>
+                    <th className="hide-on-phone" style={thStyle}>Last Visit</th>
                     <th style={thStyle}>Days Away</th>
-                    <th style={thStyle}>Membership Ends</th>
+                    <th className="hide-on-phone" style={thStyle}>Membership Ends</th>
                     <th style={{ ...thStyle, textAlign: 'right' }}></th>
                   </tr>
                 </thead>
@@ -336,20 +336,20 @@ export const AttendanceView: React.FC = () => {
                       <td style={tdStyle}>
                         <Link href={`/members/${m.id}`} style={linkStyle}>{memberName(m)}</Link>
                       </td>
-                      <td style={{ ...tdStyle, color: '#64748b' }}>
+                      <td className="hide-on-phone" style={{ ...tdStyle, color: '#64748b' }}>
                         {neverCheckedIn ? 'Never checked in' : formatDisplayDate(m.last_visit_date)}
                       </td>
                       <td style={{ ...tdStyle, color: '#d97706', fontWeight: 600 }}>{daysAway} days</td>
-                      <td style={{ ...tdStyle, color: '#64748b' }}>{formatDisplayDate(m.end_date)}</td>
+                      <td className="hide-on-phone" style={{ ...tdStyle, color: '#64748b' }}>{formatDisplayDate(m.end_date)}</td>
                       <td style={{ ...tdStyle, textAlign: 'right' }}>
                         <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
-                          <button className="btn btn-outline btn-sm" onClick={() => setReminderMember(m)}>
+                          <button className="btn btn-outline btn-sm" title="Remind" onClick={() => setReminderMember(m)}>
                             <Bell size={13} />
-                            <span>Remind</span>
+                            <span className="phone-icon-label">Remind</span>
                           </button>
-                          <button className="btn btn-secondary btn-sm" onClick={() => handleCheckIn(m)}>
+                          <button className="btn btn-secondary btn-sm" title="Check In" onClick={() => handleCheckIn(m)}>
                             <LogIn size={13} />
-                            <span>Check In</span>
+                            <span className="phone-icon-label">Check In</span>
                           </button>
                         </div>
                       </td>
@@ -437,13 +437,13 @@ export const AttendanceView: React.FC = () => {
           ) : (
             <>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                   <thead>
                     <tr style={headRowStyle}>
                       <th style={thStyle}>Date</th>
-                      <th style={thStyle}>Time</th>
+                      <th className="hide-on-phone" style={thStyle}>Time</th>
                       <th style={thStyle}>Member</th>
-                      <th style={thStyle}>Plan</th>
+                      <th className="hide-on-phone" style={thStyle}>Plan</th>
                       <th style={{ ...thStyle, textAlign: 'right' }}></th>
                     </tr>
                   </thead>
@@ -453,11 +453,11 @@ export const AttendanceView: React.FC = () => {
                       return (
                         <tr key={a.id} style={{ borderBottom: '1px solid #f8fafc' }}>
                           <td style={{ ...tdStyle, color: '#334155' }}>{formatDisplayDate(visitDay(a))}</td>
-                          <td style={{ ...tdStyle, color: '#64748b' }}>{formatTime(a.check_in_time)}</td>
+                          <td className="hide-on-phone" style={{ ...tdStyle, color: '#64748b' }}>{formatTime(a.check_in_time)}</td>
                           <td style={tdStyle}>
                             {m ? <Link href={`/members/${m.id}`} style={linkStyle}>{memberName(m)}</Link> : memberName(m)}
                           </td>
-                          <td style={{ ...tdStyle, color: '#64748b' }}>{m?.plan?.name ?? '—'}</td>
+                          <td className="hide-on-phone" style={{ ...tdStyle, color: '#64748b' }}>{m?.plan?.name ?? '—'}</td>
                           <td style={{ ...tdStyle, textAlign: 'right' }}>{undoButton(a)}</td>
                         </tr>
                       );
