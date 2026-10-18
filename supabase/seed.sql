@@ -177,7 +177,8 @@ BEGIN
     ) p
     WHERE p.pay_date <= v_today;
 
-    -- Check-ins every few days over the last five weeks, mornings, at most once a day
+    -- Check-ins every few days over the last two months, mornings, at most once a day.
+    -- Two months lets the churn check compare the last 30 days with the 30 before (Joshua's visits drop off).
     IF v_m.away_days IS NOT NULL THEN
       INSERT INTO public.attendance_logs (gym_id, admin_id, member_id, check_in_date, check_in_time)
       SELECT
@@ -186,7 +187,7 @@ BEGIN
           AT TIME ZONE 'Asia/Manila'
       FROM (
         SELECT (v_today - g)::date AS d
-        FROM generate_series(v_m.away_days, 35, v_m.visit_gap) AS g
+        FROM generate_series(v_m.away_days, 59, v_m.visit_gap) AS g
       ) v
       WHERE v.d >= v_start;
     END IF;
