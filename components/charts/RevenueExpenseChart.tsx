@@ -11,6 +11,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { MonthlyTrendData } from '@/types/database';
+import { formatCompactAmount } from '@/lib/ui/format';
 
 interface RevenueExpenseChartProps {
   data: MonthlyTrendData[];
@@ -60,7 +61,7 @@ export const RevenueExpenseChart: React.FC<RevenueExpenseChartProps> = ({
             fontSize={11}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(val) => `${currency}${(val / 1000).toFixed(0)}k`}
+            tickFormatter={(val) => formatCompactAmount(val, currency)}
           />
           <Tooltip
             contentStyle={{
