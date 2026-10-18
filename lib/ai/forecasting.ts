@@ -94,11 +94,12 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
 
   const denominator = n * sumX2 - sumX * sumX;
   const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0;
-  const intercept = (sumY - slope * sumX) / n;
 
-  // Next month forecast (Month index n + 1)
-  const nextMonthIndex = n + 1;
-  const rawProjected = Math.max(0, Math.round(slope * nextMonthIndex + intercept));
+  // The trend (slope) is applied from this month's actual revenue, so the forecast
+  // carries on from the last real point instead of jumping to where the fitted line ends.
+  const lastRevenue = historicalTrends[n - 1]?.revenue || 0;
+  const projectAhead = (monthsAhead: number) => Math.max(0, Math.round(lastRevenue + slope * monthsAhead));
+  const rawProjected = projectAhead(1);
 
   const expectedRenewals = Math.round(activeMembers * (kpis.renewalRate > 0 ? kpis.renewalRate / 100 : 0.85));
   const predictedNewMembers = newMembersAt(0.12);
@@ -127,18 +128,17 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
     });
   });
 
-  // Add forecast points for the next 3 months, labelled with real month names, e.g. "Nov (F)"
+  // Add forecast points for the next 3 months, labelled with real month names, e.g. "Nov"
   const now = new Date();
   const futureMonths = [1, 2, 3].map((i) =>
     new Date(now.getFullYear(), now.getMonth() + i, 1).toLocaleString('en-US', { month: 'short' })
   );
   futureMonths.forEach((mName, i) => {
-    const step = n + 1 + i;
-    const baseVal = Math.max(0, Math.round(slope * step + intercept));
+    const baseVal = projectAhead(i + 1);
     const variance = baseVal * 0.05 * (i + 1);
 
     series.push({
-      period: `${mName} (F)`,
+      period: mName,
       projectedRevenue: baseVal,
       lowerConfidence: Math.max(0, Math.round(baseVal - variance)),
       upperConfidence: Math.round(baseVal + variance),

@@ -214,10 +214,12 @@ export const AnalyticsView: React.FC = () => {
   const currency = profile?.currency || '₱';
 
   // Chart data blending historical and projected
-  const chartData = (forecast.trendSeries || []).map((pt) => ({
+  // The last real month also starts the forecast line, so the dashed line joins the solid one.
+  const lastHistoricalIndex = (forecast.trendSeries || []).filter((pt) => !pt.isForecast).length - 1;
+  const chartData = (forecast.trendSeries || []).map((pt, i) => ({
     month: pt.period,
     historical: pt.isForecast ? null : pt.projectedRevenue,
-    forecast: pt.isForecast ? pt.projectedRevenue : null,
+    forecast: pt.isForecast || i === lastHistoricalIndex ? pt.projectedRevenue : null,
   }));
 
   const handleContactMember = async (member: ChurnPredictionMember) => {
@@ -263,15 +265,10 @@ export const AnalyticsView: React.FC = () => {
       return;
     }
 
-    const forecastPoints = forecast.trendSeries.filter((p) => p.isForecast);
-    const minBound =
-      forecastPoints.length > 0
-        ? Math.min(...forecastPoints.map((p) => p.lowerConfidence))
-        : Math.round(forecast.forecastedNextMonthRevenue * 0.9);
-    const maxBound =
-      forecastPoints.length > 0
-        ? Math.max(...forecastPoints.map((p) => p.upperConfidence))
-        : Math.round(forecast.forecastedNextMonthRevenue * 1.1);
+    // Range for next month, the same month as the projection shown above it
+    const nextPoint = forecast.trendSeries.find((p) => p.isForecast);
+    const minBound = nextPoint ? nextPoint.lowerConfidence : Math.round(forecast.forecastedNextMonthRevenue * 0.9);
+    const maxBound = nextPoint ? nextPoint.upperConfidence : Math.round(forecast.forecastedNextMonthRevenue * 1.1);
 
     const formatVal = (val: number) => formatCompactAmount(val, currency);
 
@@ -454,16 +451,17 @@ export const AnalyticsView: React.FC = () => {
                 </div>
               ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                <LineChart data={chartData} margin={{ top: 12, right: 12, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={{ stroke: '#f1f5f9' }} />
+                  <XAxis dataKey="month" interval={0} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={{ stroke: '#f1f5f9' }} />
                   <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} domain={[0, (dataMax: number) => Math.max(dataMax, 1000)]} tickFormatter={(val) => formatCompactAmount(val, currency)} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
                     formatter={(val) => [`${currency}${Number(val).toLocaleString()}`, '']}
                   />
+                  {/* Forecast first so October's solid dot draws on top of where the dashed line starts */}
+                  <Line type="monotone" dataKey="forecast" stroke="#0284c7" strokeWidth={2.5} strokeDasharray="4 4" dot={{ r: 4, fill: '#ffffff', stroke: '#0284c7', strokeWidth: 2, strokeDasharray: '0' }} />
                   <Line type="monotone" dataKey="historical" stroke="#0284c7" strokeWidth={2.5} dot={{ r: 3, fill: '#0284c7' }} />
-                  <Line type="monotone" dataKey="forecast" stroke="#0284c7" strokeWidth={2.5} strokeDasharray="4 4" dot={{ r: 4, fill: '#ffffff', stroke: '#0284c7', strokeWidth: 2 }} />
                 </LineChart>
               </ResponsiveContainer>
               )}
