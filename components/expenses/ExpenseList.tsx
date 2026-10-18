@@ -23,7 +23,6 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { getRecentMonthKeys, getTodayKey, formatDisplayDate } from '@/lib/ui/date';
 import { downloadCSV } from '@/lib/ui/csv';
-import { escapeHtml } from '@/lib/ui/escape';
 import { getPageWindow } from '@/lib/ui/pagination';
 
 export const ExpenseList: React.FC = () => {
@@ -162,7 +161,7 @@ export const ExpenseList: React.FC = () => {
         return;
       }
       refreshData();
-      showToast(`Expense "${escapeHtml(title)}" deleted`);
+      showToast(`Expense "${title}" deleted`);
     }
   };
 

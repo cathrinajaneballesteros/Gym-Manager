@@ -5,7 +5,6 @@ import { UserPlus, Trash2 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { StaffMember } from '@/types/database';
 import { showConfirm, showError, showToast } from '@/lib/ui/swal';
-import { escapeHtml } from '@/lib/ui/escape';
 
 export const StaffSettings: React.FC = () => {
   const [staff, setStaff] = useState<StaffMember[]>(DBService.getStaff());
@@ -24,7 +23,7 @@ export const StaffSettings: React.FC = () => {
       await DBService.inviteStaff(address);
       setStaff(DBService.getStaff());
       setEmail('');
-      showToast(`Invite added for ${escapeHtml(address)}`);
+      showToast(`Invite added for ${address}`);
     } catch (err) {
       showError('Invite Failed', err instanceof Error ? err.message : 'Could not add the invite.');
     } finally {
@@ -47,7 +46,7 @@ export const StaffSettings: React.FC = () => {
     try {
       await DBService.removeStaff(member.id);
       setStaff(DBService.getStaff());
-      showToast(pending ? 'Invite cancelled' : `${escapeHtml(who)} removed`);
+      showToast(pending ? 'Invite cancelled' : `${who} removed`);
     } catch (err) {
       showError('Remove Failed', err instanceof Error ? err.message : 'Could not remove the staff member.');
     }

@@ -308,7 +308,9 @@ export const AttendanceView: React.FC = () => {
           </div>
           {inactiveMembers.length === 0 ? (
             <div style={{ padding: '2.5rem 1.5rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
-              Every current member has visited in the last {INACTIVE_DAYS} days.
+              {members.some((m) => m.status === 'active' || m.status === 'expiring')
+                ? `Every current member has visited in the last ${INACTIVE_DAYS} days.`
+                : 'No active members yet.'}
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>

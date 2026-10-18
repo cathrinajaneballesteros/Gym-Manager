@@ -214,21 +214,11 @@ export const AnalyticsView: React.FC = () => {
   const currency = profile?.currency || '₱';
 
   // Chart data blending historical and projected
-  const chartData =
-    forecast.trendSeries && forecast.trendSeries.length > 0
-      ? forecast.trendSeries.map((pt) => ({
-          month: pt.period,
-          historical: pt.isForecast ? null : pt.projectedRevenue,
-          forecast: pt.isForecast ? pt.projectedRevenue : null,
-        }))
-      : [
-          { month: 'Apr', historical: 0, forecast: null },
-          { month: 'May', historical: 0, forecast: null },
-          { month: 'Jun', historical: 0, forecast: null },
-          { month: 'Jul', historical: 0, forecast: 0 },
-          { month: 'Aug', historical: null, forecast: 0 },
-          { month: 'Sep', historical: null, forecast: 0 },
-        ];
+  const chartData = (forecast.trendSeries || []).map((pt) => ({
+    month: pt.period,
+    historical: pt.isForecast ? null : pt.projectedRevenue,
+    forecast: pt.isForecast ? pt.projectedRevenue : null,
+  }));
 
   const handleContactMember = async (member: ChurnPredictionMember) => {
     const gymName = profile?.gym_name || 'our gym';
@@ -458,6 +448,11 @@ export const AnalyticsView: React.FC = () => {
                 </div>
               </div>
 
+              {chartData.length === 0 ? (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem', border: '1px dashed #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+                  Revenue trends appear after your first month of payments.
+                </div>
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -471,6 +466,7 @@ export const AnalyticsView: React.FC = () => {
                   <Line type="monotone" dataKey="forecast" stroke="#0284c7" strokeWidth={2.5} strokeDasharray="4 4" dot={{ r: 4, fill: '#ffffff', stroke: '#0284c7', strokeWidth: 2 }} />
                 </LineChart>
               </ResponsiveContainer>
+              )}
             </div>
 
             {/* Column 3: Key Factors */}

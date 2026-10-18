@@ -215,7 +215,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
             Cancel
           </button>
           <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-            {isSubmitting ? 'Recording...' : initialExpense ? 'Update Expense' : 'Record Expense'}
+            {isSubmitting ? (initialExpense ? 'Saving...' : 'Recording...') : initialExpense ? 'Update Expense' : 'Record Expense'}
           </button>
         </div>
       </form>

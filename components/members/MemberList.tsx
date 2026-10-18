@@ -27,7 +27,6 @@ import { PaymentModal } from '@/components/payments/PaymentModal';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showError, showToast } from '@/lib/ui/swal';
-import { escapeHtml } from '@/lib/ui/escape';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { formatDisplayDate } from '@/lib/ui/date';
 import { checkInWithPrompt } from '@/lib/ui/check-in';
@@ -169,7 +168,7 @@ export const MemberList: React.FC = () => {
       }
       refreshData();
       setActiveMenuId(null);
-      showToast(`${escapeHtml(name)} removed`);
+      showToast(`${name} removed`);
     }
   };
 
@@ -341,21 +340,37 @@ export const MemberList: React.FC = () => {
               <Dumbbell size={30} strokeWidth={1.75} />
             </div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#0f172a', marginBottom: '0.4rem' }}>
-              No members yet
+              {members.length === 0 ? 'No members yet' : 'No members match your search'}
             </h3>
             <p style={{ fontSize: '0.875rem', color: '#64748b', maxWidth: '360px', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              Start by adding your first member to manage memberships and payments.
+              {members.length === 0
+                ? 'Start by adding your first member to manage memberships and payments.'
+                : 'Try a different name or clear the filters to see everyone.'}
             </p>
-            <button
-              onClick={() => {
-                setEditingMember(null);
-                setIsAddModalOpen(true);
-              }}
-              className="btn btn-primary"
-            >
-              <Plus size={16} />
-              <span>Add Member</span>
-            </button>
+            {members.length === 0 ? (
+              <button
+                onClick={() => {
+                  setEditingMember(null);
+                  setIsAddModalOpen(true);
+                }}
+                className="btn btn-primary"
+              >
+                <Plus size={16} />
+                <span>Add Member</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                  setPlanFilter('all');
+                  setCurrentPage(1);
+                }}
+                className="btn btn-secondary"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
