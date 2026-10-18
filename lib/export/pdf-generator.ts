@@ -13,6 +13,9 @@ interface PDFReportOptions {
   expenses: Expense[];
 }
 
+// "1 member", "5 members"
+const memberCount = (n: number) => `${n} ${n === 1 ? 'member' : 'members'}`;
+
 export function generateFinancialPDFReport(options: PDFReportOptions): void {
   const { gymName, gymContact, currency, reportPeriod, kpis, trends, expenses } = options;
   const pdfCurrency = currency === '₱' ? 'PHP ' : currency;
@@ -67,8 +70,8 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
     ['Total Operating Expenses', `${pdfCurrency}${kpis.totalExpenses.toLocaleString()}`, 'Rent, utilities, staff, upkeep'],
     ['Net Profit', `${pdfCurrency}${kpis.netProfit.toLocaleString()}`, kpis.netProfit >= 0 ? 'Profitable (Positive Return)' : 'Deficit'],
     ['Operating Profit Margin', `${kpis.profitMargin}%`, 'Target benchmark > 15%'],
-    ['Active Member Community', `${kpis.activeMembers} Members`, `${kpis.renewalRate}% renewal rate`],
-    ['Expiring Memberships', `${kpis.expiringMemberships} Members`, 'Ending within the next 7 days'],
+    ['Active Member Community', memberCount(kpis.activeMembers), `${kpis.renewalRate}% renewal rate`],
+    ['Expiring Memberships', memberCount(kpis.expiringMemberships), 'Ending within the next 7 days'],
   ];
 
   autoTable(doc, {
@@ -95,7 +98,7 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
     `${pdfCurrency}${t.revenue.toLocaleString()}`,
     `${pdfCurrency}${t.expenses.toLocaleString()}`,
     `${pdfCurrency}${t.profit.toLocaleString()}`,
-    `${t.memberCount} members`,
+    memberCount(t.memberCount),
   ]);
 
   autoTable(doc, {

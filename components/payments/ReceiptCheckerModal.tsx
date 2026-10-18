@@ -277,7 +277,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
                 <span>Amount Match</span>
               </div>
               <div style={{ color: '#64748b', marginTop: '0.2rem' }}>
-                {isAmountMatching ? 'Matches plan price' : 'Mismatch with plan'}
+                {payment.is_walk_in ? 'Walk-in, no plan to check' : isAmountMatching ? 'Matches plan price' : 'Mismatch with plan'}
               </div>
             </div>
           </div>

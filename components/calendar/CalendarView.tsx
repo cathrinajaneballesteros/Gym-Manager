@@ -498,9 +498,11 @@ export const CalendarView: React.FC = () => {
                   }}
                 >
                   {/* Date Number Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  {/* Wraps on narrow phone cells so the dots sit under the date instead of over it */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2px', marginBottom: '4px' }}>
                     <span
                       style={{
+                        flexShrink: 0,
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
