@@ -99,7 +99,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     }
     if (typeof window !== 'undefined') {
       sessionStorage.removeItem('sgfm_authenticated');
-      sessionStorage.removeItem('sgfm_login_logged');
     }
     DBService.clear();
     router.push('/login');
