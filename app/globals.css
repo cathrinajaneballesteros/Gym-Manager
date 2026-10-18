@@ -409,6 +409,46 @@ input[type='number'] {
   .card {
     padding: 1rem;
   }
+  /* Wide tables keep only their key columns on phones so nothing is cut off. */
+  .hide-on-phone {
+    display: none;
+  }
+  .phone-tight-table th,
+  .phone-tight-table td {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .phone-wrap {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+  span.phone-wrap {
+    display: inline-block;
+  }
+  /* Page header buttons fill the row; search boxes and filter dropdowns span the full width. */
+  .phone-row {
+    display: flex !important;
+    width: 100%;
+  }
+  .phone-row > * {
+    flex: 1 1 auto;
+  }
+  .phone-fill {
+    width: 100% !important;
+    max-width: none !important;
+  }
+  .phone-stack > * {
+    flex: 1 1 100%;
+  }
+  /* Icon-only buttons on phones; the text stays for screen readers. */
+  .phone-icon-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
   .modal-header,
   .modal-body {
     padding: 1rem !important;

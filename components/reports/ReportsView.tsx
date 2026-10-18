@@ -395,7 +395,7 @@ export const ReportsView: React.FC = () => {
                   </p>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={TH}>Method</th>
@@ -436,7 +436,7 @@ export const ReportsView: React.FC = () => {
                   </p>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={TH}>Plan</th>
@@ -488,7 +488,7 @@ export const ReportsView: React.FC = () => {
                   </p>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={TH}>Category</th>
@@ -529,7 +529,7 @@ export const ReportsView: React.FC = () => {
                   </p>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={TH}>Item</th>

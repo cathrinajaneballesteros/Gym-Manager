@@ -459,6 +459,7 @@ export const ExpenseList: React.FC = () => {
               }}
             >
               <div
+                className="phone-fill"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -492,7 +493,7 @@ export const ExpenseList: React.FC = () => {
                 />
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div className="phone-fill phone-stack" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
                 {/* Timeframe Filter */}
                 <select
                   value={timeframeFilter}
@@ -590,14 +591,14 @@ export const ExpenseList: React.FC = () => {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   <th style={{ padding: '0.9rem 1.5rem' }}>Date</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Category</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Category</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Description</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Amount</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Method</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Method</th>
                   <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -616,7 +617,7 @@ export const ExpenseList: React.FC = () => {
                       {formatDisplayDate(exp.expense_date)}
                     </td>
 
-                    <td style={{ padding: '1rem 1.25rem' }}>
+                    <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
                       <span
                         style={{
                           padding: '0.25rem 0.65rem',
@@ -639,11 +640,11 @@ export const ExpenseList: React.FC = () => {
                       )}
                     </td>
 
-                    <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#ef4444' }}>
+                    <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#ef4444', whiteSpace: 'nowrap' }}>
                       -{currency}{Number(exp.amount).toLocaleString()}
                     </td>
 
-                    <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
+                    <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
                       {exp.payment_method}
                     </td>
 

@@ -287,7 +287,7 @@ export const DashboardOverview: React.FC = () => {
           </div>
 
           {/* Quick Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+          <div className="phone-row" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
             <button
               onClick={() => setIsCheckInModalOpen(true)}
               className="btn btn-outline btn-sm"

@@ -146,7 +146,7 @@ export const PaymentList: React.FC = () => {
             </p>
           </div>
 
-          <div style={{ position: 'relative', display: 'inline-flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+          <div className="phone-row" style={{ position: 'relative', display: 'inline-flex', flexWrap: 'wrap', gap: '0.6rem' }}>
             <button
               onClick={() => {
                 setEditingWalkIn(null);
@@ -216,6 +216,7 @@ export const PaymentList: React.FC = () => {
         >
         {/* Search */}
         <div
+          className="phone-fill"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -250,7 +251,7 @@ export const PaymentList: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="phone-fill phone-stack" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <select
             value={memberFilter}
             onChange={(e) => {
@@ -461,16 +462,16 @@ export const PaymentList: React.FC = () => {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Plan</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Plan</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Amount</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Method & Ref</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Payment</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Receipt Check</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Date</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Method & Ref</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Payment</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Receipt Check</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Date</th>
                   <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -525,7 +526,7 @@ export const PaymentList: React.FC = () => {
                       </td>
 
                       {/* Plan */}
-                      <td style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
                         {p.is_walk_in ? 'Walk-in' : p.plan?.name || p.member?.plan?.name || 'Premium'}
                       </td>
 
@@ -535,7 +536,7 @@ export const PaymentList: React.FC = () => {
                       </td>
 
                       {/* Method & Ref */}
-                      <td style={{ padding: '1rem 1.25rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                           <span
                             style={{
@@ -561,7 +562,7 @@ export const PaymentList: React.FC = () => {
                       </td>
 
                       {/* Status Badge */}
-                      <td style={{ padding: '1rem 1.25rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
                         <span
                           className={`badge ${
                             p.payment_status === 'completed'
@@ -576,7 +577,7 @@ export const PaymentList: React.FC = () => {
                       </td>
 
                       {/* Receipt Status Badge */}
-                      <td style={{ padding: '1rem 1.25rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
                         <span
                           style={{
                             display: 'inline-flex',
@@ -625,13 +626,13 @@ export const PaymentList: React.FC = () => {
                       </td>
 
                       {/* Date */}
-                      <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
                         {formatDisplayDate(p.payment_date)}
                       </td>
 
                       {/* Actions */}
                       <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem' }}>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem' }}>
                           {p.payment_status === 'pending' && (
                             <button
                               onClick={() => handleMarkAsPaid(p)}
@@ -674,7 +675,7 @@ export const PaymentList: React.FC = () => {
                             }}
                           >
                             <Bell size={13} />
-                            <span>Remind</span>
+                            <span className="phone-icon-label">Remind</span>
                           </button>
                           )}
 
@@ -706,7 +707,7 @@ export const PaymentList: React.FC = () => {
                             }}
                           >
                             <FileCheck size={13} />
-                            <span>Receipt</span>
+                            <span className="phone-icon-label">Receipt</span>
                           </button>
                           <button
                             onClick={() => {
@@ -734,7 +735,7 @@ export const PaymentList: React.FC = () => {
                             }}
                           >
                             <Edit size={13} />
-                            <span>Edit</span>
+                            <span className="phone-icon-label">Edit</span>
                           </button>
                           {isOwner && (
                             <button

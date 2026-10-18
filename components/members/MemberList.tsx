@@ -217,6 +217,7 @@ export const MemberList: React.FC = () => {
         >
           {/* Search Input */}
           <div
+            className="phone-fill"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -251,7 +252,7 @@ export const MemberList: React.FC = () => {
           </div>
 
           {/* Filter Dropdowns */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="phone-fill phone-stack" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <select
               value={planFilter}
               onChange={(e) => {
@@ -374,13 +375,13 @@ export const MemberList: React.FC = () => {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Plan</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Plan</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Status</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Expiration</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Expiration</th>
                   <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -434,7 +435,7 @@ export const MemberList: React.FC = () => {
                       </td>
 
                       {/* Plan */}
-                      <td style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
                         {planName}
                       </td>
 
@@ -481,7 +482,7 @@ export const MemberList: React.FC = () => {
                       </td>
 
                       {/* Expiration Date */}
-                      <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
                         {formatDisplayDate(member.end_date)}
                       </td>
 

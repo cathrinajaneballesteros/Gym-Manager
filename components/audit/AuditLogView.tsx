@@ -405,13 +405,13 @@ export const AuditLogView: React.FC = () => {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     <th style={{ padding: '0.9rem 1.5rem' }}>Time</th>
-                    <th style={{ padding: '0.9rem 1.25rem' }}>Actor</th>
+                    <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Actor</th>
                     <th style={{ padding: '0.9rem 1.25rem' }}>Action</th>
-                    <th style={{ padding: '0.9rem 1.25rem' }}>Entity</th>
+                    <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Entity</th>
                     <th style={{ padding: '0.9rem 1.5rem' }}>Details</th>
                   </tr>
                 </thead>
@@ -428,16 +428,17 @@ export const AuditLogView: React.FC = () => {
                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                         title="Click to view complete event details"
                       >
-                        <td style={{ padding: '1rem 1.5rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                        <td className="phone-wrap" style={{ padding: '1rem 1.5rem', color: '#64748b', whiteSpace: 'nowrap' }}>
                           {formatDateTime(entry.created_at)}
                         </td>
 
-                        <td style={{ padding: '1rem 1.25rem', color: '#334155', fontSize: '0.825rem' }}>
+                        <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontSize: '0.825rem' }}>
                           {entry.actor_email || 'Unknown'}
                         </td>
 
                         <td style={{ padding: '1rem 1.25rem' }}>
                           <span
+                            className="phone-wrap"
                             style={{
                               padding: '0.25rem 0.65rem',
                               borderRadius: '6px',
@@ -453,11 +454,11 @@ export const AuditLogView: React.FC = () => {
                           </span>
                         </td>
 
-                        <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.825rem' }}>
+                        <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.825rem' }}>
                           {ENTITY_LABEL[entry.entity_type] || entry.entity_type}
                         </td>
 
-                        <td style={{ padding: '1rem 1.5rem' }}>
+                        <td className="phone-wrap" style={{ padding: '1rem 1.5rem' }}>
                           <div style={{ fontWeight: 600, color: '#0f172a' }}>{entry.entity_label || '—'}</div>
                           {typeof changed === 'string' && changed !== 'none' && (
                             <div style={{ fontSize: '0.785rem', color: '#64748b' }}>Changed: {changed}</div>
