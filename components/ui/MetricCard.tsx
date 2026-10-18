@@ -33,9 +33,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
 }) => {
   const variantStyles = {
     emerald: {
-      iconBg: 'rgba(52, 199, 89, 0.12)',
-      iconColor: '#34c759',
-      hoverBorder: 'rgba(52, 199, 89, 0.4)',
+      iconBg: 'rgba(5, 150, 105, 0.1)',
+      iconColor: '#059669',
+      hoverBorder: 'rgba(5, 150, 105, 0.4)',
     },
     rose: {
       iconBg: 'rgba(255, 59, 48, 0.1)',
@@ -119,24 +119,19 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           >
             <Icon size={17} strokeWidth={2.2} />
           </div>
-          <span style={{ fontSize: '0.825rem', fontWeight: 500, color: '#86868b' }}>
+          <span style={{ fontSize: '0.825rem', fontWeight: 500, color: '#86868b', whiteSpace: 'nowrap' }}>
             {title}
           </span>
         </div>
 
+        {/* Just the chevron, so the title stays on one line; the hint shows on hover. */}
         {onClick && (
           <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '2px',
-              fontSize: '0.72rem',
-              color: '#8e8e93',
-              fontWeight: 500,
-            }}
+            title={clickableHint || 'Details'}
+            aria-label={clickableHint || 'Details'}
+            style={{ display: 'flex', alignItems: 'center', color: '#8e8e93', flexShrink: 0 }}
           >
-            <span>{clickableHint || 'Details'}</span>
-            <ChevronRight size={13} />
+            <ChevronRight size={15} />
           </div>
         )}
       </div>

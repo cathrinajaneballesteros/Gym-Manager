@@ -226,7 +226,13 @@ export const AttendanceView: React.FC = () => {
             subtitle={`+ ${walkInsToday.length} walk-in${walkInsToday.length === 1 ? '' : 's'}`}
           />
           <MetricCard title="This Week" value={weekCount} icon={CalendarDays} variant="blue" subtitle="Since Monday" />
-          <MetricCard title="This Month" value={monthCount} icon={CalendarRange} variant="purple" />
+          <MetricCard
+            title="This Month"
+            value={monthCount}
+            icon={CalendarRange}
+            variant="purple"
+            subtitle={`Since ${new Date().toLocaleString('en-US', { month: 'short' })} 1`}
+          />
           <MetricCard
             title={`Away ${INACTIVE_DAYS}+ Days`}
             value={inactiveMembers.length}

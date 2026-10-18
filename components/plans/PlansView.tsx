@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Plus, Layers, Clock, CheckCircle2, XCircle, Pencil, Power } from 'lucide-react';
+import { Plus, Layers, CheckCircle2, XCircle, Pencil, Power } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { amountProblem, MAX_AMOUNT } from '@/lib/ui/validation';
 import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
@@ -225,7 +225,7 @@ export const PlansView: React.FC = () => {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    justifyContent: 'flex-end',
                     gap: '0.5rem',
                     fontSize: '0.75rem',
                     color: '#86868b',
@@ -234,10 +234,6 @@ export const PlansView: React.FC = () => {
                     borderTop: '1px solid #f1f5f9',
                   }}
                 >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Clock size={13} />
-                    <span>{plan.duration_months} month term</span>
-                  </span>
                   <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
                     <button
                       type="button"

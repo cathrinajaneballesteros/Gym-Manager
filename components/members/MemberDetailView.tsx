@@ -166,15 +166,19 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
               {member.first_name} {member.last_name}
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#64748b' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Mail size={14} color="#94a3b8" />
-                {member.email}
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Phone size={14} color="#94a3b8" />
-                {member.phone}
-              </span>
-              <span>•</span>
+              {member.email && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Mail size={14} color="#94a3b8" />
+                  {member.email}
+                </span>
+              )}
+              {member.phone && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Phone size={14} color="#94a3b8" />
+                  {member.phone}
+                </span>
+              )}
+              {(member.email || member.phone) && <span>•</span>}
               <span>Member since {formatDisplayDate(member.created_at)}</span>
             </div>
           </div>

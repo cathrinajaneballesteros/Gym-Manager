@@ -293,8 +293,8 @@ export const CalendarView: React.FC = () => {
               <ArrowUpRight size={16} style={{ color: '#059669' }} />
               <span style={{ fontSize: '0.785rem', color: '#64748b', fontWeight: 600 }}>Revenue Collected</span>
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#059669' }}>
-              +{currency}{monthStats.monthRevenue.toLocaleString()}
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: monthStats.monthRevenue > 0 ? '#059669' : '#1d1d1f' }}>
+              {monthStats.monthRevenue > 0 ? '+' : ''}{currency}{monthStats.monthRevenue.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px' }}>
               Payments received in {monthName}
@@ -319,8 +319,8 @@ export const CalendarView: React.FC = () => {
               <CreditCard size={16} style={{ color: monthStats.monthNetProfit >= 0 ? '#059669' : '#ef4444' }} />
               <span style={{ fontSize: '0.785rem', color: '#64748b', fontWeight: 600 }}>Net Month Profit</span>
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: monthStats.monthNetProfit >= 0 ? '#059669' : '#ef4444' }}>
-              {monthStats.monthNetProfit >= 0 ? '+' : '-'}{currency}{Math.abs(monthStats.monthNetProfit).toLocaleString()}
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: monthStats.monthNetProfit > 0 ? '#059669' : monthStats.monthNetProfit < 0 ? '#ef4444' : '#1d1d1f' }}>
+              {monthStats.monthNetProfit > 0 ? '+' : monthStats.monthNetProfit < 0 ? '-' : ''}{currency}{Math.abs(monthStats.monthNetProfit).toLocaleString()}
             </div>
             <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px' }}>
               Cash balance for {monthName}
@@ -669,7 +669,7 @@ export const CalendarView: React.FC = () => {
               </div>
               <div style={{ backgroundColor: '#fff1f2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ffe4e6' }}>
                 <span style={{ fontSize: '0.725rem', color: '#9f1239', fontWeight: 600, display: 'block' }}>Expenses Logged</span>
-                <strong style={{ fontSize: '1.2rem', color: '#e11d48' }}>{currency}{(selectedDayData?.totalExpenses || 0).toLocaleString()}</strong>
+                <strong style={{ fontSize: '1.2rem', color: '#ef4444' }}>{currency}{(selectedDayData?.totalExpenses || 0).toLocaleString()}</strong>
               </div>
             </div>
 

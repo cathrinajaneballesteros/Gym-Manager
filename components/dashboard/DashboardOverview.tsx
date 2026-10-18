@@ -318,11 +318,11 @@ export const DashboardOverview: React.FC = () => {
         <div className="grid grid-cols-4 gap-4">
           <MetricCard
             title="Total Revenue"
-            value={`+${currency}${kpis.totalRevenue.toLocaleString()}`}
+            value={`${kpis.totalRevenue > 0 ? '+' : ''}${currency}${kpis.totalRevenue.toLocaleString()}`}
             icon={TrendingUp}
             trend={revenueTrend}
             variant="emerald"
-            valueColor="#059669"
+            valueColor={kpis.totalRevenue > 0 ? '#059669' : undefined}
             onClick={() => setActiveBreakdown('revenue')}
             clickableHint="Breakdown"
           />
@@ -340,11 +340,11 @@ export const DashboardOverview: React.FC = () => {
 
           <MetricCard
             title="Net Profit"
-            value={`${kpis.netProfit >= 0 ? '+' : '-'}${currency}${Math.abs(kpis.netProfit).toLocaleString()}`}
+            value={`${kpis.netProfit > 0 ? '+' : kpis.netProfit < 0 ? '-' : ''}${currency}${Math.abs(kpis.netProfit).toLocaleString()}`}
             icon={CreditCard}
             trend={profitTrend}
             variant={kpis.netProfit >= 0 ? 'emerald' : 'rose'}
-            valueColor={kpis.netProfit >= 0 ? '#059669' : '#ef4444'}
+            valueColor={kpis.netProfit > 0 ? '#059669' : kpis.netProfit < 0 ? '#ef4444' : undefined}
             onClick={() => setActiveBreakdown('profit')}
             clickableHint="Breakdown"
           />
@@ -958,11 +958,11 @@ export const DashboardOverview: React.FC = () => {
                     </div>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
                       <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Top Category</span>
-                      <strong style={{ fontSize: '1.15rem', color: '#e11d48' }}>{topCategoryName}</strong>
+                      <strong style={{ fontSize: '1.15rem', color: '#ef4444' }}>{topCategoryName}</strong>
                     </div>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
                       <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>MoM Variance</span>
-                      <strong style={{ fontSize: '1.15rem', color: expenseTrend?.positive ? '#059669' : '#e11d48' }}>
+                      <strong style={{ fontSize: '1.15rem', color: expenseTrend?.positive ? '#059669' : '#ef4444' }}>
                         {expenseTrend ? expenseTrend.value : '0%'}
                       </strong>
                     </div>
@@ -1115,7 +1115,7 @@ export const DashboardOverview: React.FC = () => {
                             </div>
 
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontWeight: 700, color: '#e11d48', fontSize: '0.975rem' }}>
+                              <div style={{ fontWeight: 700, color: '#ef4444', fontSize: '0.975rem' }}>
                                 -{currency}{Number(e.amount).toLocaleString()}
                               </div>
                               <span style={{ fontSize: '0.675rem', fontWeight: 600, color: '#64748b', backgroundColor: '#f1f5f9', padding: '0.15rem 0.45rem', borderRadius: '4px', display: 'inline-block', marginTop: '2px' }}>
@@ -1210,7 +1210,7 @@ export const DashboardOverview: React.FC = () => {
                           }}
                         >
                           <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', display: 'block' }}>{t.month}</span>
-                          <strong style={{ fontSize: '0.95rem', color: t.profit >= 0 ? '#059669' : '#e11d48', display: 'block', marginTop: '4px' }}>
+                          <strong style={{ fontSize: '0.95rem', color: t.profit > 0 ? '#059669' : t.profit < 0 ? '#ef4444' : '#94a3b8', display: 'block', marginTop: '4px' }}>
                             {formatCompactAmount(t.profit, currency)}
                           </strong>
                         </div>

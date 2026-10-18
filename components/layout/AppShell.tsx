@@ -182,7 +182,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 href={item.href}
                 className={`ios-tab-item ${isActive ? 'active' : ''}`}
               >
-                <Icon size={19} color={isActive ? '#34c759' : '#8e8e93'} strokeWidth={isActive ? 2.2 : 1.9} />
+                <Icon size={19} color={isActive ? '#059669' : '#8e8e93'} strokeWidth={isActive ? 2.2 : 1.9} />
                 <span>{item.name}</span>
               </Link>
             );
@@ -193,7 +193,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             className={`ios-tab-item ${moreActive ? 'active' : ''}`}
             aria-label="More pages"
           >
-            <Menu size={19} color={moreActive ? '#34c759' : '#8e8e93'} strokeWidth={moreActive ? 2.2 : 1.9} />
+            <Menu size={19} color={moreActive ? '#059669' : '#8e8e93'} strokeWidth={moreActive ? 2.2 : 1.9} />
             <span>More</span>
           </button>
         </nav>
@@ -261,7 +261,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             white-space: nowrap;
           }
           .ios-tab-item.active {
-            color: #34c759;
+            color: #059669;
             font-weight: 600;
           }
         }
