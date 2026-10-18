@@ -16,6 +16,7 @@ import { printReceipt } from '@/lib/export/receipt-print';
 import { Payment } from '@/types/database';
 import { showToast, showError } from '@/lib/ui/swal';
 import { getPaymentMemberName } from '@/lib/ui/format';
+import { formatDisplayDate } from '@/lib/ui/date';
 
 interface ReceiptCheckerModalProps {
   isOpen: boolean;
@@ -53,7 +54,9 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   const currency = profile.currency || '₱';
   const member = payment.member || (payment.member_id ? DBService.getMemberById(payment.member_id) : undefined);
   const memberName = getPaymentMemberName({ ...payment, member });
-  const planName = payment.plan?.name || 'Membership Plan';
+  const planName = payment.is_walk_in ? 'Walk-in (day pass)' : payment.plan?.name || 'Membership Plan';
+  // Same short number as the printed receipt.
+  const receiptNo = payment.id.replace(/-/g, '').slice(0, 8).toUpperCase();
 
   // Automated Fraud / Sanity Verification Checks
   // GCash reference numbers are 13 digits; spaces are ignored so "1012 345 678901" matches "1012345678901".
@@ -65,6 +68,9 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
     : [];
   const isDuplicateRef = duplicatePayments.length > 0;
   const isFormatValid = /^\d{13}$/.test(ref);
+  // Cash payments have no GCash reference, so a blank one is fine.
+  const refNotNeeded = !ref && payment.payment_method === 'Cash';
+  const isRefOk = isFormatValid || refNotNeeded;
   const isAmountMatching = payment.plan ? payment.amount === payment.plan.price : true;
 
   const handleVerify = async () => {
@@ -118,10 +124,8 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   };
 
   const copyRefNumber = () => {
-    if (ref) {
-      navigator.clipboard.writeText(ref);
-      showToast('Reference number copied!');
-    }
+    navigator.clipboard.writeText(ref || receiptNo);
+    showToast(ref ? 'Reference number copied!' : 'Receipt number copied!');
   };
 
   return (
@@ -223,17 +227,17 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
                 padding: '0.65rem',
                 borderRadius: '8px',
                 border: '1px solid',
-                borderColor: isFormatValid ? '#bbf7d0' : '#fed7aa',
-                backgroundColor: isFormatValid ? '#f0fdf4' : '#fff7ed',
+                borderColor: isRefOk ? '#bbf7d0' : '#fed7aa',
+                backgroundColor: isRefOk ? '#f0fdf4' : '#fff7ed',
                 fontSize: '0.75rem',
               }}
             >
-              <div style={{ fontWeight: 600, color: isFormatValid ? '#166534' : '#c2410c', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                {isFormatValid ? <CheckCircle size={13} /> : <AlertTriangle size={13} />}
+              <div style={{ fontWeight: 600, color: isRefOk ? '#166534' : '#c2410c', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                {isRefOk ? <CheckCircle size={13} /> : <AlertTriangle size={13} />}
                 <span>Ref Format</span>
               </div>
               <div style={{ color: '#64748b', marginTop: '0.2rem' }}>
-                {isFormatValid ? '13-digit GCash ref' : ref ? 'Not 13 digits; double-check it' : 'No reference entered'}
+                {isFormatValid ? '13-digit GCash ref' : refNotNeeded ? 'Not needed for cash' : ref ? 'Not 13 digits; double-check it' : 'No reference entered'}
               </div>
             </div>
 
@@ -311,7 +315,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
               }}
             >
               <Copy size={13} />
-              <span>Copy Ref #{ref || payment.id}</span>
+              <span>{ref ? `Copy Ref #${ref}` : `Copy Receipt #${receiptNo}`}</span>
             </button>
           </div>
 
@@ -332,7 +336,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
               <tr>
                 <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Payment Date:</td>
                 <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0f172a', textAlign: 'right' }}>
-                  {payment.payment_date}
+                  {formatDisplayDate(payment.payment_date)}
                 </td>
               </tr>
               <tr>

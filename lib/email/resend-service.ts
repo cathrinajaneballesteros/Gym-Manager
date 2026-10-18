@@ -4,6 +4,7 @@
  */
 
 import { escapeHtml } from '@/lib/ui/escape';
+import { formatDisplayDate } from '@/lib/ui/date';
 
 export interface EmailPayload {
   to: string | string[];
@@ -137,7 +138,8 @@ export class ResendService {
     gymAddress?: string;
     gymEmail?: string;
   }) {
-    const { to, memberName, gymName, amount, planName, dueDate, customNote, gymPhone, gymAddress, gymEmail } = options;
+    const { to, memberName, gymName, amount, planName, customNote, gymPhone, gymAddress, gymEmail } = options;
+    const dueDate = formatDisplayDate(options.dueDate);
     // How to reach the gym, shown in the footer; empty details are left out.
     const contactLines = [gymAddress?.trim(), gymPhone?.trim() ? `Call ${gymPhone.trim()}` : '']
       .filter(Boolean)

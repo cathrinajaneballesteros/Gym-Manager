@@ -7,7 +7,7 @@ import { DBService } from '@/lib/data/db-service';
 import { Member, Payment } from '@/types/database';
 import { getPaymentMemberName } from '@/lib/ui/format';
 import { buildReminderSms } from '@/lib/ui/reminder-text';
-import { getTodayKey } from '@/lib/ui/date';
+import { formatDisplayDate, getTodayKey } from '@/lib/ui/date';
 import { showAlert, showError } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
 
@@ -227,7 +227,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
               {currency}{Number(amount || 0).toLocaleString()}
             </div>
             <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-              Due on {dueDate}
+              Due on {formatDisplayDate(dueDate)}
             </div>
           </div>
         </div>

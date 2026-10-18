@@ -118,7 +118,7 @@ export const PaymentList: React.FC = () => {
   const handleDeletePayment = async (p: Payment) => {
     const confirmed = await showConfirm(
       'Delete this payment?',
-      `${currency}${Number(p.amount).toLocaleString()} from ${getPaymentMemberName(p)} on ${p.payment_date} will be removed from revenue. Membership dates are not changed. This can't be undone.`,
+      `${currency}${Number(p.amount).toLocaleString()} from ${getPaymentMemberName(p)} on ${formatDisplayDate(p.payment_date)} will be removed from revenue. Membership dates are not changed. This can't be undone.`,
       'Yes, Delete'
     );
     if (!confirmed) return;
