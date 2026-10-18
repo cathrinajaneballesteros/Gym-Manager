@@ -513,14 +513,14 @@ export const AnalyticsView: React.FC = () => {
           </div>
 
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase' }}>
                   <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Risk Level</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Risk Level</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Days Inactive</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Visits (30 days)</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Primary Factor</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Visits (30 days)</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Primary Factor</th>
                   <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Outreach</th>
                 </tr>
               </thead>
@@ -537,16 +537,16 @@ export const AnalyticsView: React.FC = () => {
                       <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>
                         {m.memberName}
                       </td>
-                      <td style={{ padding: '1rem 1.25rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
                         <span className="badge badge-danger">High Risk</span>
                       </td>
                       <td style={{ padding: '1rem 1.25rem', color: '#ef4444', fontWeight: 600 }}>
                         {m.daysSinceLastVisit} days
                       </td>
-                      <td style={{ padding: '1rem 1.25rem', color: '#334155' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155' }}>
                         {m.visitsLast30Days}
                       </td>
-                      <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
                         {m.factors[0] || 'Prolonged attendance drop'}
                       </td>
                       <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
@@ -558,7 +558,7 @@ export const AnalyticsView: React.FC = () => {
                             title="Generate personalized AI message"
                           >
                             <Sparkles size={12} style={{ color: '#a855f7' }} />
-                            <span>AI Draft</span>
+                            <span className="phone-icon-label">AI Draft</span>
                           </button>
                           <button
                             onClick={() => handleContactMember(m)}
