@@ -69,7 +69,7 @@ In the Supabase SQL Editor, run these **in order**:
 1. `supabase/schema.sql`
 2. Every file in `supabase/migrations/`, from `001_multi_tenant.sql` to `008_invite_accept_and_server_audit.sql`
 
-Each migration is safe to run again. Optional demo data: sign up in the app as `demo@smartgym.com`, then run `supabase/seed.sql`. It only fills that account; other accounts start empty.
+Each migration is safe to run again. Optional demo data: sign up in the app as `demo@smartgym.com`, then run `supabase/seed.sql`. It fills that account with plans, 16 sample members, 6 months of payments, walk-ins, check-ins and expenses, dated relative to the day you run it. Running it again refreshes the sample rows and keeps anything you added. Other accounts start empty.
 
 ### 5. Supabase Auth settings
 
