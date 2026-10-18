@@ -269,7 +269,7 @@ export const PaymentList: React.FC = () => {
             }}
           >
             <option value="all">All Members</option>
-            {members.map((m) => (
+            {[...members].sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)).map((m) => (
               <option key={m.id} value={m.id}>
                 {m.first_name} {m.last_name}
               </option>
@@ -366,7 +366,7 @@ export const PaymentList: React.FC = () => {
                   {unverifiedCount} {unverifiedCount === 1 ? 'payment receipt requires' : 'payment receipts require'} manual review.
                 </span>
                 <span style={{ fontSize: '0.825rem', color: '#b45309', marginLeft: '0.5rem' }}>
-                  Inspect GCash and online bank transfer vouchers to verify or reject.
+                  Check each GCash reference number, then verify or reject it.
                 </span>
               </div>
             </div>

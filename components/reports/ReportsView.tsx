@@ -406,7 +406,7 @@ export const ReportsView: React.FC = () => {
                     </thead>
                     <tbody>
                       {Object.entries(paymentsByMethod).map(([method, data]) => {
-                        const pct = monthRevenueTotal > 0 ? Math.round((data.total / monthRevenueTotal) * 100) : 0;
+                        const pct = monthRevenueTotal > 0 ? Math.round((data.total / monthRevenueTotal) * 1000) / 10 : 0;
                         return (
                           <tr key={method}>
                             <td style={TD}><strong>{method}</strong></td>
@@ -499,7 +499,7 @@ export const ReportsView: React.FC = () => {
                     </thead>
                     <tbody>
                       {Object.entries(expensesByCategory).map(([category, data]) => {
-                        const pct = monthExpenseTotal > 0 ? Math.round((data.total / monthExpenseTotal) * 100) : 0;
+                        const pct = monthExpenseTotal > 0 ? Math.round((data.total / monthExpenseTotal) * 1000) / 10 : 0;
                         return (
                           <tr key={category}>
                             <td style={TD}><strong>{category}</strong></td>

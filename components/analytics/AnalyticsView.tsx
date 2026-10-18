@@ -413,7 +413,7 @@ export const AnalyticsView: React.FC = () => {
                   {currency}{forecast.forecastedNextMonthRevenue.toLocaleString()}
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
-                  Next 3 months
+                  Next month
                 </div>
               </div>
 

@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
-import { formatTimeAgo } from '@/lib/ui/date';
+import { formatTimeAgo, getTodayKey } from '@/lib/ui/date';
 import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
 import { DashboardKPIs, MonthlyTrendData, Member, UserProfile, Payment, Expense } from '@/types/database';
 import { MetricCard } from '@/components/ui/MetricCard';
@@ -397,7 +397,11 @@ export const DashboardOverview: React.FC = () => {
               </button>
             </div>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-              <CategoryExpenseChart expenses={DBService.getExpenses()} currency={currency} />
+              {/* This month only, to match the Total Expenses card */}
+              <CategoryExpenseChart
+                expenses={DBService.getExpenses().filter((e) => (e.expense_date || '').startsWith(getTodayKey().slice(0, 7)))}
+                currency={currency}
+              />
             </div>
           </div>
         </div>

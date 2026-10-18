@@ -127,8 +127,11 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
     });
   });
 
-  // Add forecast points for next 3 months
-  const futureMonths = ['Month +1', 'Month +2', 'Month +3'];
+  // Add forecast points for the next 3 months, labelled with real month names, e.g. "Nov (F)"
+  const now = new Date();
+  const futureMonths = [1, 2, 3].map((i) =>
+    new Date(now.getFullYear(), now.getMonth() + i, 1).toLocaleString('en-US', { month: 'short' })
+  );
   futureMonths.forEach((mName, i) => {
     const step = n + 1 + i;
     const baseVal = Math.max(0, Math.round(slope * step + intercept));
