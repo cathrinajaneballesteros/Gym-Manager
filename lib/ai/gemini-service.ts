@@ -74,6 +74,8 @@ export class GeminiService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
+          // A stalled model would leave the button spinning; give up and try the next one.
+          signal: AbortSignal.timeout(15_000),
         });
 
         if (!response.ok) {
