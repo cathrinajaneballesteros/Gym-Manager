@@ -147,7 +147,8 @@ export const DashboardOverview: React.FC = () => {
 
   const refreshData = () => {
     setKpis(DBService.getDashboardKPIs('this-month'));
-    setLastMonthKpis(DBService.getDashboardKPIs('last-month'));
+    // Same days of last month, so a month in progress isn't compared with a whole month.
+    setLastMonthKpis(DBService.getDashboardKPIs('last-month-to-date'));
     setTrends(DBService.getMonthlyTrends());
     setMembers(DBService.getMembers());
     setPayments(DBService.getPayments());
@@ -191,7 +192,7 @@ export const DashboardOverview: React.FC = () => {
         value: `${kpis.totalRevenue >= lastMonthKpis.totalRevenue ? '+' : '-'}${Math.abs(Math.round(((kpis.totalRevenue - lastMonthKpis.totalRevenue) / lastMonthKpis.totalRevenue) * 100))}%`,
         positive: kpis.totalRevenue >= lastMonthKpis.totalRevenue,
         direction: kpis.totalRevenue >= lastMonthKpis.totalRevenue ? ('up' as const) : ('down' as const),
-        label: 'from last month',
+        label: 'vs same point last month',
       }
     : undefined;
 
@@ -202,7 +203,7 @@ export const DashboardOverview: React.FC = () => {
           value: `${expenseDiff >= 0 ? '+' : '-'}${Math.abs(Math.round((expenseDiff / lastMonthKpis.totalExpenses) * 100))}%`,
           positive: expenseDiff >= 0,
           direction: expenseDiff >= 0 ? ('up' as const) : ('down' as const),
-          label: 'from last month',
+          label: 'vs same point last month',
         };
       })()
     : undefined;
@@ -214,7 +215,7 @@ export const DashboardOverview: React.FC = () => {
           value: `${profitDiff >= 0 ? '+' : '-'}${Math.abs(Math.round((profitDiff / Math.abs(lastMonthKpis.netProfit)) * 100))}%`,
           positive: profitDiff >= 0,
           direction: profitDiff >= 0 ? ('up' as const) : ('down' as const),
-          label: 'from last month',
+          label: 'vs same point last month',
         };
       })()
     : undefined;

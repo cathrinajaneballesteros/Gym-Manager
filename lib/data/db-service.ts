@@ -1225,7 +1225,9 @@ export class DBService {
   }
 
   // 7. Dashboard Financial KPI Calculation
-  static getDashboardKPIs(timeframe: 'this-month' | 'last-month' | 'last-3-months' | 'last-6-months' | 'this-year' = 'this-month'): DashboardKPIs {
+  static getDashboardKPIs(
+    timeframe: 'this-month' | 'last-month' | 'last-month-to-date' | 'last-3-months' | 'last-6-months' | 'this-year' = 'this-month'
+  ): DashboardKPIs {
     const members = this.getMembers();
     const payments = this.getPayments();
     const expenses = this.getExpenses();
@@ -1246,6 +1248,13 @@ export class DBService {
       label = 'Last Month';
       filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(lastMonthKey));
       filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(lastMonthKey));
+    } else if (timeframe === 'last-month-to-date') {
+      // Last month up to today's day number, so a month in progress is compared fairly.
+      label = 'Last Month to Date';
+      const lastDay = `${lastMonthKey}-${String(now.getDate()).padStart(2, '0')}`;
+      const inRange = (date: string | undefined) => (date || '').startsWith(lastMonthKey) && (date || '') <= lastDay;
+      filteredPayments = filteredPayments.filter((p) => inRange(p.payment_date));
+      filteredExpenses = filteredExpenses.filter((e) => inRange(e.expense_date));
     } else if (timeframe === 'this-month') {
       label = 'This Month';
       filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(thisMonthKey));
