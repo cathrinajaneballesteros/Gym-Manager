@@ -527,7 +527,7 @@ export const PaymentList: React.FC = () => {
 
                       {/* Plan */}
                       <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
-                        {p.is_walk_in ? 'Walk-in' : p.plan?.name || p.member?.plan?.name || 'Premium'}
+                        {p.is_walk_in ? 'Walk-in' : p.plan?.name || p.member?.plan?.name || 'No plan'}
                       </td>
 
                       {/* Amount: only completed payments count as revenue, so only they get the green "+". */}
