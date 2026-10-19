@@ -150,7 +150,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
         action: 'member.reminder_sent',
         entity_type: 'member',
         entity_id: memberId,
-        entity_label: `${memberFullName} · ${channel.toUpperCase()}`,
+        entity_label: `${memberFullName} · ${channel === 'both' ? 'SMS & Email' : channel === 'sms' ? 'SMS' : 'Email'}`,
         metadata: {
           channel,
           email: email || 'N/A',
