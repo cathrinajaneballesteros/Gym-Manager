@@ -530,9 +530,16 @@ export const PaymentList: React.FC = () => {
                         {p.is_walk_in ? 'Walk-in' : p.plan?.name || p.member?.plan?.name || 'Premium'}
                       </td>
 
-                      {/* Amount */}
-                      <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#059669' }}>
-                        +{currency}{Number(p.amount).toLocaleString()}
+                      {/* Amount: only completed payments count as revenue, so only they get the green "+". */}
+                      <td
+                        style={{
+                          padding: '1rem 1.25rem',
+                          fontWeight: 700,
+                          color: p.payment_status === 'completed' ? '#059669' : '#94a3b8',
+                          textDecoration: p.payment_status === 'refunded' ? 'line-through' : undefined,
+                        }}
+                      >
+                        {p.payment_status === 'completed' ? '+' : ''}{currency}{Number(p.amount).toLocaleString()}
                       </td>
 
                       {/* Method & Ref */}
