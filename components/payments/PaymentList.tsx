@@ -21,7 +21,7 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showToast, showConfirm, showError } from '@/lib/ui/swal';
 import { getCurrentMonthRangeLabel, formatDisplayDate } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
-import { Bell, CheckCircle2, Clock, AlertTriangle, Edit, UserPlus, Trash2 } from 'lucide-react';
+import { Bell, CheckCircle2, Clock, AlertTriangle, Edit, UserPlus, Trash2, UserRound } from 'lucide-react';
 import { getPageWindow } from '@/lib/ui/pagination';
 
 export const PaymentList: React.FC = () => {
@@ -510,7 +510,8 @@ export const PaymentList: React.FC = () => {
                               flexShrink: 0,
                             }}
                           >
-                            {initials}
+                            {/* A walk-in who gave no name has no initials to show. */}
+                            {p.is_walk_in && !p.member_name ? <UserRound size={16} /> : initials}
                           </div>
                           <div>
                             <div style={{ fontWeight: 600, color: '#0f172a' }}>
