@@ -32,6 +32,9 @@ const subscribeAudit = (callback: () => void) => {
 // The log array is replaced (never changed in place) when an entry is added, so it is a stable snapshot.
 const getAuditSnapshot = (): AuditLogEntry[] => DBService.getAuditLog();
 
+// Payment entries written by the database say "₱1,500.00"; the app's own say "₱1,500". Show them the same way.
+const displayLabel = (label?: string): string => (label || '').replace(/(\d)\.00\b/g, '$1');
+
 const NO_ENTRIES: AuditLogEntry[] = [];
 const getAuditServerSnapshot = (): AuditLogEntry[] => NO_ENTRIES;
 
@@ -459,7 +462,7 @@ export const AuditLogView: React.FC = () => {
                         </td>
 
                         <td className="phone-wrap" style={{ padding: '1rem 1.5rem' }}>
-                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{entry.entity_label || '—'}</div>
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{displayLabel(entry.entity_label) || '—'}</div>
                           {typeof changed === 'string' && changed !== 'none' && (
                             <div style={{ fontSize: '0.785rem', color: '#64748b' }}>Changed: {changed}</div>
                           )}
@@ -577,7 +580,7 @@ export const AuditLogView: React.FC = () => {
                 </span>
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
-                {selectedEntry.entity_label || 'Unnamed Entity'}
+                {displayLabel(selectedEntry.entity_label) || 'Unnamed Entity'}
               </div>
               <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.2rem' }}>
                 Actor: {selectedEntry.actor_email} • {formatDateTime(selectedEntry.created_at)}
