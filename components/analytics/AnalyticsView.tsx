@@ -78,9 +78,9 @@ export const AnalyticsView: React.FC = () => {
         throw new Error(data.error || 'Failed to generate AI executive brief');
       }
 
-      const formattedHtml = escapeHtml(data.report)
-        .replace(/### (.*?)\n/g, '<h4 style="font-weight:700; color:#0f172a; margin-top:1rem; margin-bottom:0.4rem; font-size:1rem;">$1</h4>')
+      const formattedHtml = escapeHtml(`${data.report}\n`) // trailing newline so the last line is formatted too
         .replace(/#### (.*?)\n/g, '<h5 style="font-weight:600; color:#334155; margin-top:0.75rem; margin-bottom:0.25rem; font-size:0.9rem;">$1</h5>')
+        .replace(/#{2,3} (.*?)\n/g, '<h4 style="font-weight:700; color:#0f172a; margin-top:1rem; margin-bottom:0.4rem; font-size:1rem;">$1</h4>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\* (.*?)\n/g, '<li style="margin-bottom:0.35rem; color:#475569;">$1</li>')
         .replace(/\n\n/g, '<br/>');
@@ -89,9 +89,7 @@ export const AnalyticsView: React.FC = () => {
         icon: 'success',
         title: 'Executive AI Brief (Gemini)',
         html: `
-          <div style="text-align: left; font-size: 0.875rem; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding: 0.5rem 0.25rem;">
-            ${formattedHtml}
-          </div>
+          <div style="text-align: left; font-size: 0.875rem; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding: 0.5rem 0.25rem; white-space: pre-line;">${formattedHtml.trim()}</div>
         `,
         confirmButtonText: 'Done',
         confirmButtonColor: '#6366f1',
@@ -184,9 +182,9 @@ export const AnalyticsView: React.FC = () => {
         throw new Error(data.error || 'Failed to generate cost-saving action plan');
       }
 
-      const formattedHtml = escapeHtml(data.report)
-        .replace(/### (.*?)\n/g, '<h4 style="font-weight:700; color:#0f172a; margin-top:1rem; margin-bottom:0.4rem; font-size:1rem;">$1</h4>')
+      const formattedHtml = escapeHtml(`${data.report}\n`) // trailing newline so the last line is formatted too
         .replace(/#### (.*?)\n/g, '<h5 style="font-weight:600; color:#334155; margin-top:0.75rem; margin-bottom:0.25rem; font-size:0.9rem;">$1</h5>')
+        .replace(/#{2,3} (.*?)\n/g, '<h4 style="font-weight:700; color:#0f172a; margin-top:1rem; margin-bottom:0.4rem; font-size:1rem;">$1</h4>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\* (.*?)\n/g, '<li style="margin-bottom:0.35rem; color:#475569;">$1</li>')
         .replace(/\n\n/g, '<br/>');
@@ -195,9 +193,7 @@ export const AnalyticsView: React.FC = () => {
         icon: 'success',
         title: 'Gemini Cost-Cutting Roadmap',
         html: `
-          <div style="text-align: left; font-size: 0.875rem; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding: 0.5rem 0.25rem;">
-            ${formattedHtml}
-          </div>
+          <div style="text-align: left; font-size: 0.875rem; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding: 0.5rem 0.25rem; white-space: pre-line;">${formattedHtml.trim()}</div>
         `,
         confirmButtonText: 'Adopt Plan',
         confirmButtonColor: '#059669',
