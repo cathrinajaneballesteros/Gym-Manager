@@ -246,10 +246,10 @@ export const CalendarView: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
-              Gym Operations Calendar
+              Calendar
             </h1>
             <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
-              Monitor membership expirations, payment due dates, and operational cashflow at a glance.
+              See when memberships end and when money came in and went out.
             </p>
           </div>
 
@@ -310,7 +310,7 @@ export const CalendarView: React.FC = () => {
               -{currency}{monthStats.monthExpenseTotal.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px' }}>
-              Operational outlays in {monthName}
+              Spent in {monthName}
             </div>
           </div>
 
@@ -636,7 +636,7 @@ export const CalendarView: React.FC = () => {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                   <CalendarIcon size={14} />
-                  <span>Daily Ledger & Activity Inspector</span>
+                  <span>Day Details</span>
                 </div>
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#0f172a' }}>
                   {selectedDateFormatted}

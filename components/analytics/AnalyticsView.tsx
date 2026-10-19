@@ -242,16 +242,16 @@ export const AnalyticsView: React.FC = () => {
         html: `
           <div style="text-align: left; font-size: 0.9rem; color: #475569; line-height: 1.6;">
             <div style="margin-bottom: 0.85rem; padding: 0.5rem 0.75rem; background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; color: #92400e; font-weight: 600; font-size: 0.85rem;">
-              ⚠️ Status: Awaiting Historical Records
+              ⚠️ Not enough data yet
             </div>
             <p style="margin-bottom: 0.75rem; color: #1e293b;">
-              The AI forecasting engine utilizes linear regression and moving average modeling calculated from real member payments and renewal cycles.
+              The forecast uses your past monthly payments to estimate next month (linear regression).
             </p>
             <p style="margin-bottom: 0.75rem;">
-              Since this system is running with zero initial data, no payment transactions have been logged yet to train the projection model.
+              There are no payments yet, so there&apos;s nothing to learn from.
             </p>
             <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #334155;">
-              💡 <strong>Next Step:</strong> Register gym members in the <em>Members</em> tab and record their subscription payments. Once payments are recorded, forward projections and confidence intervals will calculate automatically.
+              💡 <strong>Next step:</strong> add members in <em>Members</em> and record their payments. The forecast fills in by itself.
             </div>
           </div>
         `,
@@ -277,7 +277,7 @@ export const AnalyticsView: React.FC = () => {
             ✓ Active Model • ${forecast.confidenceScore}% Confidence Level
           </div>
           <p style="margin-bottom: 0.6rem; color: #1e293b;">
-            <strong>3-Month Projection:</strong> Based on linear regression trend across ${forecast.dataPointsCount} recorded period(s).
+            <strong>3-Month Projection:</strong> Based on the trend across ${forecast.dataPointsCount} month(s) of payments.
           </p>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.825rem;">
             <div style="background: #f8fafc; padding: 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0;">
@@ -382,7 +382,7 @@ export const AnalyticsView: React.FC = () => {
               Revenue Forecast
             </h2>
             <p style={{ fontSize: '0.825rem', color: '#64748b' }}>
-              Based on historical data, memberships, and seasonal trends
+              Based on your past payments and memberships
             </p>
           </div>
 
@@ -433,7 +433,7 @@ export const AnalyticsView: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1.25rem', marginBottom: '0.5rem', fontSize: '0.785rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <span style={{ width: '16px', height: '2.5px', backgroundColor: '#0284c7' }} />
-                  <span style={{ color: '#475569', fontWeight: 500 }}>Historical</span>
+                  <span style={{ color: '#475569', fontWeight: 500 }}>Actual</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <span style={{ width: '16px', height: '2px', borderTop: '2px dashed #0284c7' }} />
@@ -473,13 +473,13 @@ export const AnalyticsView: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', color: '#64748b', fontSize: '0.8rem', padding: '0.25rem 0' }}>
                   <p style={{ fontWeight: 600, color: '#475569' }}>Awaiting initial activity</p>
                   <p style={{ color: '#94a3b8', fontSize: '0.75rem', lineHeight: 1.4 }}>
-                    Model weights and growth factors will calibrate once members and payments are recorded.
+                    Shows up once you&apos;ve recorded members and payments.
                   </p>
                 </div>
               ) : (
                 [
                   { factor: 'Renewal retention', impact: `${Math.round(forecast.confidenceScore * 0.9)}%` },
-                  { factor: 'Growth trajectory', impact: `${forecast.projectedGrowthPercent >= 0 ? '+' : ''}${forecast.projectedGrowthPercent}%` },
+                  { factor: 'Growth trend', impact: `${forecast.projectedGrowthPercent >= 0 ? '+' : ''}${forecast.projectedGrowthPercent}%` },
                   { factor: 'Predicted new signups', impact: `+${forecast.predictedNewMembers}` },
                   { factor: 'Expected renewals', impact: `${forecast.expectedRenewals}` },
                 ].map((item) => (
@@ -501,10 +501,10 @@ export const AnalyticsView: React.FC = () => {
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>
-              Members Requiring Retention Attention
+              Members at Risk of Leaving
             </h2>
             <p style={{ fontSize: '0.825rem', color: '#64748b', marginTop: '2px' }}>
-              Identified by inactivity frequency, visit gaps, and imminent expiration dates
+              Based on missed visits and memberships ending soon
             </p>
           </div>
 
@@ -597,7 +597,7 @@ export const AnalyticsView: React.FC = () => {
               <div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.25rem 0.65rem', borderRadius: '999px', backgroundColor: 'rgba(255, 255, 255, 0.18)', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem' }}>
                   <PiggyBank size={13} style={{ color: '#a7f3d0' }} />
-                  <span>Open Gym Cost Optimization</span>
+                  <span>Ways to Save</span>
                 </div>
                 <h2 style={{ fontSize: '1.35rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '0.25rem', color: '#ffffff' }}>
                   Save up to {currency}{leaks.potentialMonthlySavings.toLocaleString()} / month

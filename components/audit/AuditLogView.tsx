@@ -81,7 +81,7 @@ const ACTION_META: Record<AuditAction, ActionMeta> = {
   'member.create': { label: 'Member created', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
   'member.update': { label: 'Member updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
   'member.delete': { label: 'Member deleted', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
-  'member.reminder_sent': { label: 'Reminder dispatched', color: '#d97706', background: '#fffbeb', border: '#fde68a' },
+  'member.reminder_sent': { label: 'Reminder sent', color: '#d97706', background: '#fffbeb', border: '#fde68a' },
   'member.check_in_undo': { label: 'Check-in undone', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
   'payment.create': { label: 'Payment recorded', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
   'payment.update': { label: 'Payment updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
@@ -224,10 +224,10 @@ export const AuditLogView: React.FC = () => {
             </div>
             <div>
               <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.15rem' }}>
-                User Auditing
+                Audit Log
               </h1>
               <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
-                Chronological audit trail of staff actions, security events, payments, and member modifications.
+                Everything done in the app, newest first.
               </p>
             </div>
           </div>

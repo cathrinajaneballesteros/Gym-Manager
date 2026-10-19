@@ -430,7 +430,7 @@ export const ReportsView: React.FC = () => {
 
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Revenue by Membership Tier</h2>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Revenue by Plan</h2>
                   <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
                     Subscription tiers performance this month
                   </p>
@@ -482,9 +482,9 @@ export const ReportsView: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Outlays by Category</h2>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Spending by Category</h2>
                   <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
-                    Share of this month&apos;s overhead
+                    Share of this month&apos;s expenses
                   </p>
                 </div>
                 <div style={{ overflowX: 'auto' }}>

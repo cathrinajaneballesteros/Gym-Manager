@@ -75,7 +75,7 @@ export default function ForgotPasswordPage() {
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
             <CheckCircle2 size={42} color="var(--success)" style={{ margin: '0 auto 1rem' }} />
             <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-white)', marginBottom: '0.5rem' }}>
-              Reset Link Dispatched
+              Check Your Email
             </h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
               If an administrator account exists for <strong>{email}</strong>, you will receive password reset instructions shortly.

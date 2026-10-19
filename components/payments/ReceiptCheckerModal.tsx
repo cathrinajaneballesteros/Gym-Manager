@@ -129,7 +129,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Manual Receipt Checker" maxWidth="620px">
+    <Modal isOpen={isOpen} onClose={onClose} title="Check GCash Receipt" maxWidth="620px">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {/* Top Header Card with Status Badge */}
         <div
@@ -159,7 +159,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>
-                Receipt Verification Status
+                Receipt Status
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -173,7 +173,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
                 </span>
               ) : (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#b45309', fontWeight: 700, fontSize: '1rem' }}>
-                  <Clock size={18} /> Pending Manual Review
+                  <Clock size={18} /> Needs Checking
                 </span>
               )}
             </div>
@@ -216,7 +216,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
         {/* Automated Inspection Warnings */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
-            Automated Checker Checklist
+            Quick Checks
           </div>
 
           {/* Three across in the modal on wider screens, stacked on phones. */}
@@ -297,7 +297,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Receipt size={18} color="#0071e3" />
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>
-                Proof of Payment Slip
+                Payment Details
               </span>
             </div>
             <button
@@ -401,7 +401,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
         ) : (
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#475569', marginBottom: '0.35rem' }}>
-              Admin Verification Note (Optional)
+              Note (optional)
             </label>
             <input
               type="text"

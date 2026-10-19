@@ -149,7 +149,7 @@ export const ExpenseList: React.FC = () => {
   const handleDelete = async (id: string, title: string) => {
     const confirmed = await showConfirm(
       'Delete Expense?',
-      `Are you sure you want to delete expense record "${title}"? This action cannot be undone.`,
+      `Delete "${title}"? This can't be undone.`,
       'Yes, delete',
       '#ef4444'
     );
@@ -198,15 +198,15 @@ export const ExpenseList: React.FC = () => {
           {/* Selected Period Expenses */}
           <div className="card" style={{ padding: '1.25rem 1.4rem' }}>
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
-              {timeframeFilter === 'all' ? 'Total Historical Outlay' : 'Selected Period Outlay'}
+              {timeframeFilter === 'all' ? 'Total Spent' : 'Spent in This Period'}
             </div>
             <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#ef4444', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
               -{currency}{periodExpensesTotal.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
               {timeframeFilter === 'all'
-                ? `${expenses.length} records across all history`
-                : `${filteredExpenses.length} entries for selected filter`}
+                ? `${expenses.length} ${expenses.length === 1 ? 'expense' : 'expenses'} in total`
+                : `${filteredExpenses.length} ${filteredExpenses.length === 1 ? 'expense' : 'expenses'} in this period`}
             </div>
           </div>
 
@@ -241,7 +241,7 @@ export const ExpenseList: React.FC = () => {
           {/* Historical Monthly Baseline Average */}
           <div className="card" style={{ padding: '1.25rem 1.4rem' }}>
             <div style={{ fontSize: '0.85rem', color: '#64748b', fontWeight: 500, marginBottom: '0.4rem' }}>
-              Monthly Baseline Average
+              Average per Month
             </div>
             <div style={{ fontSize: '1.85rem', fontWeight: 700, color: '#ef4444', letterSpacing: '-0.02em', marginBottom: '0.35rem' }}>
               -{currency}{historicalSummary.overallMonthlyAverage.toLocaleString()}
@@ -250,7 +250,7 @@ export const ExpenseList: React.FC = () => {
               {(() => {
                 // Same months the average is divided by: months in the window that have expenses.
                 const recorded = historicalSummary.monthlyTotals.filter((m) => m.total > 0).length;
-                return `Average across ${recorded} recorded ${recorded === 1 ? 'month' : 'months'}`;
+                return `Based on ${recorded} ${recorded === 1 ? 'month' : 'months'} with expenses`;
               })()}
             </div>
           </div>
@@ -289,7 +289,7 @@ export const ExpenseList: React.FC = () => {
               }}
             >
               <Receipt size={15} />
-              <span>Expense Ledger ({filteredExpenses.length})</span>
+              <span>All Expenses ({filteredExpenses.length})</span>
             </button>
 
             <button
@@ -310,7 +310,7 @@ export const ExpenseList: React.FC = () => {
               }}
             >
               <History size={15} />
-              <span>Historical Trends & Multi-Month Matrix</span>
+              <span>Month by Month</span>
             </button>
           </div>
 
@@ -343,7 +343,7 @@ export const ExpenseList: React.FC = () => {
             {/* 6-Month Trajectory Cards */}
             <div className="card">
               <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem' }}>
-                Monthly Historical Trajectory (Last 6 Months)
+                Last 6 Months
               </h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.85rem' }}>
                 {historicalSummary.monthlyTotals.map((m) => (
@@ -364,9 +364,9 @@ export const ExpenseList: React.FC = () => {
                     <div style={{ fontSize: '1.25rem', fontWeight: 700, color: m.monthKey === thisMonthKey ? '#1d4ed8' : '#0f172a', margin: '0.35rem 0' }}>
                       {currency}{m.total.toLocaleString()}
                     </div>
-                    <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
-                      {m.monthKey === thisMonthKey ? 'Current Cycle' : 'Historical'}
-                    </div>
+                    {m.monthKey === thisMonthKey && (
+                      <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>So far</div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -377,10 +377,10 @@ export const ExpenseList: React.FC = () => {
               <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
                   <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>
-                    Historical Category Spend Matrix
+                    Spending by Category
                   </h2>
                   <p style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.15rem' }}>
-                    Month-by-month expense comparison across operational categories.
+                    How much went to each category each month.
                   </p>
                 </div>
               </div>
@@ -511,12 +511,12 @@ export const ExpenseList: React.FC = () => {
                     cursor: 'pointer',
                   }}
                 >
-                  <option value="all">All Historical Records</option>
+                  <option value="all">All Time</option>
                   <option value="this-month">This Month</option>
                   <option value="last-month">Last Month</option>
                   <option value="last-3-months">Last 3 Months</option>
                   <option value="last-6-months">Last 6 Months</option>
-                  <optgroup label="Specific Historical Months">
+                  <optgroup label="Pick a Month">
                     {historyMonths.map((m) => (
                       <option key={m.monthKey} value={m.monthKey}>
                         {m.monthLabel}

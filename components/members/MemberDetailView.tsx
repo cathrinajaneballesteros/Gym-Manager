@@ -445,7 +445,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
       {activeTab === 'payments' && (
         <div className="card">
           <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem' }}>
-            Full Payment Ledger ({payments.length} records)
+            Payment History ({payments.length})
           </h2>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>

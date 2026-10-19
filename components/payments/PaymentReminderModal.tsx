@@ -168,12 +168,12 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
         title: failureCount > 0 ? 'Reminder Partially Sent' : 'Payment Reminder Sent!',
         html: `
           <div style="text-align: left; font-size: 0.875rem; color: #334155; line-height: 1.5;">
-            <p style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">${failureCount > 0 ? 'Some channels failed:' : 'Reminder dispatched successfully:'}</p>
+            <p style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">${failureCount > 0 ? 'Some channels failed:' : 'Reminder sent:'}</p>
             <ul style="padding-left: 1.25rem; margin-bottom: 0.85rem;">
               ${results.map((r) => `<li style="margin-bottom: 0.25rem;">${escapeHtml(r)}</li>`).join('')}
             </ul>
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; font-size: 0.8rem; color: #64748b;">
-              Logged to the User Audit Trail for compliance records.
+              Saved in the Audit Log.
             </div>
           </div>
         `,
