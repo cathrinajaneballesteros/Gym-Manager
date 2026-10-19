@@ -406,7 +406,8 @@ export class DBService {
   }
 
   static getFirstName(fullName?: string): string {
-    if (!fullName || !fullName.trim()) return 'Admin';
+    // "Gym Administrator" is the placeholder for accounts made without a name; "Gym" isn't a first name.
+    if (!fullName || !fullName.trim() || fullName.trim() === 'Gym Administrator') return 'Admin';
     const first = fullName.trim().split(/\s+/)[0];
     return first || 'Admin';
   }
