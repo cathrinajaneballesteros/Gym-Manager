@@ -50,6 +50,9 @@ export const MemberModal: React.FC<MemberModalProps> = ({
     (p) => p.is_active || p.id === initialMember?.membership_plan_id
   );
   const todayStr = getTodayKey();
+  // Once a member has paid, payments set their end date (each renewal extends it), so editing
+  // the plan or start date must not reset it to one plan length.
+  const datesSetByPayments = Boolean(initialMember && initialMember.status !== 'pending');
 
   const buildDefaultValues = (): MemberFormData => {
     const defaultPlanId = initialMember?.membership_plan_id || selectablePlans[0]?.id || '';
@@ -98,6 +101,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   // Recalculate the expiration date only when the user changes the start date or plan.
   // (Doing it in an effect also fired on open/re-render and wiped renewed end dates.)
   const recalculateEndDate = () => {
+    if (datesSetByPayments) return;
     const selectedPlan = plans.find((p) => p.id === getValues('membership_plan_id'));
     if (!selectedPlan) return;
     const computed = addMonthsToDateKey(getValues('start_date'), selectedPlan.duration_months);
@@ -310,7 +314,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                   border: '1px solid #e2e8f0',
                 }}
               >
-                Auto-calculated
+                {datesSetByPayments ? 'Set by payments' : 'Auto-calculated'}
               </span>
             </div>
             <input
@@ -318,7 +322,11 @@ export const MemberModal: React.FC<MemberModalProps> = ({
               {...register('end_date')}
               readOnly
               tabIndex={-1}
-              title="Automatically calculated from the start date and selected membership plan"
+              title={
+                datesSetByPayments
+                  ? 'Extended by each completed payment; a new plan applies from the next renewal'
+                  : 'Automatically calculated from the start date and selected membership plan'
+              }
               style={{
                 width: '100%',
                 backgroundColor: '#f8fafc',
