@@ -1289,10 +1289,12 @@ export class DBService {
     // makes the month-over-month trend arrow meaningful.
     const currentActiveMembers = members.filter((m) => m.status === 'active').length;
     let activeMembers = currentActiveMembers;
-    if (timeframe === 'last-month') {
-      const start = formatDateLocal(new Date(currentYear, currentMonth - 1, 1));
-      const end = formatDateLocal(new Date(currentYear, currentMonth, 0));
-      activeMembers = countMembersActiveInWindow(members, start, end);
+    if (timeframe === 'last-month' || timeframe === 'last-month-to-date') {
+      // Paid members whose membership covered the last day of last month, to compare with who is current today.
+      const lastDay = formatDateLocal(new Date(currentYear, currentMonth, 0));
+      activeMembers = members.filter(
+        (m) => m.status !== 'pending' && m.start_date && m.end_date && m.start_date <= lastDay && m.end_date >= lastDay
+      ).length;
     } else if (timeframe === 'last-3-months' || timeframe === 'last-6-months') {
       const count = timeframe === 'last-3-months' ? 3 : 6;
       const start = formatDateLocal(new Date(currentYear, currentMonth - (count - 1), 1));
