@@ -162,14 +162,8 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           <span
             style={{
               fontWeight: 600,
-              color:
-                typeof trend.value === 'string' && trend.value.startsWith('-')
-                  ? '#ef4444'
-                  : typeof trend.value === 'string' && trend.value.startsWith('+')
-                  ? '#059669'
-                  : trend.positive
-                  ? '#059669'
-                  : '#ef4444',
+              // Good or bad news, not the sign: expenses going up is shown in red.
+              color: trend.positive ? '#059669' : '#ef4444',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.15rem',

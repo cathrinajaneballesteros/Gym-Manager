@@ -201,7 +201,8 @@ export const DashboardOverview: React.FC = () => {
         const expenseDiff = kpis.totalExpenses - lastMonthKpis.totalExpenses;
         return {
           value: `${expenseDiff >= 0 ? '+' : '-'}${Math.abs(Math.round((expenseDiff / lastMonthKpis.totalExpenses) * 100))}%`,
-          positive: expenseDiff >= 0,
+          // Spending less is the good news.
+          positive: expenseDiff <= 0,
           direction: expenseDiff >= 0 ? ('up' as const) : ('down' as const),
           label: 'vs same point last month',
         };
