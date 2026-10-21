@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   const supabase = createClient();
 
@@ -40,6 +41,13 @@ export default function LoginPage() {
         setMode('signup');
       }
 
+      // Sent back here by /auth/callback when an email link was opened on another device.
+      if (params.get('notice') === 'email_confirmed') {
+        setNotice('Your email is confirmed. Please sign in.');
+      } else if (params.get('notice') === 'reset_other_device') {
+        setError('Open the password reset link in the same browser you requested it from, or request a new one.');
+      }
+
       // Sent back here by /auth/callback when Google sign-in or an email confirmation link didn't work.
       if (params.get('error') === 'auth_callback_failed') {
         const reason = params.get('reason');
@@ -52,6 +60,7 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setNotice('');
 
     if (!email || !password) {
       setError('Please provide both email and password.');
@@ -345,6 +354,22 @@ export default function LoginPage() {
         </div>
 
         {/* Error Message */}
+        {notice && !error && (
+          <div
+            style={{
+              padding: '0.75rem 0.9rem',
+              backgroundColor: '#ecfdf5',
+              border: '1px solid #d1fae5',
+              borderRadius: '10px',
+              color: '#065f46',
+              fontSize: '0.825rem',
+              marginBottom: '1.25rem',
+            }}
+          >
+            {notice}
+          </div>
+        )}
+
         {error && (
           <div
             style={{
