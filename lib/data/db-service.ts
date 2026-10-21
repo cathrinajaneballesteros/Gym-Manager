@@ -884,7 +884,13 @@ export class DBService {
     const log = check(result) as unknown as AttendanceLog;
     data.attendance = [log, ...withoutId(data.attendance, log.id)];
 
-    await this.saveMember(memberId, { last_visit_date: getTodayKey() });
+    // The visit is saved by now; if updating "last visit" fails, don't report the check-in as failed
+    // (a retry would only say "already checked in"). The visit itself still shows in Attendance.
+    try {
+      await this.saveMember(memberId, { last_visit_date: getTodayKey() });
+    } catch (err) {
+      console.warn('Check-in saved, but last visit date did not update:', err);
+    }
 
     this.notifyAttendanceChanged();
     return log;
