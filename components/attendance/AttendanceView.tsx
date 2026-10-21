@@ -183,7 +183,7 @@ export const AttendanceView: React.FC = () => {
               Attendance
             </h1>
             <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
-              Check members in at the front desk. Visits feed the churn risk on AI Analytics.
+              Check members in at the front desk.{DBService.isOwner() ? ' Visits feed the churn risk on AI Analytics.' : ''}
             </p>
           </div>
           <button onClick={exportCSV} className="btn btn-outline btn-sm" disabled={filteredHistory.length === 0}>
