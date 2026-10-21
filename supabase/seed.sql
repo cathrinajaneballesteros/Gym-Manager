@@ -9,6 +9,11 @@
 DO $$
 DECLARE
   v_demo_email TEXT := 'demo@smartgym.com';
+  -- Optional: your own email and mobile number, put on Kristine Mendoza (expiring soon), so email and SMS
+  -- reminders can be shown arriving on your own inbox and phone. The other sample numbers aren't real contacts,
+  -- so don't send SMS reminders to them.
+  v_demo_member_email TEXT := NULL;  -- e.g. 'you@gmail.com'
+  v_demo_member_phone TEXT := NULL;  -- e.g. '09171234567'
   v_admin_id UUID;
   v_gym_id UUID;
   -- The gym's calendar day (Philippine time); CURRENT_DATE on Supabase is UTC.
@@ -70,7 +75,7 @@ BEGIN
   --   join_days  = how far back their payment history may go
   --   end_offset = membership end date minus today (negative = expired, 0-7 = expiring, NULL = never paid)
   --   away_days  = days since their last check-in (NULL = no visits); visit_gap = days between visits
-  --   unverified = their latest GCash payment still needs its receipt checked
+  --   unverified = paid their next period by GCash yesterday; that receipt still needs checking
   DROP TABLE IF EXISTS pg_temp.seed_members;
   CREATE TEMP TABLE seed_members (
     idx INT, first_name TEXT, last_name TEXT, plan_name TEXT, method TEXT,
@@ -80,11 +85,11 @@ BEGIN
     (1,  'Juan',      'Dela Cruz',  'Monthly Regular',          'Cash',  170,  20,    0,    2, false),
     (2,  'Maria',     'Santos',     'Monthly Regular',          'GCash', 150,  9,     1,    3, false),
     (3,  'Mark',      'Reyes',      'Monthly Regular',          'Cash',  120,  25,    0,    2, false),
-    (4,  'Angelica',  'Bautista',   'Monthly Regular',          'GCash', 90,   15,    2,    3, true),
+    (4,  'Angelica',  'Bautista',   'Monthly Regular',          'GCash', 90,   3,     2,    3, true),
     (5,  'Paolo',     'Garcia',     'Monthly Regular',          'Cash',  60,   11,    1,    4, false),
     (6,  'Kristine',  'Mendoza',    'Monthly Regular',          'GCash', 25,   5,     3,    3, false),
     (7,  'Ramon',     'Villanueva', 'Monthly Regular',          'Cash',  140,  -10,   22,   3, false),
-    (8,  'Bea',       'Navarro',    'Student Monthly Discount', 'GCash', 130,  18,    1,    2, true),
+    (8,  'Bea',       'Navarro',    'Student Monthly Discount', 'GCash', 130,  4,     1,    2, true),
     (9,  'Carlo',     'Aquino',     'Student Monthly Discount', 'Cash',  45,   2,     2,    3, false),
     (10, 'Janine',    'Flores',     'Student Monthly Discount', 'GCash', 80,   -18,   30,   4, false),
     (11, 'Miguel',    'Torres',     'Quarterly Pro',            'Cash',  160,  40,    1,    2, false),
@@ -136,12 +141,14 @@ BEGIN
     END IF;
 
     INSERT INTO public.members (
-      gym_id, admin_id, first_name, last_name, phone, membership_plan_id,
+      gym_id, admin_id, first_name, last_name, email, phone, membership_plan_id,
       start_date, end_date, status, last_visit_date, created_at
     )
     VALUES (
       v_gym_id, v_admin_id, v_m.first_name, v_m.last_name,
-      '0917555' || lpad((100 + v_m.idx)::text, 4, '0'),
+      CASE WHEN v_m.idx = 6 THEN v_demo_member_email END,
+      CASE WHEN v_m.idx = 6 AND v_demo_member_phone IS NOT NULL THEN v_demo_member_phone
+        ELSE '0917555' || lpad((100 + v_m.idx)::text, 4, '0') END,
       v_plan.id, v_start, v_end,
       CASE
         WHEN v_m.end_offset IS NULL THEN 'pending'
@@ -161,12 +168,9 @@ BEGIN
     )
     SELECT
       v_gym_id, v_admin_id, v_member_id, v_m.first_name || ' ' || v_m.last_name, v_plan.id, v_plan.price, p.pay_date,
-      v_m.method, 'completed',
-      CASE WHEN v_m.unverified AND p.k = 1 THEN 'unverified' ELSE 'verified' END,
-      CASE WHEN v_m.method = 'GCash' AND NOT (v_m.unverified AND p.k = 1)
-        THEN (p.pay_date + time '18:00') AT TIME ZONE 'Asia/Manila' END,
-      CASE WHEN v_m.method = 'GCash' AND NOT (v_m.unverified AND p.k = 1)
-        THEN 'Limar Glen Calderon' END,
+      v_m.method, 'completed', 'verified',
+      CASE WHEN v_m.method = 'GCash' THEN (p.pay_date + time '18:00') AT TIME ZONE 'Asia/Manila' END,
+      CASE WHEN v_m.method = 'GCash' THEN 'Limar Glen Calderon' END,
       -- 13-digit GCash reference, fixed per member and period so re-runs match
       CASE WHEN v_m.method = 'GCash'
         THEN '10' || substr(translate(md5(v_m.idx || '-' || p.k), 'abcdef', '123456'), 1, 11) END,
@@ -176,6 +180,21 @@ BEGIN
       FROM generate_series(1, v_n) AS k
     ) p
     WHERE p.pay_date <= v_today;
+
+    -- Renewal paid early by GCash, waiting on the receipt check. Like a GCash payment recorded in the app,
+    -- it's pending: not counted as revenue and the membership isn't extended until it's verified.
+    IF v_m.unverified THEN
+      INSERT INTO public.payments (
+        gym_id, admin_id, member_id, member_name, membership_plan_id, amount, payment_date,
+        payment_method, payment_status, receipt_status, reference_number, created_at
+      )
+      VALUES (
+        v_gym_id, v_admin_id, v_member_id, v_m.first_name || ' ' || v_m.last_name, v_plan.id, v_plan.price, v_today - 1,
+        'GCash', 'pending', 'unverified',
+        '10' || substr(translate(md5(v_m.idx || '-next'), 'abcdef', '123456'), 1, 11),
+        ((v_today - 1) + time '19:30') AT TIME ZONE 'Asia/Manila'
+      );
+    END IF;
 
     -- Check-ins every few days over the last two months, mornings, at most once a day.
     -- Two months lets the churn check compare the last 30 days with the 30 before (Joshua's visits drop off).
