@@ -16,9 +16,9 @@ Progress as of Oct 13, 2026.
 
 ## Payment reminders via SMS and email — Mostly done
 - Reminders can be sent from Members, Payments, the Calendar, and the Dashboard.
-- Email goes through Resend and SMS through textbee.dev. Without an API key, sending is simulated.
+- Email goes through Brevo and SMS through textbee.dev. Without an API key, sending is simulated.
 - Every reminder that goes out is recorded in the Audit Log.
-- Left: reminders are only sent by hand; nothing sends them automatically before a due date. Email still uses Resend's test sender, which only delivers to the account owner's address until a domain is verified.
+- Left: reminders are only sent by hand; nothing sends them automatically before a due date.
 
 ## Receipt checker (manual) — Done
 - GCash payments are flagged "Needs Verification", with a count and a filter on the Payments page.

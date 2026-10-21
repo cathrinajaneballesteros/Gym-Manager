@@ -1,5 +1,5 @@
 /**
- * Resend Email Service Integration
+ * Brevo Email Service Integration
  * Sends payment receipts, membership expiry reminders, and system notifications.
  */
 
@@ -10,52 +10,58 @@ export interface EmailPayload {
   to: string | string[];
   subject: string;
   html: string;
-  from?: string;
+  /** Display name on the From line; the address is always BREVO_SENDER_EMAIL. */
+  fromName?: string;
   /** Where the member's reply goes (the gym's own email). */
   replyTo?: string;
 }
 
-export class ResendService {
+export class EmailService {
   private static getApiKey(): string | null {
-    return process.env.RESEND_API_KEY || null;
+    return process.env.BREVO_API_KEY || null;
+  }
+
+  private static getSenderEmail(): string | null {
+    return process.env.BREVO_SENDER_EMAIL || null;
   }
 
   static isConfigured(): boolean {
     const key = this.getApiKey();
-    return Boolean(key && key.startsWith('re_') && !key.includes('your-resend'));
+    const sender = this.getSenderEmail();
+    return Boolean(key && !key.includes('your-brevo') && sender && !sender.includes('your-'));
   }
 
   /**
-   * Send an email via Resend REST API
+   * Send an email via Brevo's transactional email API
    */
   static async sendEmail(payload: EmailPayload) {
     const apiKey = this.getApiKey();
-    if (!apiKey) {
-      throw new Error('RESEND_API_KEY is not configured in .env.local');
+    const senderEmail = this.getSenderEmail();
+    if (!apiKey || !senderEmail) {
+      throw new Error('BREVO_API_KEY and BREVO_SENDER_EMAIL must be set in .env.local');
     }
 
-    // Default from email: In Resend free sandbox without custom domain,
-    // 'onboarding@resend.dev' is provided by default.
-    const fromAddress = payload.from || 'Gymetrics <onboarding@resend.dev>';
-
-    const res = await fetch('https://api.resend.com/emails', {
+    // The sender address must be verified under Senders in the Brevo dashboard.
+    const recipients = Array.isArray(payload.to) ? payload.to : [payload.to];
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
+        'api-key': apiKey,
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
       },
       body: JSON.stringify({
-        from: fromAddress,
-        to: payload.to,
+        sender: { name: payload.fromName || 'Gymetrics', email: senderEmail },
+        to: recipients.map((email) => ({ email })),
         subject: payload.subject,
-        html: payload.html,
-        ...(payload.replyTo ? { reply_to: payload.replyTo } : {}),
+        htmlContent: payload.html,
+        ...(payload.replyTo ? { replyTo: { email: payload.replyTo } } : {}),
       }),
     });
 
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(`Resend API error (${res.status}): ${errorText}`);
+      throw new Error(`Brevo API error (${res.status}): ${errorText}`);
     }
 
     return await res.json();
@@ -120,6 +126,7 @@ export class ResendService {
       to,
       subject: `Payment Receipt from ${gymName} (${amount})`,
       html,
+      fromName: gymName,
     });
   }
 
@@ -198,6 +205,7 @@ export class ResendService {
       to,
       subject: `Payment Reminder: ${planName} due on ${dueDate} - ${gymName}`,
       html,
+      fromName: gymName,
       replyTo: gymEmail?.trim() || undefined,
     });
   }

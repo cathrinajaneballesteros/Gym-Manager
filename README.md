@@ -25,7 +25,7 @@ A web app for gym owners in the Philippines to run their gym's money side: membe
 - **Framework**: [Next.js](https://nextjs.org/) 16 (App Router), [React](https://react.dev/) 19, [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: plain CSS (`app/globals.css`) and inline styles
 - **Database & Auth**: [Supabase](https://supabase.com/) (PostgreSQL, Auth, Storage)
-- **Email / SMS / AI**: [Resend](https://resend.com/), [textbee](https://textbee.dev/), [Google Gemini](https://ai.google.dev/), all optional
+- **Email / SMS / AI**: [Brevo](https://www.brevo.com/), [textbee](https://textbee.dev/), [Google Gemini](https://ai.google.dev/), all optional
 - **Exports**: `xlsx`, `jspdf`, `jspdf-autotable`
 - **Icons and charts**: [Lucide React](https://lucide.dev/), [Recharts](https://recharts.org/)
 
@@ -56,7 +56,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
 
 # Optional: without these the feature is simulated or turned off
 GEMINI_API_KEY=        # AI summaries on Analytics
-RESEND_API_KEY=        # reminder emails
+BREVO_API_KEY=         # reminder emails
+BREVO_SENDER_EMAIL=    # a sender verified in Brevo → Senders
 TEXTBEE_API_KEY=       # reminder SMS (textbee.dev)
 TEXTBEE_DEVICE_ID=     # the linked phone, from the textbee dashboard
 ```
@@ -93,7 +94,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## 📝 Notes
 
-- **Resend test sender**: until you verify a domain in Resend, emails from `onboarding@resend.dev` are only delivered to the Resend account's own email.
+- **Brevo sender**: reminder emails come from `BREVO_SENDER_EMAIL`, which must be verified under Senders in Brevo. A free address like Gmail works but may land in spam; a verified domain delivers more reliably.
 - **Usage limits**: each account can send up to 20 reminder emails, 20 SMS and 30 AI requests per hour.
 - **Vercel Hobby plan**: deployments are blocked for commits authored by someone other than the Vercel project owner. The owner can use **Redeploy** in the Vercel dashboard after merging.
 

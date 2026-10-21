@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cleanText, requireGymMember } from '@/lib/supabase/require-user';
-import { ResendService } from '@/lib/email/resend-service';
+import { EmailService } from '@/lib/email/email-service';
 
 export async function POST(req: Request) {
   const access = await requireGymMember('email', 20, '1 hour');
@@ -32,18 +32,18 @@ export async function POST(req: Request) {
     const planName = cleanText(body.planName, 100) || 'Gym Membership';
     const dueDate = cleanText(body.dueDate, 10) || new Date().toISOString().split('T')[0];
 
-    if (!ResendService.isConfigured()) {
+    if (!EmailService.isConfigured()) {
       // Return simulated success with note if key is not configured,
       // so testing remains frictionless while flagging simulated status
       return NextResponse.json({
         success: true,
         simulated: true,
-        message: 'Resend API key not configured in .env.local — Reminder email logged and simulated successfully.',
+        message: 'Brevo API key or sender email not configured in .env.local — Reminder email logged and simulated successfully.',
         details: { to: member.email, memberName, amount, dueDate, planName },
       });
     }
 
-    const result = await ResendService.sendPaymentReminder({
+    const result = await EmailService.sendPaymentReminder({
       to: member.email,
       memberName,
       gymName: gym.name,
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, simulated: false, result });
   } catch (error) {
-    console.error('Error sending reminder email via Resend:', error);
+    console.error('Error sending reminder email via Brevo:', error);
     return NextResponse.json({ error: 'Failed to send the reminder email. Please try again.' }, { status: 500 });
   }
 }
