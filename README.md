@@ -25,7 +25,7 @@ A web app for gym owners in the Philippines to run their gym's money side: membe
 - **Framework**: [Next.js](https://nextjs.org/) 16 (App Router), [React](https://react.dev/) 19, [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: plain CSS (`app/globals.css`) and inline styles
 - **Database & Auth**: [Supabase](https://supabase.com/) (PostgreSQL, Auth, Storage)
-- **Email / SMS / AI**: [Resend](https://resend.com/), [Semaphore](https://semaphore.co/), [Google Gemini](https://ai.google.dev/), all optional
+- **Email / SMS / AI**: [Resend](https://resend.com/), [textbee](https://textbee.dev/), [Google Gemini](https://ai.google.dev/), all optional
 - **Exports**: `xlsx`, `jspdf`, `jspdf-autotable`
 - **Icons and charts**: [Lucide React](https://lucide.dev/), [Recharts](https://recharts.org/)
 
@@ -57,7 +57,8 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-or-anon-key
 # Optional: without these the feature is simulated or turned off
 GEMINI_API_KEY=        # AI summaries on Analytics
 RESEND_API_KEY=        # reminder emails
-SEMAPHORE_API_KEY=     # reminder SMS
+TEXTBEE_API_KEY=       # reminder SMS (textbee.dev)
+TEXTBEE_DEVICE_ID=     # the linked phone, from the textbee dashboard
 ```
 
 On Vercel, add the same variables under Project Settings → Environment Variables, then redeploy.
