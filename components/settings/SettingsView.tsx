@@ -42,11 +42,24 @@ export const SettingsView: React.FC = () => {
     });
   }, []);
 
+  // Keep the gym name under the avatar current after it's changed on the Gym tab.
+  useEffect(() => {
+    const handleProfileUpdate = () => setProfile(DBService.getProfile());
+    window.addEventListener('sgfm_profile_updated', handleProfileUpdate);
+    return () => window.removeEventListener('sgfm_profile_updated', handleProfileUpdate);
+  }, []);
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    const name = fullName.trim();
+    if (!name) {
+      showError('Name Required', 'Enter your full name.');
+      return;
+    }
     setSavingProfile(true);
     try {
-      const updated = await DBService.updateProfile({ full_name: fullName, phone });
+      const updated = await DBService.updateProfile({ full_name: name, phone: phone.trim() });
+      setFullName(name);
       setProfile(updated);
     } catch (err) {
       showError('Save Failed', err instanceof Error ? err.message : 'Could not save your settings.');
