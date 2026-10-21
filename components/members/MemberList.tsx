@@ -475,6 +475,8 @@ export const MemberList: React.FC = () => {
                             'Active'
                           ) : member.status === 'expiring' ? (
                             'Expiring Soon'
+                          ) : member.status === 'inactive' ? (
+                            'Inactive'
                           ) : (
                             'Expired'
                           )}

@@ -232,8 +232,8 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
         </div>
       </div>
 
-      {/* 3. Navigation Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem' }}>
+      {/* 3. Navigation Tabs (scroll sideways on phones instead of widening the page) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem', overflowX: 'auto', flexWrap: 'nowrap' }}>
         {([
           { key: 'overview', label: 'Overview' },
           { key: 'payments', label: 'Payment History' },
@@ -251,6 +251,8 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
               color: activeTab === tab.key ? '#059669' : '#64748b',
               borderBottom: activeTab === tab.key ? '2px solid #059669' : '2px solid transparent',
               transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
             {tab.label}
@@ -466,8 +468,12 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
                     <td style={{ padding: '0.75rem', color: '#64748b' }}>{p.payment_method}</td>
                     <td style={{ padding: '0.75rem', color: '#94a3b8', fontSize: '0.75rem' }}>{p.reference_number || '—'}</td>
                     <td style={{ padding: '0.75rem', textAlign: 'right' }}>
-                      <span className={`badge ${p.payment_status === 'completed' ? 'badge-completed' : 'badge-pending'}`}>
-                        {p.payment_status === 'completed' ? 'Paid' : p.payment_status}
+                      <span
+                        className={`badge ${
+                          p.payment_status === 'completed' ? 'badge-completed' : p.payment_status === 'refunded' ? 'badge-neutral' : 'badge-pending'
+                        }`}
+                      >
+                        {p.payment_status === 'completed' ? 'Paid' : p.payment_status === 'refunded' ? 'Refunded' : 'Pending'}
                       </span>
                     </td>
                   </tr>
