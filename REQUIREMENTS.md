@@ -1,6 +1,6 @@
 # Project Requirements
 
-Progress as of Oct 13, 2026.
+Progress as of Oct 21, 2026.
 
 | Requirement | Status |
 | --- | --- |
@@ -22,25 +22,26 @@ Progress as of Oct 13, 2026.
 
 ## Receipt checker (manual) — Done
 - GCash payments are flagged "Needs Verification", with a count and a filter on the Payments page.
-- A receipt can be verified (with notes) or rejected (with a required reason). Rejecting sets the payment back to pending.
+- A pending receipt can be verified (with notes) or rejected (with a required reason). Once a payment is completed it can't be rejected or set back to pending, so one payment never extends a membership twice.
 - Warns when another payment already uses the same reference number (spaces ignored), and when the reference isn't a 13-digit GCash number.
 - New GCash payments (including walk-ins) need a reference number and stay pending until verified. Only then do they count as revenue and activate or extend the membership, so a rejected receipt never gives free time.
 - Receipts can be printed.
 
 ## Expense historical data — Done
 - Expenses can be filtered by this month, last month, last 3 months, and last 6 months.
-- Shows this month against last month, and a 6-month breakdown by category with monthly averages.
-- Expense history exports to CSV.
+- Shows this month against the same days of last month, and a 6-month breakdown by category with monthly averages.
+- Expense history exports to CSV that opens in Excel with ₱ intact.
 
 ## User auditing — Done
 - Records sign-in, sign-up, and sign-out, plus every create, edit, and delete for members, payments, expenses, plans, and settings. Also records receipt checks and reminders.
 - Edits show the old and new value of each field, and deleted records keep their key details.
-- Filters by action, entity, and date range; search also looks inside event details. Exports to CSV.
+- Filters by action, entity (including staff), and date range; search also looks inside event details. Exports to CSV.
 - Saved in Supabase per gym. Staff actions are recorded under the staff member's email; only the owner can read the log.
 
 ## AI analytics that help owners save money — Done
 - Analytics page with a revenue forecast, member churn risk, and expense leak detection with estimated monthly and yearly savings.
-- Churn risk uses recorded check-ins: staff check members in from the Attendance page (or from Members, a member's page, or the Dashboard), and a drop in visits over the last 30 days raises the risk. The Attendance page also lists current members not seen in 14+ days.
+- The forecast follows the trend of full months; the month in progress is left out so it doesn't drag the forecast down. With fewer than two full months it shows next month at the latest month's level.
+- Churn risk uses recorded check-ins of paying members: staff check members in from the Attendance page (or from Members, a member's page, or the Dashboard), and a drop in visits over the last 30 days raises the risk. The Attendance page also lists current members not seen in 14+ days.
 - Gemini writes an executive brief and personalised member messages.
 - The dashboard shows the top AI insights.
 - Spending checks compare each month with the gym's own earlier months (after 2 months of expenses), treat equipment as one-time purchases, and size the money-saving tips to what the gym actually spends.
@@ -50,7 +51,7 @@ Progress as of Oct 13, 2026.
 ## 5 gym owners, each with their own gym profile — Mostly done
 - All data (plans, members, payments, expenses, check-ins, audit log) is saved in Supabase per gym. Row-level security keeps each gym's data to its own team, and app pages require login.
 - After signing up, a new owner goes through onboarding: gym name and address, contact details, opening hours, and their first membership plans. All of it can be edited later in Settings → Gym.
-- Owners invite staff by email in Settings → Staff. Staff join the gym when they sign up or sign in with that email. Staff can register and edit members, check members in, record payments, and approve GCash receipts. Expenses, reports, AI analytics, the audit log, plans, gym settings, and deleting members are owner-only.
+- Owners invite staff by email in Settings → Staff. When the staff member signs up or signs in with that email, they're asked to join the gym. Staff can register and edit members, check members in, record payments, and approve GCash receipts. Expenses, profit, reports, AI analytics, the audit log, plans, gym settings, and deleting members or payments are owner-only. Staff the owner removes lose access right away and are told why.
 - Walk-ins (one-time visitors) can be recorded from Attendance or Payments without registering a member. They count toward revenue, show as "Walk-ins" in revenue by plan, and use the gym's walk-in price (set in onboarding or Settings → Gym).
 - Owners can upload their gym's logo (onboarding or Settings → Gym). It's stored in Supabase Storage and shown in the sidebar for the whole team.
 - New owners start with no data. Sample data for presentations is seeded into one demo account (`supabase/seed.sql`).
@@ -58,7 +59,7 @@ Progress as of Oct 13, 2026.
 
 ## Calendar method — Done
 - Monthly calendar of membership expirations, completed payments, and expenses, with a filter for each.
-- Each month shows its expiration count and revenue.
+- Each month shows its expiration count and revenue; the owner also sees expenses and net profit (staff don't).
 - From a day, you can record a payment or send a reminder.
 
 ## Clickable dashboard — Done

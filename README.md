@@ -13,8 +13,8 @@ A web app for gym owners in the Philippines to run their gym's money side: membe
 - **Payments**: record Cash and GCash payments and walk-ins. GCash payments stay pending until the receipt's reference number is checked. Print a receipt with the gym's logo and details.
 - **Expenses**: log running costs by category, with spending checks that compare each month to the gym's own past months.
 - **Reports**: revenue, expenses, profit and loss, and monthly/annual views, exported to PDF or Excel.
-- **Analytics**: a revenue forecast from past months, members at risk of not renewing (based on real visits), saving tips, and optional AI summaries (Google Gemini).
-- **Owner and Staff roles**: owners see everything; staff handle check-ins, members and payments. Staff are invited by email and choose to join. Access is enforced in the database (row-level security), not just the UI.
+- **Analytics**: a revenue forecast from past full months, members at risk of not renewing (based on real visits), saving tips, and optional AI summaries (Google Gemini).
+- **Owner and Staff roles**: owners see everything; staff handle check-ins, members and payments, and never see expenses or profit. Staff are invited by email and choose to join. Access is enforced in the database (row-level security), not just the UI.
 - **Audit log**: who did what, written by the database so it can't be skipped or faked.
 - **Works on phones**: bottom tab bar, layouts that fit small screens.
 
