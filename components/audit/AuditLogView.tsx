@@ -359,6 +359,7 @@ export const AuditLogView: React.FC = () => {
               <option value="expense">Expenses</option>
               <option value="plan">Plans</option>
               <option value="settings">Settings</option>
+              <option value="staff">Staff</option>
               <option value="auth">Authentication</option>
             </select>
 
