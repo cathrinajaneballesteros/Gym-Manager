@@ -8,7 +8,8 @@ import { getTodayKey, daysAgoKey, toDateKey } from '@/lib/ui/date';
  * to classify attrition risk and provide actionable retention suggestions.
  */
 export function predictMemberChurn(requireMinMembers: number = 3): ChurnPredictionResult {
-  const members = DBService.getMembers();
+  // Members who never paid aren't at risk of leaving yet; they're still waiting on a first payment.
+  const members = DBService.getMembers().filter((m) => m.status !== 'pending');
   const todayStr = getTodayKey();
   const today = new Date(todayStr); // Today's local date, read as UTC midnight like the stored dates
 
@@ -41,10 +42,13 @@ export function predictMemberChurn(requireMinMembers: number = 3): ChurnPredicti
   let lowCount = 0;
 
   members.forEach((m) => {
-    // 1. Calculate days since last visit
+    // 1. Calculate days since last visit. A new member's last visit starts out as their start date,
+    // so without any check-ins it's counted from when they joined, not as a recent visit.
+    const hasCheckIns = visitDaysByMember.has(m.id);
+    const lastVisit = hasCheckIns ? m.last_visit_date : m.start_date;
     let daysSinceLastVisit = 3; // Default default
-    if (m.last_visit_date) {
-      const visitDate = new Date(m.last_visit_date);
+    if (lastVisit) {
+      const visitDate = new Date(lastVisit);
       daysSinceLastVisit = Math.max(
         0,
         Math.floor((today.getTime() - visitDate.getTime()) / (1000 * 60 * 60 * 24))
@@ -68,7 +72,7 @@ export function predictMemberChurn(requireMinMembers: number = 3): ChurnPredicti
     } else if (daysSinceLastVisit >= 14) {
       riskScore += 25;
       factors.push(`Inactivity period of ${daysSinceLastVisit} days`);
-    } else if (daysSinceLastVisit <= 3) {
+    } else if (daysSinceLastVisit <= 3 && hasCheckIns) {
       riskScore -= 10;
       factors.push('Regular gym attendance in the last 72 hours');
     }
