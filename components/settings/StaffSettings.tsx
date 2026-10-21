@@ -32,7 +32,7 @@ export const StaffSettings: React.FC = () => {
   };
 
   const handleRemove = async (member: StaffMember) => {
-    const who = member.full_name || member.email;
+    const who = DBService.staffName(member);
     const pending = member.status === 'invited';
     const confirmed = await showConfirm(
       pending ? 'Cancel invite?' : 'Remove staff member?',
@@ -97,9 +97,9 @@ export const StaffSettings: React.FC = () => {
           >
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600, fontSize: '0.875rem', color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {member.full_name || member.email}
+                {DBService.staffName(member)}
               </div>
-              {member.full_name && (
+              {DBService.staffName(member) !== member.email && (
                 <div style={{ fontSize: '0.75rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.email}</div>
               )}
             </div>

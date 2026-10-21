@@ -593,6 +593,12 @@ export class DBService {
     return data.staff;
   }
 
+  /** A team member's name, or their email when the account has no real name ("Gym Administrator" is the placeholder). */
+  static staffName(member: StaffMember): string {
+    const name = member.full_name?.trim();
+    return name && name !== 'Gym Administrator' ? name : member.email;
+  }
+
   /** The person joins this gym the first time they sign up or sign in with this email. */
   static async inviteStaff(email: string): Promise<StaffMember> {
     const address = email.trim().toLowerCase();
@@ -633,7 +639,7 @@ export class DBService {
       action: 'staff.remove',
       entity_type: 'staff',
       entity_id: id,
-      entity_label: member.full_name || member.email,
+      entity_label: this.staffName(member),
       metadata: { email: member.email, status: member.status },
     });
   }
