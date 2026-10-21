@@ -18,7 +18,8 @@ const memberSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^\+?[0-9()\-\s]{7,20}$/, 'Use digits only, e.g. 09171234567 or +63 917 123 4567'),
+    .regex(/^\+?[0-9()\-\s]{7,20}$/, 'Use digits only, e.g. 09171234567 or +63 917 123 4567')
+    .refine((v) => v.replace(/\D/g, '').length >= 7, 'Enter at least 7 digits'),
   emergency_contact: z.string().trim().max(120, 'Emergency contact is too long'),
   membership_plan_id: z.string().min(1, 'Please select a membership plan'),
   start_date: z.string().min(10, 'Start date is required'),
@@ -26,7 +27,8 @@ const memberSchema = z.object({
   notes: z.string().max(500, 'Notes can be up to 500 characters').optional(),
 });
 
-const digitsOnly = (value: string) => value.replace(/\D/g, '');
+// Digits only, with +63 written as 0, so "+63 917 123 4567" and "0917 123 4567" match as the same number.
+const normalizePhone = (value: string) => value.replace(/\D/g, '').replace(/^63(?=9\d{9}$)/, '0');
 
 type MemberFormData = z.infer<typeof memberSchema>;
 
@@ -120,11 +122,11 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   const onSubmit = async (data: MemberFormData) => {
     // Stop the same person being registered twice by mistake.
     const email = data.email.toLowerCase();
-    const phone = digitsOnly(data.phone);
+    const phone = normalizePhone(data.phone);
     const duplicate = DBService.getMembers().find(
       (m) =>
         m.id !== initialMember?.id &&
-        ((email && m.email?.toLowerCase() === email) || (phone && digitsOnly(m.phone || '') === phone))
+        ((email && m.email?.toLowerCase() === email) || (phone && normalizePhone(m.phone || '') === phone))
     );
     if (duplicate) {
       const field = email && duplicate.email?.toLowerCase() === email ? 'email' : 'phone number';
