@@ -1,13 +1,17 @@
 import { NextResponse } from 'next/server';
-import { cleanText, requireGymMember } from '@/lib/supabase/require-user';
+import { cleanText, requireGymMember, takeApiQuota } from '@/lib/supabase/require-user';
 import { GeminiService, ExecutiveReportRequest } from '@/lib/ai/gemini-service';
 
 const toNumber = (value: unknown) => Number(value) || 0;
+// Like toNumber, but a real 0 (e.g. a membership expiring today) is kept instead of replaced by the fallback.
+const toNumberOr = (value: unknown, fallback: number) =>
+  value !== null && value !== '' && Number.isFinite(Number(value)) ? Number(value) : fallback;
 
 export async function POST(req: Request) {
-  const access = await requireGymMember('ai', 30, '1 hour');
+  // The usage limit is taken after the checks below, so requests that are turned away don't use it up.
+  const access = await requireGymMember();
   if (access.error) return access.error;
-  const { role, gym } = access;
+  const { role, gym, supabase } = access;
 
   // Only Analytics asks the AI, and Analytics is owner-only.
   if (role !== 'owner') {
@@ -25,14 +29,17 @@ export async function POST(req: Request) {
       );
     }
 
+    const limited = await takeApiQuota(supabase, 'ai', 30, '1 hour');
+    if (limited) return limited;
+
     const body = await req.json();
     const action = body.action || 'executive-report';
 
     if (action === 'retention-message') {
       const message = await GeminiService.generateRetentionMessage(
         cleanText(body.memberName, 80) || 'Valued Member',
-        toNumber(body.daysInactive) || 14,
-        toNumber(body.daysUntilExpiry) || 7,
+        toNumberOr(body.daysInactive, 14),
+        toNumberOr(body.daysUntilExpiry, 7),
         gym.name
       );
       return NextResponse.json({ success: true, message });

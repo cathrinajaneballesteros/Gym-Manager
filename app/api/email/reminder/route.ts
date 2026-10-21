@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cleanText, requireGymMember } from '@/lib/supabase/require-user';
+import { getManilaDateKey } from '@/lib/ui/date';
 import { EmailService } from '@/lib/email/email-service';
 
 export async function POST(req: Request) {
@@ -15,11 +16,15 @@ export async function POST(req: Request) {
     }
 
     // Read through the signed-in client, so only this gym's members are found.
-    const { data: member } = await supabase
+    const { data: member, error: memberError } = await supabase
       .from('members')
       .select('first_name, last_name, email')
       .eq('id', memberId)
       .maybeSingle();
+    if (memberError) {
+      console.error('Member lookup failed:', memberError);
+      return NextResponse.json({ error: 'Could not load the member. Please try again.' }, { status: 500 });
+    }
     if (!member) {
       return NextResponse.json({ error: 'Member not found.' }, { status: 404 });
     }
@@ -30,7 +35,7 @@ export async function POST(req: Request) {
     const memberName = `${member.first_name} ${member.last_name}`.trim() || 'Valued Member';
     const amount = cleanText(body.amount, 40) || `${gym.currency}0.00`;
     const planName = cleanText(body.planName, 100) || 'Gym Membership';
-    const dueDate = cleanText(body.dueDate, 10) || new Date().toISOString().split('T')[0];
+    const dueDate = cleanText(body.dueDate, 10) || getManilaDateKey();
 
     if (!EmailService.isConfigured()) {
       // Return simulated success with note if key is not configured,

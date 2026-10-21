@@ -1,3 +1,8 @@
+// Today's date as YYYY-MM-DD in the Philippines, for server code (servers usually run on UTC).
+export function getManilaDateKey(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+}
+
 // Formats a Date as YYYY-MM-DD in the user's local time.
 // (toISOString() uses UTC, which is still "yesterday" before 8 AM in the Philippines.)
 export function toDateKey(d: Date): string {

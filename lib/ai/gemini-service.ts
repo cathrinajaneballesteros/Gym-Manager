@@ -64,7 +64,8 @@ export class GeminiService {
           ],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 1000,
+            // Room for models that think before answering; thinking counts against this limit.
+            maxOutputTokens: 2048,
           },
         };
 
@@ -86,7 +87,12 @@ export class GeminiService {
 
         const data = await response.json();
         const candidate = data.candidates?.[0];
-        const text = candidate?.content?.parts?.[0]?.text;
+        // The answer can be split over several parts; thought summaries are skipped.
+        const parts: { text?: string; thought?: boolean }[] = candidate?.content?.parts || [];
+        const text = parts
+          .filter((part) => !part.thought && part.text)
+          .map((part) => part.text)
+          .join('');
 
         if (text) {
           return text.trim();
