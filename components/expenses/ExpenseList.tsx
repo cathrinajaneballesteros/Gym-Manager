@@ -122,8 +122,10 @@ export const ExpenseList: React.FC = () => {
     .filter((e) => (e.expense_date || '').startsWith(thisMonthKey))
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
+  // This month is still in progress, so compare with the same days of last month.
+  const lastMonthSameDayKey = `${lastMonthKey}-${String(now.getDate()).padStart(2, '0')}`;
   const lastMonthExpenses = expenses
-    .filter((e) => (e.expense_date || '').startsWith(lastMonthKey))
+    .filter((e) => (e.expense_date || '').startsWith(lastMonthKey) && (e.expense_date || '') <= lastMonthSameDayKey)
     .reduce((sum, e) => sum + Number(e.amount), 0);
 
   const totalPages = Math.ceil(filteredExpenses.length / pageSize) || 1;
@@ -226,14 +228,14 @@ export const ExpenseList: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: isPos ? '#ef4444' : '#059669', fontWeight: 600 }}>
                     {isPos ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                     <span>
-                      {isPos ? '+' : '-'}{Math.abs(Math.round((diff / lastMonthExpenses) * 100))}% vs last month ({currency}{lastMonthExpenses.toLocaleString()})
+                      {isPos ? '+' : '-'}{Math.abs(Math.round((diff / lastMonthExpenses) * 100))}% vs same point last month ({currency}{lastMonthExpenses.toLocaleString()})
                     </span>
                   </div>
                 );
               })()
             ) : (
               <div style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
-                No expenses last month
+                No expenses by this point last month
               </div>
             )}
           </div>
