@@ -666,7 +666,7 @@ export const CalendarView: React.FC = () => {
             </div>
 
             {/* Daily Summary Metric Cards */}
-            <div className="calendar-day-summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <div className="calendar-day-summary" style={{ display: 'grid', gridTemplateColumns: `repeat(${isOwner ? 3 : 2}, minmax(0, 1fr))`, gap: '0.75rem', marginBottom: '1.5rem' }}>
               <div style={{ backgroundColor: '#fffbeb', padding: '0.75rem', borderRadius: '8px', border: '1px solid #fef3c7' }}>
                 <span style={{ fontSize: '0.725rem', color: '#92400e', fontWeight: 600, display: 'block' }}>Expiring Members</span>
                 <strong style={{ fontSize: '1.2rem', color: '#b45309' }}>{selectedDayData?.expirations.length || 0}</strong>
@@ -675,10 +675,12 @@ export const CalendarView: React.FC = () => {
                 <span style={{ fontSize: '0.725rem', color: '#065f46', fontWeight: 600, display: 'block' }}>Total Collected</span>
                 <strong style={{ fontSize: '1.2rem', color: '#059669' }}>{currency}{(selectedDayData?.totalRevenue || 0).toLocaleString()}</strong>
               </div>
-              <div style={{ backgroundColor: '#fff1f2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ffe4e6' }}>
-                <span style={{ fontSize: '0.725rem', color: '#9f1239', fontWeight: 600, display: 'block' }}>Expenses Logged</span>
-                <strong style={{ fontSize: '1.2rem', color: '#ef4444' }}>{currency}{(selectedDayData?.totalExpenses || 0).toLocaleString()}</strong>
-              </div>
+              {isOwner && (
+                <div style={{ backgroundColor: '#fff1f2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ffe4e6' }}>
+                  <span style={{ fontSize: '0.725rem', color: '#9f1239', fontWeight: 600, display: 'block' }}>Expenses Logged</span>
+                  <strong style={{ fontSize: '1.2rem', color: '#ef4444' }}>{currency}{(selectedDayData?.totalExpenses || 0).toLocaleString()}</strong>
+                </div>
+              )}
             </div>
 
             {/* Section A: Members Expiring on This Date */}
