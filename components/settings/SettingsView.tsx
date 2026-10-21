@@ -88,7 +88,10 @@ export const SettingsView: React.FC = () => {
         showError('Current Password Needed', 'Enter your current password to change it.');
         return;
       }
-      const { error: checkError } = await supabase.auth.signInWithPassword({ email: user.email, password: oldPassword });
+      sessionStorage.setItem('sgfm_reauth', '1');
+      const { error: checkError } = await supabase.auth
+        .signInWithPassword({ email: user.email, password: oldPassword })
+        .finally(() => sessionStorage.removeItem('sgfm_reauth'));
       if (checkError) {
         showError('Wrong Password', 'Your current password is incorrect.');
         return;

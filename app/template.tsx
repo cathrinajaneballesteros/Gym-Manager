@@ -17,6 +17,8 @@ export default function Template({ children }: { children: React.ReactNode }) {
       try {
         if (localStorage.getItem('sgfm_login_logged') === key) return;
         localStorage.setItem('sgfm_login_logged', key);
+        // Settings re-checks the current password by signing in again; that isn't a new login.
+        if (sessionStorage.getItem('sgfm_reauth') === '1') return;
       } catch {
         return;
       }
