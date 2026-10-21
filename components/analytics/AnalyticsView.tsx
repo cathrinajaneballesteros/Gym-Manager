@@ -73,7 +73,8 @@ export const AnalyticsView: React.FC = () => {
         }),
       });
 
-      const data = await res.json();
+      // A timeout or crash page isn't JSON; fall through to the error message instead of "Unexpected token <".
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Failed to generate AI executive brief');
       }
@@ -114,7 +115,7 @@ export const AnalyticsView: React.FC = () => {
           daysUntilExpiry: member.daysUntilExpiration,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) throw new Error(data.error);
 
       showAlert({
@@ -177,7 +178,7 @@ export const AnalyticsView: React.FC = () => {
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Failed to generate cost-saving action plan');
       }
@@ -480,14 +481,18 @@ export const AnalyticsView: React.FC = () => {
                 </div>
               ) : (
                 [
-                  { factor: 'Renewal retention', impact: `${Math.round(forecast.confidenceScore * 0.9)}%` },
-                  { factor: 'Growth trend', impact: `${forecast.projectedGrowthPercent >= 0 ? '+' : ''}${forecast.projectedGrowthPercent}%` },
-                  { factor: 'Predicted new signups', impact: `+${forecast.predictedNewMembers}` },
-                  { factor: 'Expected renewals', impact: `${forecast.expectedRenewals}` },
+                  { factor: 'Renewal retention', impact: `${DBService.getDashboardKPIs('this-month').renewalRate}%`, good: true },
+                  {
+                    factor: 'Growth trend',
+                    impact: `${forecast.projectedGrowthPercent >= 0 ? '+' : ''}${forecast.projectedGrowthPercent}%`,
+                    good: forecast.projectedGrowthPercent >= 0,
+                  },
+                  { factor: 'Predicted new signups', impact: `+${forecast.predictedNewMembers}`, good: true },
+                  { factor: 'Expected renewals', impact: `${forecast.expectedRenewals}`, good: true },
                 ].map((item) => (
                   <div key={item.factor} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                     <span style={{ color: '#64748b' }}>{item.factor}</span>
-                    <span style={{ fontWeight: 600, color: '#059669' }}>{item.impact}</span>
+                    <span style={{ fontWeight: 600, color: item.good ? '#059669' : '#ef4444' }}>{item.impact}</span>
                   </div>
                 ))
               )}
