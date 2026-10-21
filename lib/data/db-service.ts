@@ -224,10 +224,10 @@ function formatDateLocal(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// Count members whose membership was active at any point within [start, end] (inclusive).
+// Count paid members whose membership was active at any point within [start, end] (inclusive).
 function countMembersActiveInWindow(members: Member[], start: string, end: string): number {
   return members.filter((m) => {
-    if (!m.start_date || !m.end_date) return false;
+    if (m.status === 'pending' || !m.start_date || !m.end_date) return false;
     return m.start_date <= end && m.end_date >= start;
   }).length;
 }
@@ -1310,10 +1310,12 @@ export class DBService {
     const currentActiveMembers = members.filter((m) => m.status === 'active').length;
     let activeMembers = currentActiveMembers;
     if (timeframe === 'last-month' || timeframe === 'last-month-to-date') {
-      // Paid members whose membership covered the last day of last month, to compare with who is current today.
+      // Paid members who were "active" on the last day of last month: more than 7 days left, the same rule
+      // as today's active status, so expiring members aren't counted on one side only.
       const lastDay = formatDateLocal(new Date(currentYear, currentMonth, 0));
+      const activeCutoff = formatDateLocal(new Date(currentYear, currentMonth, 7));
       activeMembers = members.filter(
-        (m) => m.status !== 'pending' && m.start_date && m.end_date && m.start_date <= lastDay && m.end_date >= lastDay
+        (m) => m.status !== 'pending' && m.start_date && m.end_date && m.start_date <= lastDay && m.end_date > activeCutoff
       ).length;
     } else if (timeframe === 'last-3-months' || timeframe === 'last-6-months') {
       const count = timeframe === 'last-3-months' ? 3 : 6;
@@ -1331,8 +1333,9 @@ export class DBService {
     const expiredMemberships = members.filter((m) => m.status === 'expired').length;
     const inactiveMembers = members.filter((m) => m.status === 'inactive').length;
     const pendingMembers = members.filter((m) => m.status === 'pending').length;
-    const totalMembers = activeMembers + expiringMemberships + expiredMemberships + inactiveMembers + pendingMembers;
-    const renewalRate = totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 1000) / 10 : 0;
+    // Always from today's roster: the period counts above would otherwise add expiring and expired members twice.
+    const totalMembers = currentActiveMembers + expiringMemberships + expiredMemberships + inactiveMembers + pendingMembers;
+    const renewalRate = totalMembers > 0 ? Math.round((currentActiveMembers / totalMembers) * 1000) / 10 : 0;
 
     return {
       totalRevenue,

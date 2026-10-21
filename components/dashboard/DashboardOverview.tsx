@@ -223,9 +223,8 @@ export const DashboardOverview: React.FC = () => {
 
   const memberTrend = lastMonthKpis && lastMonthKpis.activeMembers > 0
     ? (() => {
-        // Everyone with a valid membership today (expiring ones still count), against the end of last month.
-        const currentMembers = kpis.activeMembers + kpis.expiringMemberships;
-        const memberDiff = currentMembers - lastMonthKpis.activeMembers;
+        // Active members today (the number on the card) against those active at the end of last month.
+        const memberDiff = kpis.activeMembers - lastMonthKpis.activeMembers;
         return {
           value: `${memberDiff >= 0 ? '+' : '-'}${Math.abs(Math.round((memberDiff / lastMonthKpis.activeMembers) * 100))}%`,
           positive: memberDiff >= 0,
