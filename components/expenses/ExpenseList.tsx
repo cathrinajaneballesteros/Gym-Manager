@@ -101,22 +101,6 @@ export const ExpenseList: React.FC = () => {
   }, [expenses, searchQuery, categoryFilter, methodFilter, timeframeFilter, thisMonthKey, lastMonthKey]);
 
   const periodExpensesTotal = filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-  const allTimeExpensesTotal = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-
-  // Top category for active view
-  const catSums: Record<string, number> = {};
-  filteredExpenses.forEach((e) => {
-    catSums[e.category] = (catSums[e.category] || 0) + Number(e.amount);
-  });
-  let topCategoryName = '—';
-  let topCategoryAmount = 0;
-  Object.entries(catSums).forEach(([name, amt]) => {
-    if (amt > topCategoryAmount) {
-      topCategoryAmount = amt;
-      topCategoryName = name;
-    }
-  });
-  const topCategoryPct = periodExpensesTotal > 0 ? Math.round((topCategoryAmount / periodExpensesTotal) * 100) : 0;
 
   const thisMonthExpenses = expenses
     .filter((e) => (e.expense_date || '').startsWith(thisMonthKey))

@@ -103,7 +103,6 @@ export default function OnboardingPage() {
   const filledPlans = plans.filter((p) => p.name.trim());
   const planError = (): string | null => {
     for (const p of filledPlans) {
-      const price = Number(p.price);
       const months = Number(p.months);
       const priceProblem = amountProblem(p.price);
       if (priceProblem) return `"${p.name.trim()}": ${priceProblem}`;

@@ -94,7 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
       await supabase.auth.signOut();
-    } catch (e) {
+    } catch {
       // Ignore
     }
     if (typeof window !== 'undefined') {

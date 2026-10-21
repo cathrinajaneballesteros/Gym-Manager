@@ -141,7 +141,6 @@ export const ReportsView: React.FC = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     loadReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useGymDataRefresh(loadReport);
 
