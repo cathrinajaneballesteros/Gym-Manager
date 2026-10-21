@@ -967,6 +967,15 @@ export class DBService {
         status: 'active',
         membership_plan_id: plan.id,
       });
+    } else if (member.membership_plan_id !== plan.id || !member.start_date) {
+      // First payment, but for a different plan than they registered with: their period follows the paid plan.
+      const startDate = member.start_date || today;
+      await this.updateMember(member.id, {
+        start_date: startDate,
+        end_date: addMonthsToDateKey(startDate, plan.duration_months),
+        status: 'active',
+        membership_plan_id: plan.id,
+      });
     } else {
       // First payment for a newly registered member: their dates were set when they registered.
       await this.updateMember(member.id, { status: 'active' });
