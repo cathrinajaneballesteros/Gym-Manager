@@ -30,6 +30,18 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
   const [customNote, setCustomNote] = useState('');
   const [isSending, setIsSending] = useState(false);
 
+  // This modal stays mounted between uses, so start each opening fresh; otherwise one member's note
+  // would be pre-filled (and sent) for the next.
+  const openKey = isOpen ? `${member?.id ?? ''}:${payment?.id ?? ''}` : null;
+  const [lastOpenKey, setLastOpenKey] = useState(openKey);
+  if (openKey !== lastOpenKey) {
+    setLastOpenKey(openKey);
+    if (openKey) {
+      setChannel('both');
+      setCustomNote('');
+    }
+  }
+
   // Everything below comes from the member or payment; the server looks the contact details up again.
   const profile = DBService.getProfile();
   const gym = DBService.getGym();
