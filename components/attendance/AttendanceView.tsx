@@ -62,13 +62,15 @@ const memberName = (m?: Member) => (m ? `${m.first_name} ${m.last_name}`.trim() 
 
 export const AttendanceView: React.FC = () => {
   const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  // Part of the memo key, so a page left open past midnight doesn't keep showing yesterday's walk-ins.
+  const todayKey = getTodayKey();
   const { members, attendance, walkInsToday } = useMemo(
     () => ({
       members: snapshot ? DBService.getMembers() : [],
       attendance: snapshot ? DBService.getAttendance() : [],
-      walkInsToday: snapshot ? DBService.getWalkIns(getTodayKey()) : [],
+      walkInsToday: snapshot ? DBService.getWalkIns(todayKey) : [],
     }),
-    [snapshot]
+    [snapshot, todayKey]
   );
   const memberMap = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
 
@@ -82,7 +84,6 @@ export const AttendanceView: React.FC = () => {
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const inactiveRef = useRef<HTMLDivElement>(null);
 
-  const todayKey = getTodayKey();
   const weekStartKey = daysAgoKey((new Date().getDay() + 6) % 7); // Monday
   const visitDay = (a: AttendanceLog) => toDateKey(new Date(a.check_in_time));
 
