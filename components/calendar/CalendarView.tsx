@@ -36,6 +36,8 @@ export const CalendarView: React.FC = () => {
   const [viewDate, setViewDate] = useState<Date>(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  // Expenses are owner-only (staff can't read them), so staff would see ₱0 spent and revenue as profit.
+  const isOwner = DBService.isOwner();
 
   // Modal states
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
@@ -301,6 +303,8 @@ export const CalendarView: React.FC = () => {
             </div>
           </div>
 
+          {isOwner && (
+          <>
           <div className="card" style={{ padding: '1rem 1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
               <ArrowDownRight size={16} style={{ color: '#ef4444' }} />
@@ -326,6 +330,8 @@ export const CalendarView: React.FC = () => {
               Cash balance for {monthName}
             </div>
           </div>
+          </>
+          )}
         </div>
       </ScrollReveal>
 
@@ -386,7 +392,7 @@ export const CalendarView: React.FC = () => {
                 { key: 'expirations', label: '• Expirations', color: '#f59e0b' },
                 { key: 'payments', label: '• Payments', color: '#059669' },
                 { key: 'expenses', label: '• Expenses', color: '#ef4444' },
-              ].map((f) => (
+              ].filter((f) => isOwner || f.key !== 'expenses').map((f) => (
                 <button
                   key={f.key}
                   onClick={() => setActiveFilter(f.key as FilterType)}
@@ -808,6 +814,7 @@ export const CalendarView: React.FC = () => {
             </div>
 
             {/* Section C: Expenses Logged */}
+            {isOwner && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -853,6 +860,7 @@ export const CalendarView: React.FC = () => {
                 </div>
               )}
             </div>
+            )}
 
             {/* Drawer Footer Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.75rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>
