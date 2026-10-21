@@ -392,6 +392,24 @@ export class DBService {
     // Something was saved on this device while loading; this copy may be missing it, so wait for the next refresh.
     if (background && revision !== revisionAtStart) return;
     const gym = gymRow ? fromGymRow(gymRow as Row) : null;
+    // Remember which gym this person works at as staff. If the owner removes them they land on onboarding,
+    // and this lets it say why, even after a reload or on their next sign-in on this device.
+    try {
+      const staffGymKey = `sgfm_staff_gym:${user.id}`;
+      if (role === 'staff' && gym) {
+        localStorage.setItem(staffGymKey, gym.name);
+      } else if (role) {
+        localStorage.removeItem(staffGymKey);
+      } else {
+        const removedFrom = localStorage.getItem(staffGymKey);
+        if (removedFrom) {
+          sessionStorage.setItem('sgfm_removed_from', removedFrom);
+          localStorage.removeItem(staffGymKey);
+        }
+      }
+    } catch {
+      // Storage blocked: only the explanation is lost.
+    }
     data = {
       userId: user.id,
       profile: withGym(fromProfileRow(profile), gym),

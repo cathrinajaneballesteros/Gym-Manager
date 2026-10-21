@@ -39,6 +39,8 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   // A gym that invited this email; they choose to join it or set up their own.
   const [invite, setInvite] = useState<{ invite_id: string; gym_name: string } | null>(null);
+  // The gym this person was just removed from as staff, if that's why they're here.
+  const [removedFrom, setRemovedFrom] = useState<string | null>(null);
   // Uploaded after the gym is created, since the logo is stored in the gym's own folder.
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -87,6 +89,13 @@ export default function OnboardingPage() {
       if (!gym) {
         const pending = await DBService.getPendingInvite().catch(() => null);
         if (!cancelled) setInvite(pending);
+      }
+      try {
+        const removed = sessionStorage.getItem('sgfm_removed_from');
+        sessionStorage.removeItem('sgfm_removed_from');
+        if (!cancelled && removed) setRemovedFrom(removed);
+      } catch {
+        // No note to show.
       }
       if (!cancelled) setReady(true);
     })();
@@ -221,6 +230,18 @@ export default function OnboardingPage() {
         }}
         className="onboarding-card"
       >
+        {removedFrom && !invite && (
+          <div style={{ marginBottom: '1.75rem', padding: '1rem 1.1rem', borderRadius: '14px', backgroundColor: '#fffbeb', border: '1px solid #fde68a' }}>
+            <p style={{ fontSize: '0.9rem', color: '#92400e', fontWeight: 600, marginBottom: '0.35rem' }}>
+              You&apos;re no longer on {removedFrom}&apos;s team.
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#b45309' }}>
+              The owner removed your staff access. Ask them to invite you again if that was a mistake, or set up your
+              own gym below.
+            </p>
+          </div>
+        )}
+
         {invite && (
           <div style={{ marginBottom: '1.75rem', padding: '1rem 1.1rem', borderRadius: '14px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
             <p style={{ fontSize: '0.9rem', color: '#065f46', fontWeight: 600, marginBottom: '0.35rem' }}>
