@@ -5,7 +5,6 @@ import {
   CreditCard,
   Search,
   Plus,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   FileCheck,
@@ -19,7 +18,7 @@ import { ReceiptCheckerModal } from './ReceiptCheckerModal';
 import { PaymentReminderModal } from './PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showToast, showConfirm, showError } from '@/lib/ui/swal';
-import { getCurrentMonthRangeLabel, formatDisplayDate } from '@/lib/ui/date';
+import { formatDisplayDate } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
 import { Bell, CheckCircle2, Clock, AlertTriangle, Edit, UserPlus, Trash2, UserRound } from 'lucide-react';
 import { getPageWindow } from '@/lib/ui/pagination';
@@ -321,24 +320,6 @@ export const PaymentList: React.FC = () => {
             <option value="rejected">Rejected Receipts</option>
           </select>
 
-          {/* Date range filter pill */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '0.5rem 0.85rem',
-              fontSize: '0.825rem',
-              color: '#475569',
-              fontWeight: 500,
-            }}
-          >
-            <Calendar size={14} color="#64748b" />
-            <span>{getCurrentMonthRangeLabel()}</span>
-          </div>
         </div>
       </div>
       </ScrollReveal>
