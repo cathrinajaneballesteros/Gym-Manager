@@ -1010,6 +1010,7 @@ export class DBService {
   }
 
   static async addPayment(input: Omit<Payment, 'id' | 'admin_id' | 'created_at'>): Promise<Payment> {
+    const payer = input.member_id && !input.is_walk_in ? this.getMemberById(input.member_id) : undefined;
     const row = check(
       await db()
         .from('payments')
@@ -1017,6 +1018,9 @@ export class DBService {
           toRow(
             {
               ...input,
+              // Saved now so deleting the member later doesn't have to fill it in on every payment,
+              // which the audit log would record as an edit to each one.
+              member_name: input.member_name || (payer ? this.memberLabel(payer) : undefined),
               receipt_status: input.receipt_status || (input.payment_method === 'Cash' ? 'verified' : 'unverified'),
             },
             PAYMENT_COLUMNS
