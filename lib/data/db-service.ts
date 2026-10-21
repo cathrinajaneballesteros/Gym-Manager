@@ -573,8 +573,14 @@ export class DBService {
     if (data.staff.some((s) => s.email.toLowerCase() === address)) {
       throw new Error('That email is already on your staff list');
     }
+    if (!data.gym) throw new Error('Finish setting up your gym first');
+    // gym_staff has no gym_id default (unlike the data tables), so it has to be sent.
     const row = check(
-      await db().from('gym_staff').insert({ email: address, role: 'staff', status: 'invited' }).select().single()
+      await db()
+        .from('gym_staff')
+        .insert({ gym_id: data.gym.id, email: address, role: 'staff', status: 'invited' })
+        .select()
+        .single()
     ) as Row;
     const invite = fromStaffRow(row);
     data.staff = [...withoutId(data.staff, invite.id), invite];
