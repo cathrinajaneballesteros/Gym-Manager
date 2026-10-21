@@ -438,7 +438,8 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            {!isRejecting && payment.receipt_status !== 'rejected' && (
+            {/* A completed payment already extended the membership, so it can't be sent back to pending. */}
+            {!isRejecting && payment.receipt_status !== 'rejected' && payment.payment_status !== 'completed' && (
               <button
                 type="button"
                 onClick={() => setIsRejecting(true)}

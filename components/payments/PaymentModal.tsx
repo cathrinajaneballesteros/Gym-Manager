@@ -278,7 +278,11 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
             ) : (
               <select {...register('payment_status')} style={{ width: '100%' }}>
                 <option value="completed">Completed / Settled</option>
-                <option value="pending">Pending Verification</option>
+                {/* A settled payment already extended the membership; moving it back to pending and then
+                    completing it again would extend it a second time. */}
+                {initialPayment?.payment_status !== 'completed' && initialPayment?.payment_status !== 'refunded' && (
+                  <option value="pending">Pending Verification</option>
+                )}
                 <option value="refunded">Refunded</option>
               </select>
             )}

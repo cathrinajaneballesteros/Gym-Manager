@@ -1072,7 +1072,8 @@ export class DBService {
       },
     });
 
-    if (previous.payment_status !== 'completed') await this.applySavedPayment(updatedPayment);
+    // Only a pending payment hasn't been applied yet; a refunded one may have been completed before.
+    if (previous.payment_status === 'pending') await this.applySavedPayment(updatedPayment);
     return updatedPayment;
   }
 
@@ -1105,7 +1106,7 @@ export class DBService {
       },
     });
 
-    if (current.payment_status !== 'completed') await this.applySavedPayment(updatedPayment);
+    if (current.payment_status === 'pending') await this.applySavedPayment(updatedPayment);
     return updatedPayment;
   }
 
@@ -1113,6 +1114,9 @@ export class DBService {
     const profile = this.getProfile();
     const current = data.payments.find((p) => p.id === id);
     if (!current) throw new Error('Payment not found');
+    if (current.payment_status === 'completed') {
+      throw new Error('This payment is already counted and extended the membership. Delete it instead if it was a mistake.');
+    }
 
     const updatedPayment = await this.savePayment(id, {
       payment_status: 'pending',
