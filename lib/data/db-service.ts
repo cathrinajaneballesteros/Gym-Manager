@@ -182,6 +182,15 @@ function check<T>(result: { data: T | null; error: { message: string } | null })
   return result.data as T;
 }
 
+// Row-level security makes a blocked delete remove nothing without an error. Treat that as a failure, so the
+// item doesn't disappear here only to come back on the next refresh.
+async function deleteById(table: string, id: string): Promise<void> {
+  const rows = check(await db().from(table).delete().eq('id', id).select('id'));
+  if (!rows || rows.length === 0) {
+    throw new Error("It couldn't be deleted. It may already be gone (refresh the page), or you don't have permission.");
+  }
+}
+
 async function fetchAll(table: string, orderBy: string): Promise<Row[]> {
   const rows: Row[] = [];
   for (let from = 0; ; from += PAGE_SIZE) {
@@ -599,7 +608,7 @@ export class DBService {
     const member = data.staff.find((s) => s.id === id);
     if (!member) throw new Error('Staff member not found');
     if (member.role === 'owner') throw new Error('The owner cannot be removed');
-    check(await db().from('gym_staff').delete().eq('id', id));
+    await deleteById('gym_staff', id);
     data.staff = data.staff.filter((s) => s.id !== id);
 
     this.recordAudit({
@@ -827,7 +836,7 @@ export class DBService {
     // The database then unlinks them from the member and removes the member's check-ins.
     const memberName = this.memberLabel(member);
     check(await db().from('payments').update({ member_name: memberName }).eq('member_id', id));
-    check(await db().from('members').delete().eq('id', id));
+    await deleteById('members', id);
 
     let paymentsKept = 0;
     data.payments = data.payments.map((p) => {
@@ -899,7 +908,7 @@ export class DBService {
   static async undoCheckIn(logId: string): Promise<void> {
     const log = data.attendance.find((a) => a.id === logId);
     if (!log) throw new Error('Check-in not found');
-    check(await db().from('attendance_logs').delete().eq('id', logId));
+    await deleteById('attendance_logs', logId);
     data.attendance = data.attendance.filter((a) => a.id !== logId);
 
     // Last visit goes back to the newest remaining check-in, or the start date if there are none.
@@ -1167,7 +1176,7 @@ export class DBService {
 
   static async deletePayment(id: string): Promise<void> {
     const payment = data.payments.find((p) => p.id === id);
-    check(await db().from('payments').delete().eq('id', id));
+    await deleteById('payments', id);
     data.payments = data.payments.filter((p) => p.id !== id);
 
     this.recordAudit({
@@ -1237,7 +1246,7 @@ export class DBService {
 
   static async deleteExpense(id: string): Promise<void> {
     const expense = data.expenses.find((e) => e.id === id);
-    check(await db().from('expenses').delete().eq('id', id));
+    await deleteById('expenses', id);
     data.expenses = data.expenses.filter((e) => e.id !== id);
 
     this.recordAudit({
