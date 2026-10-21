@@ -113,19 +113,35 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   };
 
   const handlePrint = () => {
+    // The member's end date is only what this payment paid up to if it's their latest completed payment;
+    // an older receipt would show a later renewal's date, and a pending one the date before it's extended.
+    const latestCompleted = DBService.getPayments()
+      .filter((p) => p.member_id === payment.member_id && p.payment_status === 'completed' && !p.is_walk_in)
+      .sort(
+        (a, b) =>
+          (b.payment_date || '').localeCompare(a.payment_date || '') ||
+          (b.created_at || '').localeCompare(a.created_at || '')
+      )[0];
     const opened = printReceipt({
       payment: { ...payment, member },
       gym: DBService.getGym(),
       gymName: profile.gym_name || 'Gym',
       currency,
-      validUntil: member?.end_date,
+      validUntil: payment.payment_status === 'completed' && latestCompleted?.id === payment.id ? member?.end_date : undefined,
     });
     if (!opened) showError('Pop-up blocked', 'Allow pop-ups for this site to print the receipt.');
   };
 
+  // The clipboard only exists on https or localhost, e.g. not on a phone opening the app by its LAN address.
   const copyRefNumber = () => {
-    navigator.clipboard.writeText(ref || receiptNo);
-    showToast(ref ? 'Reference number copied!' : 'Receipt number copied!');
+    if (!navigator.clipboard) {
+      showToast('Copying needs a secure (https) connection', 'error');
+      return;
+    }
+    navigator.clipboard
+      .writeText(ref || receiptNo)
+      .then(() => showToast(ref ? 'Reference number copied!' : 'Receipt number copied!'))
+      .catch(() => showToast('Could not copy', 'error'));
   };
 
   return (

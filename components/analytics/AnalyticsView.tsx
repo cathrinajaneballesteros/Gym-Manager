@@ -138,9 +138,17 @@ export const AnalyticsView: React.FC = () => {
         confirmButtonColor: '#059669',
       }).then((result) => {
         if (result.isConfirmed) {
-          navigator.clipboard.writeText(data.message);
-          showToast('Copied to clipboard!');
-          setContactedMemberId(member.memberId);
+          const copyFailed = () =>
+            showError('Copy Failed', 'Could not copy the message. Please check your browser permissions.');
+          // The clipboard only exists on https or localhost.
+          if (!navigator.clipboard) return copyFailed();
+          navigator.clipboard
+            .writeText(data.message)
+            .then(() => {
+              showToast('Copied to clipboard!');
+              setContactedMemberId(member.memberId);
+            })
+            .catch(copyFailed);
         }
       });
     } catch {

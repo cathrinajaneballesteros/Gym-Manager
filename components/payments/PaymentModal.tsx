@@ -14,7 +14,8 @@ import { getPaymentMemberName } from '@/lib/ui/format';
 import { amountField, MAX_AMOUNT, pastDateField } from '@/lib/ui/validation';
 
 const paymentSchema = z.object({
-  member_id: z.string().min(1, 'Please select a member'),
+  // Required in onSubmit, except for a payment whose member was deleted (it has no member any more).
+  member_id: z.string(),
   membership_plan_id: z.string().optional(),
   amount: amountField('Payment amount'),
   payment_date: pastDateField('Payment date'),
@@ -91,6 +92,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
     register,
     handleSubmit,
     setValue,
+    setError,
     watch,
     reset,
     formState: { errors, isSubmitting },
@@ -134,6 +136,10 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({
   const isNewGCash = !initialPayment && watch('payment_method') === 'GCash';
 
   const onSubmit = async (data: PaymentFormData) => {
+    if (!deletedMemberPayment && !data.member_id) {
+      setError('member_id', { message: 'Please select a member' });
+      return;
+    }
     try {
       // A new GCash payment waits for its receipt to be verified before it counts or extends the membership.
       // Activating or extending the membership happens in DBService once the payment is completed.
