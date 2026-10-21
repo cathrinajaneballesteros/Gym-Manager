@@ -112,9 +112,14 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
 
   // 4. Expense Categorization Summary
   // @ts-expect-error autoTable adds lastAutoTable to doc instance
-  const nextY2 = (doc.lastAutoTable?.finalY || 180) + 12;
+  let nextY2 = (doc.lastAutoTable?.finalY || 180) + 12;
+  // A long year-to-date table leaves no room for this section, so it goes on a new page instead of being left out.
+  if (nextY2 > 230) {
+    doc.addPage();
+    nextY2 = 20;
+  }
 
-  if (nextY2 < 230) {
+  {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
@@ -139,14 +144,17 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
     });
   }
 
-  // Footer Disclaimer
-  doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184);
-  doc.text(
-    'CONFIDENTIAL • Prepared by Smart Gym Finance Manager • For internal administrative audit and accounting use only.',
-    14,
-    285
-  );
+  // Footer Disclaimer, on every page
+  for (let page = 1; page <= doc.getNumberOfPages(); page++) {
+    doc.setPage(page);
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      'CONFIDENTIAL • Prepared by Smart Gym Finance Manager • For internal administrative audit and accounting use only.',
+      14,
+      285
+    );
+  }
 
   // Trigger browser download
   const filename = `${gymName.toLowerCase().replace(/\s+/g, '-')}-financial-report-${reportPeriod.replace(/[^\w]+/g, '-').replace(/-+$/, '')}.pdf`;
