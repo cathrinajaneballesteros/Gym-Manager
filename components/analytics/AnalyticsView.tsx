@@ -277,7 +277,9 @@ export const AnalyticsView: React.FC = () => {
             ✓ Active Model • ${forecast.confidenceScore}% Confidence Level
           </div>
           <p style="margin-bottom: 0.6rem; color: #1e293b;">
-            <strong>3-Month Projection:</strong> Based on the trend across ${forecast.dataPointsCount} month(s) of payments.
+            ${nextPoint
+              ? `<strong>3-Month Projection:</strong> Based on the trend across ${forecast.dataPointsCount} full month(s) of payments.`
+              : '<strong>Early estimate:</strong> Next month is shown at the latest month&apos;s level until there are two full months of payments.'}
           </p>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.825rem;">
             <div style="background: #f8fafc; padding: 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0;">

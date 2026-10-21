@@ -12,7 +12,11 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
   const members = DBService.getMembers();
   const payments = DBService.getPayments();
 
-  const activeMonthsWithRevenue = historicalTrends.filter((pt) => pt.revenue > 0);
+  // The trend is fitted on full months only: this month is still in progress, so its revenue so far would
+  // drag the line down. Months before the gym's first payment are left out too, as they aren't a real ₱0.
+  const firstRevenueIndex = historicalTrends.findIndex((pt) => pt.revenue > 0);
+  const fullMonths = firstRevenueIndex === -1 ? [] : historicalTrends.slice(firstRevenueIndex, -1);
+  const thisMonthSoFar = historicalTrends[historicalTrends.length - 1]?.revenue || 0;
   const activeMembers = members.filter((m) => m.status === 'active').length;
   const currency = DBService.getProfile().currency || '₱';
   // No members means no new sign-ups to extrapolate from.
@@ -44,10 +48,10 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
     };
   }
 
-  // 2. Early data state: only 1 month with revenue. Too little to see a trend, so assume next month
-  // matches this one instead of inventing growth.
-  if (activeMonthsWithRevenue.length < 2 && !useDemoData) {
-    const currentRevenue = kpis.totalRevenue;
+  // 2. Early data state: fewer than 2 full months with revenue. Too little to see a trend, so assume next
+  // month matches the latest month instead of inventing growth.
+  if (fullMonths.length < 2 && !useDemoData) {
+    const currentRevenue = Math.max(fullMonths[fullMonths.length - 1]?.revenue || 0, thisMonthSoFar);
     const projectedNext = currentRevenue;
     const expectedRenewals = Math.round(activeMembers * (kpis.renewalRate > 0 ? kpis.renewalRate / 100 : 0.85));
     const predictedNew = newMembersAt(0.1);
@@ -70,20 +74,20 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
       })),
       hasSufficientData: true,
       explanation:
-        "Not enough history yet: there's only one month of revenue, so next month is shown at this month's level. A real trend appears once two or more months are recorded.",
-      dataPointsCount: activeMonthsWithRevenue.length,
-      seasonalFactors: ['Based on this month only'],
+        "Not enough history yet: a trend needs two full months of payments, so next month is shown at the latest month's level.",
+      dataPointsCount: fullMonths.length,
+      seasonalFactors: ['Based on the latest month only'],
     };
   }
 
-  // 3. Multi-month Linear Regression on historical monthly revenues
-  const n = historicalTrends.length;
+  // 3. Multi-month Linear Regression on the full months' revenues
+  const n = fullMonths.length;
   let sumX = 0;
   let sumY = 0;
   let sumXY = 0;
   let sumX2 = 0;
 
-  historicalTrends.forEach((point, index) => {
+  fullMonths.forEach((point, index) => {
     const x = index + 1;
     const y = point.revenue;
     sumX += x;
@@ -95,16 +99,17 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
   const denominator = n * sumX2 - sumX * sumX;
   const slope = denominator !== 0 ? (n * sumXY - sumX * sumY) / denominator : 0;
 
-  // The trend (slope) is applied from this month's actual revenue, so the forecast
-  // carries on from the last real point instead of jumping to where the fitted line ends.
-  const lastRevenue = historicalTrends[n - 1]?.revenue || 0;
-  const projectAhead = (monthsAhead: number) => Math.max(0, Math.round(lastRevenue + slope * monthsAhead));
+  // The trend (slope) is applied from last month's actual revenue, so the forecast carries on from the
+  // last full month instead of jumping to where the fitted line ends. Next month is two steps after it.
+  const lastFullRevenue = fullMonths[n - 1]?.revenue || 0;
+  const projectAhead = (monthsAhead: number) => Math.max(0, Math.round(lastFullRevenue + slope * (monthsAhead + 1)));
   const rawProjected = projectAhead(1);
 
   const expectedRenewals = Math.round(activeMembers * (kpis.renewalRate > 0 ? kpis.renewalRate / 100 : 0.85));
   const predictedNewMembers = newMembersAt(0.12);
 
-  const currentRevenue = historicalTrends[historicalTrends.length - 1]?.revenue || kpis.totalRevenue;
+  // Growth is measured against last month, the latest full month.
+  const currentRevenue = lastFullRevenue;
   const forecastedRevenue = rawProjected > 0 ? rawProjected : currentRevenue;
 
   const growthPercent =
@@ -152,13 +157,13 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
     currentMonthlyRevenue: currentRevenue,
     forecastedNextMonthRevenue: forecastedRevenue,
     projectedGrowthPercent: growthPercent,
-    confidenceScore: Math.min(95, 60 + activeMonthsWithRevenue.length * 8),
+    confidenceScore: Math.min(95, 60 + n * 8),
     expectedRenewals,
     predictedNewMembers,
     trendSeries: series,
     hasSufficientData: true,
-    explanation: `Based on ${activeMonthsWithRevenue.length} months of transaction trends and retention patterns across ${activeMembers} active members, revenue is projected to reach ${currency}${forecastedRevenue.toLocaleString()} next month (${growthPercent >= 0 ? '+' : ''}${growthPercent}%).`,
-    dataPointsCount: activeMonthsWithRevenue.length,
+    explanation: `Based on ${n} full months of transaction trends and retention patterns across ${activeMembers} active members, revenue is projected to reach ${currency}${forecastedRevenue.toLocaleString()} next month (${growthPercent >= 0 ? '+' : ''}${growthPercent}% vs last month).`,
+    dataPointsCount: n,
     seasonalFactors: [
       'Active member renewal rate projection',
       'Historical monthly payment run-rate trajectory',
