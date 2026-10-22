@@ -622,7 +622,8 @@ export const PaymentList: React.FC = () => {
                       {/* Actions */}
                       <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
                         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem' }}>
-                          {p.payment_status === 'pending' && (
+                          {/* A rejected GCash receipt must not be counted with one click; edit or delete it instead. */}
+                          {p.payment_status === 'pending' && p.receipt_status !== 'rejected' && (
                             <button
                               onClick={() => handleMarkAsPaid(p)}
                               title="Confirm & Mark Payment as Paid"
