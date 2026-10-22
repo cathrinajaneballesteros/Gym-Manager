@@ -455,6 +455,8 @@ export class DBService {
     ) as Row;
     const updated = withGym(fromProfileRow(row), data.gym);
     data.profile = updated;
+    // The database copies the new name onto the staff list (009_sync_staff_names.sql); mirror it here.
+    data.staff = data.staff.map((s) => (s.user_id === updated.id ? { ...s, full_name: updated.full_name } : s));
     emit('sgfm_profile_updated', updated);
     if (changedFields(current, updates).length > 0) {
       this.recordAudit({
