@@ -26,7 +26,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
     };
   }, []);
 
-  const initials = DBService.getInitials(profile?.full_name);
+  const initials = DBService.getInitials(DBService.displayName(profile));
 
   return (
     <header

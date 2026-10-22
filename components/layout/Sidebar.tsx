@@ -80,8 +80,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
     };
   }, [pathname]);
 
-  const adminName = profile?.full_name || 'Admin';
-  const initials = DBService.getInitials(profile?.full_name);
+  const adminName = DBService.displayName(profile);
+  const initials = DBService.getInitials(adminName);
 
   const handleLogout = async () => {
     DBService.recordAudit({

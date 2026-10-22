@@ -439,6 +439,12 @@ export class DBService {
     return first || 'Admin';
   }
 
+  /** The signed-in person's name, or their email when the account has no real name ("Gym Administrator" is the placeholder). */
+  static displayName(profile?: Pick<UserProfile, 'full_name' | 'email'> | null): string {
+    const name = profile?.full_name?.trim();
+    return name && name !== 'Gym Administrator' ? name : profile?.email || 'Admin';
+  }
+
   static getInitials(fullName?: string): string {
     if (!fullName || !fullName.trim()) return 'AD';
     const parts = fullName.trim().split(/\s+/).filter(Boolean);
