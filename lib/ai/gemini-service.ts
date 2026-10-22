@@ -64,7 +64,8 @@ export class GeminiService {
           ],
           generationConfig: {
             temperature: 0.7,
-            maxOutputTokens: 1000,
+            // Room for models that think before answering; thinking counts against this limit.
+            maxOutputTokens: 2048,
           },
         };
 
@@ -74,6 +75,8 @@ export class GeminiService {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
+          // A stalled model would leave the button spinning; give up and try the next one.
+          signal: AbortSignal.timeout(15_000),
         });
 
         if (!response.ok) {
@@ -84,7 +87,12 @@ export class GeminiService {
 
         const data = await response.json();
         const candidate = data.candidates?.[0];
-        const text = candidate?.content?.parts?.[0]?.text;
+        // The answer can be split over several parts; thought summaries are skipped.
+        const parts: { text?: string; thought?: boolean }[] = candidate?.content?.parts || [];
+        const text = parts
+          .filter((part) => !part.thought && part.text)
+          .map((part) => part.text)
+          .join('');
 
         if (text) {
           return text.trim();
@@ -102,11 +110,11 @@ export class GeminiService {
    */
   static async generateExecutiveReport(stats: ExecutiveReportRequest): Promise<string> {
     const system =
-      'You are a elite gym business consultant and CFO advisor for independent gym owners. ' +
-      'Write professional, motivating, punchy, and actionable financial summaries. ' +
-      'Keep your output organized with bullet points and bold highlights. Keep it under 250 words.';
+      'You are a friendly adviser to the owner of a small, independent gym in the Philippines. ' +
+      'Use simple, everyday words a busy gym owner understands; avoid finance and business jargon. ' +
+      'Show amounts in pesos (₱). Use short bullet points and bold the key numbers. Keep it under 250 words.';
 
-    const user = `Analyze this gym\'s monthly business performance:
+    const user = `Here is how the gym did this month:
 - Gym Name: ${stats.gymName || 'Fitness Center'}
 - Currency: ${stats.currency || '₱'}
 - Monthly Gross Revenue: ${stats.currency}${stats.totalRevenue.toLocaleString()}
@@ -116,10 +124,10 @@ export class GeminiService {
 - Members at Risk of Churning: ${stats.churnRiskCount}
 - Highest Expense Category: ${stats.topExpenseCategory || 'General Operations'}
 
-Provide:
-1. Executive Health Scorecard (Overall rating & 1-sentence verdict)
-2. 2-3 High-Impact Revenue & Expense Actions
-3. Immediate Retention Strategy for at-risk members`;
+Write three short sections with these headings:
+1. How the gym is doing (one sentence)
+2. What to do this month (2-3 simple steps to earn more or spend less)
+3. Members to reach out to (how to bring back members who may stop coming)`;
 
     return this.prompt(system, user);
   }
@@ -136,9 +144,11 @@ Provide:
     const system =
       'You are a friendly, motivating gym community manager. Write a short, warm, non-pushy message (SMS/WhatsApp style, 2-3 sentences max) to re-engage a gym member who has not visited recently.';
 
+    const membership =
+      daysUntilExpiry < 0 ? `ended ${Math.abs(daysUntilExpiry)} days ago` : `ends in ${daysUntilExpiry} days`;
     const user = `Member: ${memberName}
 Inactive for: ${daysInactive} days
-Membership expires in: ${daysUntilExpiry} days
+Membership: ${membership}
 Gym name: ${gymName}
 
 Write an engaging, warm check-in message offering encouragement or inviting them back for a workout.`;
@@ -159,9 +169,9 @@ Write an engaging, warm check-in message offering encouragement or inviting them
     anomalies?: { category: string; currentAmount: number; baseline: number; difference: number }[];
   }): Promise<string> {
     const system =
-      'You are a seasoned fitness business consultant and financial controller specializing in gym profitability. ' +
-      'Your sole objective is to help the gym owner eliminate operational waste, reduce unnecessary expenses, and maximize net take-home profit. ' +
-      'Be direct, practical, and highly specific with concrete monetary targets and operational steps. Keep under 300 words.';
+      'You are a friendly adviser helping the owner of a small, independent gym in the Philippines spend less money. ' +
+      'Use simple, everyday words a busy gym owner understands; avoid finance and business jargon. ' +
+      'Give practical steps that fit a local gym, with amounts in pesos (₱). Use short bullet points. Keep it under 300 words.';
 
     const anomaliesText =
       data.anomalies && data.anomalies.length > 0
@@ -173,21 +183,21 @@ Write an engaging, warm check-in message offering encouragement or inviting them
             .join('\n')
         : '  * General operations baseline tracking';
 
-    const user = `Analyze our gym expenditures and design an aggressive cost-cutting action plan:
+    const user = `Here is what the gym spent this month. Suggest a simple plan to spend less:
 - Gym Name: ${data.gymName || 'Fitness Center'}
 - Currency: ${data.currency || '₱'}
 - Total Monthly Expenses: ${data.currency || '₱'}${data.totalExpenses.toLocaleString()}
 - Detected Potential Monthly Savings: ${data.currency || '₱'}${data.potentialMonthlySavings.toLocaleString()}
 - Detected Potential Annual Savings: ${data.currency || '₱'}${data.potentialAnnualSavings.toLocaleString()}
 - Largest Expense Category: ${data.topExpenseCategory || 'Utilities'}
-- Spending Anomalies Flagged:
+- Higher than usual this month:
 ${anomaliesText}
 
-Provide:
-1. Top 3 Immediate Quick Wins (Actions to take this week to stop cash bleed)
-2. Strategic Cost-Cutting Initiatives (Vendors, utilities, maintenance, supplies)
-3. 30-Day Expense Reduction Checklist for staff
-4. Projected Bottom-Line Profit Increase`;
+Write four short sections with these headings:
+1. Quick wins this week (3 easy things to do now)
+2. Bigger savings (suppliers, electricity and water, repairs, supplies)
+3. Your 30-day checklist (simple tasks for the owner)
+4. How much more you could keep each month`;
 
     return this.prompt(system, user);
   }

@@ -20,7 +20,7 @@ export const AppleFooter: React.FC = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
+            gridTemplateColumns: 'repeat(3, 1fr)',
             gap: '2rem',
             marginBottom: '3rem',
           }}
@@ -30,27 +30,17 @@ export const AppleFooter: React.FC = () => {
             <div style={{ fontWeight: 600, color: '#1d1d1f', marginBottom: '0.85rem' }}>Platform</div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: 0 }}>
               <li><a href="#overview" style={{ color: 'inherit', textDecoration: 'none' }}>Overview</a></li>
-              <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Cashflow Intelligence</Link></li>
-              <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Member Churn Radar</Link></li>
-              <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Expense Leak Sentinel</Link></li>
-              <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Automated Reports</Link></li>
-            </ul>
-          </div>
-
-          <div>
-            <div style={{ fontWeight: 600, color: '#1d1d1f', marginBottom: '0.85rem' }}>Solutions</div>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: 0 }}>
-              <li><span style={{ color: 'inherit' }}>Boutique Fitness Studios</span></li>
-              <li><span style={{ color: 'inherit' }}>Commercial 24/7 Gyms</span></li>
-              <li><span style={{ color: 'inherit' }}>CrossFit & Strength Boxes</span></li>
-              <li><span style={{ color: 'inherit' }}>Multi-Branch Franchises</span></li>
+              <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Forecast</Link></li>
+              <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>At-risk members</Link></li>
+              <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Expense alerts</Link></li>
+              <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>PDF & Excel reports</Link></li>
             </ul>
           </div>
 
           <div>
             <div style={{ fontWeight: 600, color: '#1d1d1f', marginBottom: '0.85rem' }}>Account</div>
             <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.5rem', padding: 0 }}>
-              <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Sign In</Link></li>
+              <li><Link href="/login?mode=signin" style={{ color: 'inherit', textDecoration: 'none' }}>Sign In</Link></li>
               <li><Link href="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Create Account</Link></li>
               <li><Link href="/forgot-password" style={{ color: 'inherit', textDecoration: 'none' }}>Password Recovery</Link></li>
               <li><Link href="/dashboard" style={{ color: 'inherit', textDecoration: 'none' }}>Open Workspace</Link></li>
@@ -79,7 +69,7 @@ export const AppleFooter: React.FC = () => {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <img src="/logo.svg" alt="Smart Gym Finance Manager" width={18} height={18} style={{ borderRadius: '4px' }} />
-            <span>Copyright © 2026 Smart Gym Finance Manager Inc. All rights reserved.</span>
+            <span>Copyright © 2026 Smart Gym Finance Manager. All rights reserved.</span>
           </div>
         </div>
       </div>

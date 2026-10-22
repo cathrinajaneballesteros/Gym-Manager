@@ -116,8 +116,8 @@ export const CategoryExpenseChart: React.FC<CategoryExpenseChartProps> = ({
         </div>
       </div>
 
-      {/* Right: Category Breakdown Legend List */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
+      {/* Right: Category Breakdown Legend List (capped so each % stays near its label on wide cards) */}
+      <div style={{ flex: 1, width: '100%', maxWidth: '320px', display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingRight: '0.5rem' }}>
         {sortedCategories.slice(0, 6).map((item) => (
           <div
             key={item.name}

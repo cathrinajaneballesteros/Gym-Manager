@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Plus, Layers, Clock, CheckCircle2, XCircle, Pencil, Power } from 'lucide-react';
+import { Plus, Layers, CheckCircle2, XCircle, Pencil, Power } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { amountProblem, MAX_AMOUNT } from '@/lib/ui/validation';
 import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
@@ -22,6 +22,7 @@ export const PlansView: React.FC = () => {
   const [price, setPrice] = useState('');
   const [duration, setDuration] = useState('1');
   const [description, setDescription] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const load = () => {
     setPlans(DBService.getPlans());
@@ -78,6 +79,7 @@ export const PlansView: React.FC = () => {
       return;
     }
 
+    setSaving(true);
     try {
       const fields = {
         name: name.trim(),
@@ -95,6 +97,8 @@ export const PlansView: React.FC = () => {
       showToast(editingPlan ? 'Membership plan updated' : 'Membership plan added');
     } catch (err) {
       showError('Save Failed', err instanceof Error ? err.message : 'Could not save the plan.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -221,7 +225,7 @@ export const PlansView: React.FC = () => {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
+                    justifyContent: 'flex-end',
                     gap: '0.5rem',
                     fontSize: '0.75rem',
                     color: '#86868b',
@@ -230,10 +234,6 @@ export const PlansView: React.FC = () => {
                     borderTop: '1px solid #f1f5f9',
                   }}
                 >
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                    <Clock size={13} />
-                    <span>{plan.duration_months} month term</span>
-                  </span>
                   <div style={{ display: 'inline-flex', gap: '0.4rem' }}>
                     <button
                       type="button"
@@ -384,8 +384,8 @@ export const PlansView: React.FC = () => {
             <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary">
-              {editingPlan ? 'Save Changes' : 'Add Plan'}
+            <button type="submit" className="btn btn-primary" disabled={saving}>
+              {saving ? 'Saving...' : editingPlan ? 'Save Changes' : 'Add Plan'}
             </button>
           </div>
         </form>

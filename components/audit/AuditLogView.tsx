@@ -32,6 +32,9 @@ const subscribeAudit = (callback: () => void) => {
 // The log array is replaced (never changed in place) when an entry is added, so it is a stable snapshot.
 const getAuditSnapshot = (): AuditLogEntry[] => DBService.getAuditLog();
 
+// Payment entries written by the database say "₱1,500.00"; the app's own say "₱1,500". Show them the same way.
+const displayLabel = (label?: string): string => (label || '').replace(/(\d)\.00\b/g, '$1');
+
 const NO_ENTRIES: AuditLogEntry[] = [];
 const getAuditServerSnapshot = (): AuditLogEntry[] => NO_ENTRIES;
 
@@ -78,7 +81,7 @@ const ACTION_META: Record<AuditAction, ActionMeta> = {
   'member.create': { label: 'Member created', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
   'member.update': { label: 'Member updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
   'member.delete': { label: 'Member deleted', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
-  'member.reminder_sent': { label: 'Reminder dispatched', color: '#d97706', background: '#fffbeb', border: '#fde68a' },
+  'member.reminder_sent': { label: 'Reminder sent', color: '#d97706', background: '#fffbeb', border: '#fde68a' },
   'member.check_in_undo': { label: 'Check-in undone', color: '#ef4444', background: '#fef2f2', border: '#fecaca' },
   'payment.create': { label: 'Payment recorded', color: '#059669', background: '#f0fdf4', border: '#bbf7d0' },
   'payment.update': { label: 'Payment updated', color: '#2563eb', background: '#eff6ff', border: '#bfdbfe' },
@@ -221,10 +224,10 @@ export const AuditLogView: React.FC = () => {
             </div>
             <div>
               <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.15rem' }}>
-                User Auditing
+                Audit Log
               </h1>
               <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
-                Chronological audit trail of staff actions, security events, payments, and member modifications.
+                Everything done in the app, newest first.
               </p>
             </div>
           </div>
@@ -356,6 +359,7 @@ export const AuditLogView: React.FC = () => {
               <option value="expense">Expenses</option>
               <option value="plan">Plans</option>
               <option value="settings">Settings</option>
+              <option value="staff">Staff</option>
               <option value="auth">Authentication</option>
             </select>
 
@@ -405,13 +409,13 @@ export const AuditLogView: React.FC = () => {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                     <th style={{ padding: '0.9rem 1.5rem' }}>Time</th>
-                    <th style={{ padding: '0.9rem 1.25rem' }}>Actor</th>
-                    <th style={{ padding: '0.9rem 1.25rem' }}>Action</th>
-                    <th style={{ padding: '0.9rem 1.25rem' }}>Entity</th>
+                    <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Actor</th>
+                    <th style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>Action</th>
+                    <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>Entity</th>
                     <th style={{ padding: '0.9rem 1.5rem' }}>Details</th>
                   </tr>
                 </thead>
@@ -428,16 +432,17 @@ export const AuditLogView: React.FC = () => {
                         onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                         title="Click to view complete event details"
                       >
-                        <td style={{ padding: '1rem 1.5rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                        <td className="phone-wrap" style={{ padding: '1rem 1.5rem', color: '#64748b', whiteSpace: 'nowrap' }}>
                           {formatDateTime(entry.created_at)}
                         </td>
 
-                        <td style={{ padding: '1rem 1.25rem', color: '#334155', fontSize: '0.825rem' }}>
+                        <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontSize: '0.825rem' }}>
                           {entry.actor_email || 'Unknown'}
                         </td>
 
-                        <td style={{ padding: '1rem 1.25rem' }}>
+                        <td style={{ padding: '1rem 1.25rem', textAlign: 'center' }}>
                           <span
+                            className="phone-wrap"
                             style={{
                               padding: '0.25rem 0.65rem',
                               borderRadius: '6px',
@@ -453,12 +458,12 @@ export const AuditLogView: React.FC = () => {
                           </span>
                         </td>
 
-                        <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.825rem' }}>
+                        <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.825rem', textAlign: 'center' }}>
                           {ENTITY_LABEL[entry.entity_type] || entry.entity_type}
                         </td>
 
-                        <td style={{ padding: '1rem 1.5rem' }}>
-                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{entry.entity_label || '—'}</div>
+                        <td className="phone-wrap" style={{ padding: '1rem 1.5rem' }}>
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{displayLabel(entry.entity_label) || '—'}</div>
                           {typeof changed === 'string' && changed !== 'none' && (
                             <div style={{ fontSize: '0.785rem', color: '#64748b' }}>Changed: {changed}</div>
                           )}
@@ -576,7 +581,7 @@ export const AuditLogView: React.FC = () => {
                 </span>
               </div>
               <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0f172a' }}>
-                {selectedEntry.entity_label || 'Unnamed Entity'}
+                {displayLabel(selectedEntry.entity_label) || 'Unnamed Entity'}
               </div>
               <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.2rem' }}>
                 Actor: {selectedEntry.actor_email} • {formatDateTime(selectedEntry.created_at)}

@@ -1,7 +1,7 @@
 /**
  * SMS Reminder Service
  * Sends automated and manual payment reminders via SMS to gym members.
- * Supports Semaphore API (popular Philippine SMS gateway) and simulated delivery mode.
+ * Supports textbee.dev (sends through a linked Android phone) and simulated delivery mode.
  */
 
 import { buildReminderSms } from '@/lib/ui/reminder-text';
@@ -25,24 +25,27 @@ export interface SmsReminderOptions {
 }
 
 export class SmsService {
-  private static getSemaphoreKey(): string | null {
-    return process.env.SEMAPHORE_API_KEY || null;
+  private static getTextbeeKey(): string | null {
+    return process.env.TEXTBEE_API_KEY || null;
   }
 
   static isConfigured(): boolean {
-    const key = this.getSemaphoreKey();
-    return Boolean(key && !key.includes('your-semaphore-key'));
+    const key = this.getTextbeeKey();
+    return Boolean(key && !key.includes('your-textbee-api-key'));
   }
 
   /**
-   * Format phone numbers to standard E.164 or 11-digit local format
+   * Format phone numbers to international format (+639XXXXXXXXX), which textbee needs
    */
   static formatPhoneNumber(rawPhone: string): string {
     const cleaned = rawPhone.replace(/\D/g, '');
-    if (cleaned.startsWith('63') && cleaned.length === 12) {
-      return `0${cleaned.slice(2)}`;
+    if (cleaned.startsWith('09') && cleaned.length === 11) {
+      return `+63${cleaned.slice(1)}`;
     }
-    return cleaned;
+    if (cleaned.startsWith('9') && cleaned.length === 10) {
+      return `+63${cleaned}`;
+    }
+    return `+${cleaned}`;
   }
 
   /**
@@ -54,7 +57,7 @@ export class SmsService {
   }
 
   /**
-   * Send SMS via Semaphore API or fallback to simulated delivery
+   * Send SMS via textbee.dev or fallback to simulated delivery
    */
   static async sendReminderSMS(options: SmsReminderOptions): Promise<{
     success: boolean;
@@ -66,31 +69,34 @@ export class SmsService {
   }> {
     const formattedPhone = this.formatPhoneNumber(options.phone);
     const text = this.generateReminderText(options);
-    const apiKey = this.getSemaphoreKey();
+    const apiKey = this.getTextbeeKey();
 
     if (apiKey && this.isConfigured()) {
       try {
-        const response = await fetch('https://api.semaphore.co/api/v4/messages', {
+        const deviceId = process.env.TEXTBEE_DEVICE_ID || undefined;
+        const response = await fetch('https://api.textbee.dev/api/v1/gateway/send-sms', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey },
           body: JSON.stringify({
-            apikey: apiKey,
-            number: formattedPhone,
+            recipients: [formattedPhone],
             message: text,
-            sendername: 'SEMAPHORE',
+            deviceId,
           }),
         });
 
         if (!response.ok) {
           const errText = await response.text();
-          throw new Error(`Semaphore API error (${response.status}): ${errText}`);
+          throw new Error(`textbee API error (${response.status}): ${errText}`);
         }
 
         const data = await response.json();
+        if (data?.data?.success === false) {
+          throw new Error(`textbee API error: ${data.data.message || 'message was not accepted'}`);
+        }
         return {
           success: true,
           simulated: false,
-          messageId: data[0]?.message_id ? String(data[0].message_id) : `sms_${Date.now()}`,
+          messageId: data?.data?.smsBatchId ? String(data.data.smsBatchId) : `sms_${Date.now()}`,
           recipient: formattedPhone,
           text,
           sentAt: new Date().toISOString(),

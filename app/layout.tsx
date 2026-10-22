@@ -10,7 +10,7 @@ const montserrat = Montserrat({
 });
 
 export const metadata: Metadata = {
-  title: 'Smart Gym Finance Manager | Cloud Financial SaaS',
+  title: 'Smart Gym Finance Manager',
   description:
     'Intelligent financial management platform for fitness centers with AI revenue forecasting, churn prediction, and expense leak detection.',
 };

@@ -36,6 +36,8 @@ export const CalendarView: React.FC = () => {
   const [viewDate, setViewDate] = useState<Date>(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  // Expenses are owner-only (staff can't read them), so staff would see ₱0 spent and revenue as profit.
+  const isOwner = DBService.isOwner();
 
   // Modal states
   const [reminderModalOpen, setReminderModalOpen] = useState(false);
@@ -246,10 +248,10 @@ export const CalendarView: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <h1 style={{ fontSize: '1.65rem', fontWeight: 700, color: '#0f172a', letterSpacing: '-0.02em', marginBottom: '0.25rem' }}>
-              Gym Operations Calendar
+              Calendar
             </h1>
             <p style={{ fontSize: '0.875rem', color: '#64748b' }}>
-              Monitor membership expirations, payment due dates, and operational cashflow at a glance.
+              See when memberships end and when money came in and went out.
             </p>
           </div>
 
@@ -293,14 +295,16 @@ export const CalendarView: React.FC = () => {
               <ArrowUpRight size={16} style={{ color: '#059669' }} />
               <span style={{ fontSize: '0.785rem', color: '#64748b', fontWeight: 600 }}>Revenue Collected</span>
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#059669' }}>
-              +{currency}{monthStats.monthRevenue.toLocaleString()}
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: monthStats.monthRevenue > 0 ? '#059669' : '#1d1d1f' }}>
+              {monthStats.monthRevenue > 0 ? '+' : ''}{currency}{monthStats.monthRevenue.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px' }}>
               Payments received in {monthName}
             </div>
           </div>
 
+          {isOwner && (
+          <>
           <div className="card" style={{ padding: '1rem 1.25rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.35rem' }}>
               <ArrowDownRight size={16} style={{ color: '#ef4444' }} />
@@ -310,7 +314,7 @@ export const CalendarView: React.FC = () => {
               -{currency}{monthStats.monthExpenseTotal.toLocaleString()}
             </div>
             <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px' }}>
-              Operational outlays in {monthName}
+              Spent in {monthName}
             </div>
           </div>
 
@@ -319,13 +323,15 @@ export const CalendarView: React.FC = () => {
               <CreditCard size={16} style={{ color: monthStats.monthNetProfit >= 0 ? '#059669' : '#ef4444' }} />
               <span style={{ fontSize: '0.785rem', color: '#64748b', fontWeight: 600 }}>Net Month Profit</span>
             </div>
-            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: monthStats.monthNetProfit >= 0 ? '#059669' : '#ef4444' }}>
-              {monthStats.monthNetProfit >= 0 ? '+' : '-'}{currency}{Math.abs(monthStats.monthNetProfit).toLocaleString()}
+            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: monthStats.monthNetProfit > 0 ? '#059669' : monthStats.monthNetProfit < 0 ? '#ef4444' : '#1d1d1f' }}>
+              {monthStats.monthNetProfit > 0 ? '+' : monthStats.monthNetProfit < 0 ? '-' : ''}{currency}{Math.abs(monthStats.monthNetProfit).toLocaleString()}
             </div>
             <div style={{ fontSize: '0.725rem', color: '#64748b', marginTop: '2px' }}>
               Cash balance for {monthName}
             </div>
           </div>
+          </>
+          )}
         </div>
       </ScrollReveal>
 
@@ -386,7 +392,7 @@ export const CalendarView: React.FC = () => {
                 { key: 'expirations', label: '• Expirations', color: '#f59e0b' },
                 { key: 'payments', label: '• Payments', color: '#059669' },
                 { key: 'expenses', label: '• Expenses', color: '#ef4444' },
-              ].map((f) => (
+              ].filter((f) => isOwner || f.key !== 'expenses').map((f) => (
                 <button
                   key={f.key}
                   onClick={() => setActiveFilter(f.key as FilterType)}
@@ -498,9 +504,11 @@ export const CalendarView: React.FC = () => {
                   }}
                 >
                   {/* Date Number Header */}
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  {/* Wraps on narrow phone cells so the dots sit under the date instead of over it */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2px', marginBottom: '4px' }}>
                     <span
                       style={{
+                        flexShrink: 0,
                         display: 'inline-flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -634,7 +642,7 @@ export const CalendarView: React.FC = () => {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', marginBottom: '0.25rem' }}>
                   <CalendarIcon size={14} />
-                  <span>Daily Ledger & Activity Inspector</span>
+                  <span>Day Details</span>
                 </div>
                 <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#0f172a' }}>
                   {selectedDateFormatted}
@@ -658,7 +666,7 @@ export const CalendarView: React.FC = () => {
             </div>
 
             {/* Daily Summary Metric Cards */}
-            <div className="calendar-day-summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <div className="calendar-day-summary" style={{ display: 'grid', gridTemplateColumns: `repeat(${isOwner ? 3 : 2}, minmax(0, 1fr))`, gap: '0.75rem', marginBottom: '1.5rem' }}>
               <div style={{ backgroundColor: '#fffbeb', padding: '0.75rem', borderRadius: '8px', border: '1px solid #fef3c7' }}>
                 <span style={{ fontSize: '0.725rem', color: '#92400e', fontWeight: 600, display: 'block' }}>Expiring Members</span>
                 <strong style={{ fontSize: '1.2rem', color: '#b45309' }}>{selectedDayData?.expirations.length || 0}</strong>
@@ -667,10 +675,12 @@ export const CalendarView: React.FC = () => {
                 <span style={{ fontSize: '0.725rem', color: '#065f46', fontWeight: 600, display: 'block' }}>Total Collected</span>
                 <strong style={{ fontSize: '1.2rem', color: '#059669' }}>{currency}{(selectedDayData?.totalRevenue || 0).toLocaleString()}</strong>
               </div>
-              <div style={{ backgroundColor: '#fff1f2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ffe4e6' }}>
-                <span style={{ fontSize: '0.725rem', color: '#9f1239', fontWeight: 600, display: 'block' }}>Expenses Logged</span>
-                <strong style={{ fontSize: '1.2rem', color: '#e11d48' }}>{currency}{(selectedDayData?.totalExpenses || 0).toLocaleString()}</strong>
-              </div>
+              {isOwner && (
+                <div style={{ backgroundColor: '#fff1f2', padding: '0.75rem', borderRadius: '8px', border: '1px solid #ffe4e6' }}>
+                  <span style={{ fontSize: '0.725rem', color: '#9f1239', fontWeight: 600, display: 'block' }}>Expenses Logged</span>
+                  <strong style={{ fontSize: '1.2rem', color: '#ef4444' }}>{currency}{(selectedDayData?.totalExpenses || 0).toLocaleString()}</strong>
+                </div>
+              )}
             </div>
 
             {/* Section A: Members Expiring on This Date */}
@@ -806,6 +816,7 @@ export const CalendarView: React.FC = () => {
             </div>
 
             {/* Section C: Expenses Logged */}
+            {isOwner && (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
@@ -851,6 +862,7 @@ export const CalendarView: React.FC = () => {
                 </div>
               )}
             </div>
+            )}
 
             {/* Drawer Footer Actions */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.75rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9' }}>

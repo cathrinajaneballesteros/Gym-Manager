@@ -36,7 +36,7 @@ export const BentoFeatures: React.FC = () => {
                 display: 'block',
               }}
             >
-              ENGINEERED FOR SCALE
+              WHAT YOU GET
             </span>
             <h2
               style={{
@@ -48,8 +48,8 @@ export const BentoFeatures: React.FC = () => {
                 marginBottom: '1rem',
               }}
             >
-              Enterprise precision. <br />
-              Zero unnecessary friction.
+              Everything your front desk needs. <br />
+              Nothing it doesn&apos;t.
             </h2>
             <p
               style={{
@@ -60,7 +60,7 @@ export const BentoFeatures: React.FC = () => {
                 lineHeight: 1.55,
               }}
             >
-              Architected with PostgreSQL, modern edge encryption, and continuous squircle clarity.
+              Payments, reports, staff access and your data, kept simple.
             </p>
           </ScrollReveal>
         </div>
@@ -106,10 +106,10 @@ export const BentoFeatures: React.FC = () => {
                   <CreditCard size={20} color="#059669" />
                 </div>
                 <h3 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>
-                  Unified Multi-Channel Payment Ledger
+                  Cash and GCash in one list
                 </h3>
                 <p style={{ color: '#636366', fontSize: '0.95rem', lineHeight: 1.6, maxWidth: '520px' }}>
-                  Accept payments via GCash or on-site Cash. Transactions reconcile in real-time with automatic plan activation and receipt generation.
+                  Record cash and GCash payments in one place. Each payment renews the member&apos;s plan, and GCash receipts can be checked against their reference numbers.
                 </p>
               </div>
 
@@ -127,7 +127,7 @@ export const BentoFeatures: React.FC = () => {
                 className="payment-pills-grid"
               >
                 {[
-                  { method: 'GCash', status: 'Instant Verified', amount: '₱1,500' },
+                  { method: 'GCash', status: 'Reference checked', amount: '₱1,500' },
                   { method: 'On-site Cash', status: 'Logged by Staff', amount: '₱750' },
                 ].map((item) => (
                   <div key={item.method} style={{ backgroundColor: '#ffffff', padding: '0.85rem', borderRadius: '10px', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)' }}>
@@ -172,21 +172,21 @@ export const BentoFeatures: React.FC = () => {
                   <FileText size={20} color="#0071e3" />
                 </div>
                 <h3 style={{ fontSize: '1.45rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>
-                  Board-Ready Financial Exports
+                  PDF & Excel Reports
                 </h3>
                 <p style={{ color: '#636366', fontSize: '0.925rem', lineHeight: 1.6 }}>
-                  One-click generation of PDF statements and Excel audit workbooks formatted to international accounting standards.
+                  Export income, expenses and profit for any month as a PDF report or an Excel workbook.
                 </p>
               </div>
 
               <div style={{ marginTop: '2rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 0.85rem', backgroundColor: '#f8fafc', borderRadius: '10px', fontSize: '0.8rem', color: '#334155', fontWeight: 500 }}>
                   <FileText size={15} color="#0284c7" />
-                  <span>Executive P&L Statement (PDF)</span>
+                  <span>Profit & loss report (PDF)</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.65rem 0.85rem', backgroundColor: '#f8fafc', borderRadius: '10px', fontSize: '0.8rem', color: '#334155', fontWeight: 500 }}>
                   <FileSpreadsheet size={15} color="#10b981" />
-                  <span>Audited General Ledger (.xlsx)</span>
+                  <span>Monthly report (.xlsx)</span>
                 </div>
               </div>
             </ScrollReveal>
@@ -220,13 +220,13 @@ export const BentoFeatures: React.FC = () => {
                 <Lock size={20} color="#7c3aed" />
               </div>
               <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>
-                Role-Based Permission Governance
+                Owner and Staff Access
               </h3>
               <p style={{ color: '#636366', fontSize: '0.925rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                Protect sensitive payroll, owner draws, and net profits with granular permission layers. Front desk staff can log entries without viewing executive bottom lines.
+                Owners see the finances. Staff can handle check-ins, members and payments without seeing expenses or profit.
               </p>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-                {['Administrator', 'Club General Manager', 'Front Desk Receptionist', 'Accountant'].map((role) => (
+                {['Owner', 'Staff'].map((role) => (
                   <span key={role} style={{ fontSize: '0.75rem', fontWeight: 600, padding: '0.3rem 0.65rem', borderRadius: '9999px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', color: '#475569' }}>
                     {role}
                   </span>
@@ -263,14 +263,14 @@ export const BentoFeatures: React.FC = () => {
                 <Database size={20} color="#0891b2" />
               </div>
               <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>
-                Low-Latency Cloud PostgreSQL
+                Your Data in the Cloud
               </h3>
               <p style={{ color: '#636366', fontSize: '0.925rem', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-                Hosted on enterprise Supabase infrastructure. Encrypted in transit and at rest, offering automated point-in-time recovery and 99.99% uptime guarantees.
+                Your gym&apos;s data is stored securely online and stays in sync between the front desk computer and your phone.
               </p>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>
                 <Zap size={14} />
-                <span>Sub-50ms query response on 50,000+ member databases</span>
+                <span>Changes show up on every device</span>
               </div>
             </ScrollReveal>
           </div>

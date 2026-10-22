@@ -5,7 +5,6 @@ import {
   CreditCard,
   Search,
   Plus,
-  Calendar,
   ChevronLeft,
   ChevronRight,
   FileCheck,
@@ -19,9 +18,9 @@ import { ReceiptCheckerModal } from './ReceiptCheckerModal';
 import { PaymentReminderModal } from './PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showToast, showConfirm, showError } from '@/lib/ui/swal';
-import { getCurrentMonthRangeLabel, formatDisplayDate } from '@/lib/ui/date';
+import { formatDisplayDate } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
-import { Bell, CheckCircle2, Clock, AlertTriangle, Edit, UserPlus, Trash2 } from 'lucide-react';
+import { Bell, CheckCircle2, Clock, AlertTriangle, Edit, UserPlus, Trash2, UserRound } from 'lucide-react';
 import { getPageWindow } from '@/lib/ui/pagination';
 
 export const PaymentList: React.FC = () => {
@@ -118,7 +117,7 @@ export const PaymentList: React.FC = () => {
   const handleDeletePayment = async (p: Payment) => {
     const confirmed = await showConfirm(
       'Delete this payment?',
-      `${currency}${Number(p.amount).toLocaleString()} from ${getPaymentMemberName(p)} on ${p.payment_date} will be removed from revenue. Membership dates are not changed. This can't be undone.`,
+      `${currency}${Number(p.amount).toLocaleString()} from ${getPaymentMemberName(p)} on ${formatDisplayDate(p.payment_date)} will be removed from revenue. Membership dates are not changed. This can't be undone.`,
       'Yes, Delete'
     );
     if (!confirmed) return;
@@ -146,7 +145,7 @@ export const PaymentList: React.FC = () => {
             </p>
           </div>
 
-          <div style={{ position: 'relative', display: 'inline-flex', flexWrap: 'wrap', gap: '0.6rem' }}>
+          <div className="phone-row" style={{ position: 'relative', display: 'inline-flex', flexWrap: 'wrap', gap: '0.6rem' }}>
             <button
               onClick={() => {
                 setEditingWalkIn(null);
@@ -216,6 +215,7 @@ export const PaymentList: React.FC = () => {
         >
         {/* Search */}
         <div
+          className="phone-fill"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -250,7 +250,7 @@ export const PaymentList: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div className="phone-fill phone-stack" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <select
             value={memberFilter}
             onChange={(e) => {
@@ -268,7 +268,7 @@ export const PaymentList: React.FC = () => {
             }}
           >
             <option value="all">All Members</option>
-            {members.map((m) => (
+            {[...members].sort((a, b) => `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`)).map((m) => (
               <option key={m.id} value={m.id}>
                 {m.first_name} {m.last_name}
               </option>
@@ -320,24 +320,6 @@ export const PaymentList: React.FC = () => {
             <option value="rejected">Rejected Receipts</option>
           </select>
 
-          {/* Date range filter pill */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.45rem',
-              backgroundColor: '#ffffff',
-              border: '1px solid #e2e8f0',
-              borderRadius: '8px',
-              padding: '0.5rem 0.85rem',
-              fontSize: '0.825rem',
-              color: '#475569',
-              fontWeight: 500,
-            }}
-          >
-            <Calendar size={14} color="#64748b" />
-            <span>{getCurrentMonthRangeLabel()}</span>
-          </div>
         </div>
       </div>
       </ScrollReveal>
@@ -365,7 +347,7 @@ export const PaymentList: React.FC = () => {
                   {unverifiedCount} {unverifiedCount === 1 ? 'payment receipt requires' : 'payment receipts require'} manual review.
                 </span>
                 <span style={{ fontSize: '0.825rem', color: '#b45309', marginLeft: '0.5rem' }}>
-                  Inspect GCash and online bank transfer vouchers to verify or reject.
+                  Check each GCash reference number, then verify or reject it.
                 </span>
               </div>
             </div>
@@ -461,16 +443,16 @@ export const PaymentList: React.FC = () => {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Plan</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Plan</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Amount</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Method & Ref</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Payment</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Receipt Check</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Date</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Method & Ref</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Payment</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Receipt Check</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Date</th>
                   <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -509,7 +491,8 @@ export const PaymentList: React.FC = () => {
                               flexShrink: 0,
                             }}
                           >
-                            {initials}
+                            {/* A walk-in who gave no name has no initials to show. */}
+                            {p.is_walk_in && !p.member_name ? <UserRound size={16} /> : initials}
                           </div>
                           <div>
                             <div style={{ fontWeight: 600, color: '#0f172a' }}>
@@ -525,17 +508,24 @@ export const PaymentList: React.FC = () => {
                       </td>
 
                       {/* Plan */}
-                      <td style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
-                        {p.is_walk_in ? 'Walk-in' : p.plan?.name || p.member?.plan?.name || 'Premium'}
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
+                        {p.is_walk_in ? 'Walk-in' : p.plan?.name || p.member?.plan?.name || 'No plan'}
                       </td>
 
-                      {/* Amount */}
-                      <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#059669' }}>
-                        +{currency}{Number(p.amount).toLocaleString()}
+                      {/* Amount: only completed payments count as revenue, so only they get the green "+". */}
+                      <td
+                        style={{
+                          padding: '1rem 1.25rem',
+                          fontWeight: 700,
+                          color: p.payment_status === 'completed' ? '#059669' : '#94a3b8',
+                          textDecoration: p.payment_status === 'refunded' ? 'line-through' : undefined,
+                        }}
+                      >
+                        {p.payment_status === 'completed' ? '+' : ''}{currency}{Number(p.amount).toLocaleString()}
                       </td>
 
                       {/* Method & Ref */}
-                      <td style={{ padding: '1rem 1.25rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                           <span
                             style={{
@@ -561,7 +551,7 @@ export const PaymentList: React.FC = () => {
                       </td>
 
                       {/* Status Badge */}
-                      <td style={{ padding: '1rem 1.25rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
                         <span
                           className={`badge ${
                             p.payment_status === 'completed'
@@ -576,7 +566,7 @@ export const PaymentList: React.FC = () => {
                       </td>
 
                       {/* Receipt Status Badge */}
-                      <td style={{ padding: '1rem 1.25rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
                         <span
                           style={{
                             display: 'inline-flex',
@@ -625,14 +615,15 @@ export const PaymentList: React.FC = () => {
                       </td>
 
                       {/* Date */}
-                      <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
                         {formatDisplayDate(p.payment_date)}
                       </td>
 
                       {/* Actions */}
                       <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem' }}>
-                          {p.payment_status === 'pending' && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem' }}>
+                          {/* A rejected GCash receipt must not be counted with one click; edit or delete it instead. */}
+                          {p.payment_status === 'pending' && p.receipt_status !== 'rejected' && (
                             <button
                               onClick={() => handleMarkAsPaid(p)}
                               title="Confirm & Mark Payment as Paid"
@@ -674,7 +665,7 @@ export const PaymentList: React.FC = () => {
                             }}
                           >
                             <Bell size={13} />
-                            <span>Remind</span>
+                            <span className="phone-icon-label">Remind</span>
                           </button>
                           )}
 
@@ -706,7 +697,7 @@ export const PaymentList: React.FC = () => {
                             }}
                           >
                             <FileCheck size={13} />
-                            <span>Receipt</span>
+                            <span className="phone-icon-label">Receipt</span>
                           </button>
                           <button
                             onClick={() => {
@@ -734,7 +725,7 @@ export const PaymentList: React.FC = () => {
                             }}
                           >
                             <Edit size={13} />
-                            <span>Edit</span>
+                            <span className="phone-icon-label">Edit</span>
                           </button>
                           {isOwner && (
                             <button

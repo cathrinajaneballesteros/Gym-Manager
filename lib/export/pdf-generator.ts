@@ -13,6 +13,9 @@ interface PDFReportOptions {
   expenses: Expense[];
 }
 
+// "1 member", "5 members"
+const memberCount = (n: number) => `${n} ${n === 1 ? 'member' : 'members'}`;
+
 export function generateFinancialPDFReport(options: PDFReportOptions): void {
   const { gymName, gymContact, currency, reportPeriod, kpis, trends, expenses } = options;
   const pdfCurrency = currency === '₱' ? 'PHP ' : currency;
@@ -67,8 +70,8 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
     ['Total Operating Expenses', `${pdfCurrency}${kpis.totalExpenses.toLocaleString()}`, 'Rent, utilities, staff, upkeep'],
     ['Net Profit', `${pdfCurrency}${kpis.netProfit.toLocaleString()}`, kpis.netProfit >= 0 ? 'Profitable (Positive Return)' : 'Deficit'],
     ['Operating Profit Margin', `${kpis.profitMargin}%`, 'Target benchmark > 15%'],
-    ['Active Member Community', `${kpis.activeMembers} Members`, `${kpis.renewalRate}% renewal rate`],
-    ['Expiring Memberships', `${kpis.expiringMemberships} Members`, 'Ending within the next 7 days'],
+    ['Active Member Community', memberCount(kpis.activeMembers), `${kpis.renewalRate}% renewal rate`],
+    ['Expiring Memberships', memberCount(kpis.expiringMemberships), 'Ending within the next 7 days'],
   ];
 
   autoTable(doc, {
@@ -95,7 +98,7 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
     `${pdfCurrency}${t.revenue.toLocaleString()}`,
     `${pdfCurrency}${t.expenses.toLocaleString()}`,
     `${pdfCurrency}${t.profit.toLocaleString()}`,
-    `${t.memberCount} members`,
+    memberCount(t.memberCount),
   ]);
 
   autoTable(doc, {
@@ -109,9 +112,14 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
 
   // 4. Expense Categorization Summary
   // @ts-expect-error autoTable adds lastAutoTable to doc instance
-  const nextY2 = (doc.lastAutoTable?.finalY || 180) + 12;
+  let nextY2 = (doc.lastAutoTable?.finalY || 180) + 12;
+  // A long year-to-date table leaves no room for this section, so it goes on a new page instead of being left out.
+  if (nextY2 > 230) {
+    doc.addPage();
+    nextY2 = 20;
+  }
 
-  if (nextY2 < 230) {
+  {
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
@@ -136,14 +144,17 @@ export function generateFinancialPDFReport(options: PDFReportOptions): void {
     });
   }
 
-  // Footer Disclaimer
-  doc.setFontSize(8);
-  doc.setTextColor(148, 163, 184);
-  doc.text(
-    'CONFIDENTIAL • Prepared by Smart Gym Finance Manager • For internal administrative audit and accounting use only.',
-    14,
-    285
-  );
+  // Footer Disclaimer, on every page
+  for (let page = 1; page <= doc.getNumberOfPages(); page++) {
+    doc.setPage(page);
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184);
+    doc.text(
+      'CONFIDENTIAL • Prepared by Smart Gym Finance Manager • For internal administrative audit and accounting use only.',
+      14,
+      285
+    );
+  }
 
   // Trigger browser download
   const filename = `${gymName.toLowerCase().replace(/\s+/g, '-')}-financial-report-${reportPeriod.replace(/[^\w]+/g, '-').replace(/-+$/, '')}.pdf`;

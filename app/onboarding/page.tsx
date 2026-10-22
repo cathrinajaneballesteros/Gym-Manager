@@ -11,7 +11,6 @@ import { GymLogoPicker } from '@/components/gym/GymLogoPicker';
 import { DEFAULT_OPENING_HOURS, emptyGymDetails, invalidHourDays } from '@/lib/ui/gym';
 import { STAFF_HOME } from '@/lib/ui/roles';
 import { showError, showToast } from '@/lib/ui/swal';
-import { escapeHtml } from '@/lib/ui/escape';
 import { amountProblem, MAX_AMOUNT, walkInPriceProblem } from '@/lib/ui/validation';
 
 interface PlanDraft {
@@ -40,6 +39,8 @@ export default function OnboardingPage() {
   const [saving, setSaving] = useState(false);
   // A gym that invited this email; they choose to join it or set up their own.
   const [invite, setInvite] = useState<{ invite_id: string; gym_name: string } | null>(null);
+  // The gym this person was just removed from as staff, if that's why they're here.
+  const [removedFrom, setRemovedFrom] = useState<string | null>(null);
   // Uploaded after the gym is created, since the logo is stored in the gym's own folder.
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -89,6 +90,13 @@ export default function OnboardingPage() {
         const pending = await DBService.getPendingInvite().catch(() => null);
         if (!cancelled) setInvite(pending);
       }
+      try {
+        const removed = sessionStorage.getItem('sgfm_removed_from');
+        sessionStorage.removeItem('sgfm_removed_from');
+        if (!cancelled && removed) setRemovedFrom(removed);
+      } catch {
+        // No note to show.
+      }
       if (!cancelled) setReady(true);
     })();
     return () => {
@@ -104,7 +112,6 @@ export default function OnboardingPage() {
   const filledPlans = plans.filter((p) => p.name.trim());
   const planError = (): string | null => {
     for (const p of filledPlans) {
-      const price = Number(p.price);
       const months = Number(p.months);
       const priceProblem = amountProblem(p.price);
       if (priceProblem) return `"${p.name.trim()}": ${priceProblem}`;
@@ -168,8 +175,8 @@ export default function OnboardingPage() {
         }
       }
       sessionStorage.setItem('sgfm_authenticated', 'true');
-      if (logoFailed) showToast(`${escapeHtml(gym.name)} is ready. The logo didn't upload; add it in Settings → Gym.`, 'warning');
-      else showToast(`${escapeHtml(gym.name)} is ready`);
+      if (logoFailed) showToast(`${gym.name} is ready. The logo didn't upload; add it in Settings → Gym.`, 'warning');
+      else showToast(`${gym.name} is ready`);
       router.replace('/dashboard');
     } catch (err) {
       showError('Setup Failed', err instanceof Error ? err.message : 'Could not save your gym.');
@@ -192,7 +199,7 @@ export default function OnboardingPage() {
       if (join) {
         await DBService.acceptInvite(invite.invite_id);
         sessionStorage.setItem('sgfm_authenticated', 'true');
-        showToast(`You joined ${escapeHtml(invite.gym_name)}`);
+        showToast(`You joined ${invite.gym_name}`);
         router.replace(STAFF_HOME);
         return;
       }
@@ -223,6 +230,18 @@ export default function OnboardingPage() {
         }}
         className="onboarding-card"
       >
+        {removedFrom && !invite && (
+          <div style={{ marginBottom: '1.75rem', padding: '1rem 1.1rem', borderRadius: '14px', backgroundColor: '#fffbeb', border: '1px solid #fde68a' }}>
+            <p style={{ fontSize: '0.9rem', color: '#92400e', fontWeight: 600, marginBottom: '0.35rem' }}>
+              You&apos;re no longer on {removedFrom}&apos;s team.
+            </p>
+            <p style={{ fontSize: '0.8rem', color: '#b45309' }}>
+              The owner removed your staff access. Ask them to invite you again if that was a mistake, or set up your
+              own gym below.
+            </p>
+          </div>
+        )}
+
         {invite && (
           <div style={{ marginBottom: '1.75rem', padding: '1rem 1.1rem', borderRadius: '14px', backgroundColor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
             <p style={{ fontSize: '0.9rem', color: '#065f46', fontWeight: 600, marginBottom: '0.35rem' }}>
@@ -263,6 +282,15 @@ export default function OnboardingPage() {
         <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', marginBottom: '0.3rem' }}>{current.title}</h1>
         <p style={{ fontSize: '0.875rem', color: '#6e6e73', marginBottom: '1.5rem' }}>{current.subtitle}</p>
 
+        {/* A form so Enter moves to the next step (or finishes on the last one). */}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (saving) return;
+            if (isLast) finish(true);
+            else next();
+          }}
+        >
         {step === 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <div>
@@ -374,17 +402,18 @@ export default function OnboardingPage() {
               <button type="button" className="btn btn-secondary" onClick={() => finish(false)} disabled={saving}>
                 Skip for now
               </button>
-              <button type="button" className="btn btn-primary" onClick={() => finish(true)} disabled={saving} style={{ backgroundColor: '#059669', borderColor: '#059669' }}>
+              <button type="submit" className="btn btn-primary" disabled={saving} style={{ backgroundColor: '#059669', borderColor: '#059669' }}>
                 {saving ? 'Setting up…' : 'Finish setup'}
               </button>
             </>
           ) : (
-            <button type="button" className="btn btn-primary" onClick={next} style={{ backgroundColor: '#059669', borderColor: '#059669', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <button type="submit" className="btn btn-primary" disabled={saving} style={{ backgroundColor: '#059669', borderColor: '#059669', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
               Continue
               <ArrowRight size={15} />
             </button>
           )}
         </div>
+        </form>
       </div>
 
       <style jsx>{`

@@ -18,7 +18,8 @@ const memberSchema = z.object({
   phone: z
     .string()
     .trim()
-    .regex(/^\+?[0-9()\-\s]{7,20}$/, 'Use digits only, e.g. 09171234567 or +63 917 123 4567'),
+    .regex(/^\+?[0-9()\-\s]{7,20}$/, 'Use digits only, e.g. 09171234567 or +63 917 123 4567')
+    .refine((v) => v.replace(/\D/g, '').length >= 7, 'Enter at least 7 digits'),
   emergency_contact: z.string().trim().max(120, 'Emergency contact is too long'),
   membership_plan_id: z.string().min(1, 'Please select a membership plan'),
   start_date: z.string().min(10, 'Start date is required'),
@@ -26,7 +27,8 @@ const memberSchema = z.object({
   notes: z.string().max(500, 'Notes can be up to 500 characters').optional(),
 });
 
-const digitsOnly = (value: string) => value.replace(/\D/g, '');
+// Digits only, with +63 written as 0, so "+63 917 123 4567" and "0917 123 4567" match as the same number.
+const normalizePhone = (value: string) => value.replace(/\D/g, '').replace(/^63(?=9\d{9}$)/, '0');
 
 type MemberFormData = z.infer<typeof memberSchema>;
 
@@ -50,6 +52,9 @@ export const MemberModal: React.FC<MemberModalProps> = ({
     (p) => p.is_active || p.id === initialMember?.membership_plan_id
   );
   const todayStr = getTodayKey();
+  // Once a member has paid, payments set their end date (each renewal extends it), so editing
+  // the plan or start date must not reset it to one plan length.
+  const datesSetByPayments = Boolean(initialMember && initialMember.status !== 'pending');
 
   const buildDefaultValues = (): MemberFormData => {
     const defaultPlanId = initialMember?.membership_plan_id || selectablePlans[0]?.id || '';
@@ -98,6 +103,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   // Recalculate the expiration date only when the user changes the start date or plan.
   // (Doing it in an effect also fired on open/re-render and wiped renewed end dates.)
   const recalculateEndDate = () => {
+    if (datesSetByPayments) return;
     const selectedPlan = plans.find((p) => p.id === getValues('membership_plan_id'));
     if (!selectedPlan) return;
     const computed = addMonthsToDateKey(getValues('start_date'), selectedPlan.duration_months);
@@ -116,11 +122,11 @@ export const MemberModal: React.FC<MemberModalProps> = ({
   const onSubmit = async (data: MemberFormData) => {
     // Stop the same person being registered twice by mistake.
     const email = data.email.toLowerCase();
-    const phone = digitsOnly(data.phone);
+    const phone = normalizePhone(data.phone);
     const duplicate = DBService.getMembers().find(
       (m) =>
         m.id !== initialMember?.id &&
-        ((email && m.email?.toLowerCase() === email) || (phone && digitsOnly(m.phone || '') === phone))
+        ((email && m.email?.toLowerCase() === email) || (phone && normalizePhone(m.phone || '') === phone))
     );
     if (duplicate) {
       const field = email && duplicate.email?.toLowerCase() === email ? 'email' : 'phone number';
@@ -310,7 +316,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
                   border: '1px solid #e2e8f0',
                 }}
               >
-                Auto-calculated
+                {datesSetByPayments ? 'Set by payments' : 'Auto-calculated'}
               </span>
             </div>
             <input
@@ -318,7 +324,11 @@ export const MemberModal: React.FC<MemberModalProps> = ({
               {...register('end_date')}
               readOnly
               tabIndex={-1}
-              title="Automatically calculated from the start date and selected membership plan"
+              title={
+                datesSetByPayments
+                  ? 'Extended by each completed payment; a new plan applies from the next renewal'
+                  : 'Automatically calculated from the start date and selected membership plan'
+              }
               style={{
                 width: '100%',
                 backgroundColor: '#f8fafc',

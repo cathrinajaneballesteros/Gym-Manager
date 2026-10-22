@@ -71,7 +71,7 @@ interface SummaryCardProps {
   dataKey: 'revenue' | 'expenses';
 }
 
-// This month's total with the change from last month and a 6-month sparkline.
+// This month's total with the change from the same point last month and a 6-month sparkline.
 const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, color, change, trends, dataKey }) => (
   <div className="card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '2rem', flexWrap: 'wrap' }}>
     <div style={{ minWidth: '200px' }}>
@@ -84,7 +84,7 @@ const SummaryCard: React.FC<SummaryCardProps> = ({ label, value, color, change, 
       {change && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: change.color, fontWeight: 600 }}>
           {change.isUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-          <span>{change.label} from last month</span>
+          <span>{change.label} vs same point last month</span>
         </div>
       )}
     </div>
@@ -126,7 +126,8 @@ export const ReportsView: React.FC = () => {
 
   const loadReport = () => {
     setKpis(DBService.getDashboardKPIs('this-month'));
-    setLastMonthKpis(DBService.getDashboardKPIs('last-month'));
+    // This month is still in progress, so compare it with the same days of last month (as the Dashboard does).
+    setLastMonthKpis(DBService.getDashboardKPIs('last-month-to-date'));
     setSixMonthKpis(DBService.getDashboardKPIs('last-6-months'));
     setAnnualKpis(DBService.getDashboardKPIs('this-year'));
     setTrends(DBService.getMonthlyTrends());
@@ -140,7 +141,6 @@ export const ReportsView: React.FC = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     loadReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useGymDataRefresh(loadReport);
 
@@ -395,7 +395,7 @@ export const ReportsView: React.FC = () => {
                   </p>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={TH}>Method</th>
@@ -406,7 +406,7 @@ export const ReportsView: React.FC = () => {
                     </thead>
                     <tbody>
                       {Object.entries(paymentsByMethod).map(([method, data]) => {
-                        const pct = monthRevenueTotal > 0 ? Math.round((data.total / monthRevenueTotal) * 100) : 0;
+                        const pct = monthRevenueTotal > 0 ? Math.round((data.total / monthRevenueTotal) * 1000) / 10 : 0;
                         return (
                           <tr key={method}>
                             <td style={TD}><strong>{method}</strong></td>
@@ -430,13 +430,13 @@ export const ReportsView: React.FC = () => {
 
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Revenue by Membership Tier</h2>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Revenue by Plan</h2>
                   <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
                     Subscription tiers performance this month
                   </p>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={TH}>Plan</th>
@@ -482,13 +482,13 @@ export const ReportsView: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
-                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Outlays by Category</h2>
+                  <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Spending by Category</h2>
                   <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
-                    Share of this month&apos;s overhead
+                    Share of this month&apos;s expenses
                   </p>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={TH}>Category</th>
@@ -499,7 +499,7 @@ export const ReportsView: React.FC = () => {
                     </thead>
                     <tbody>
                       {Object.entries(expensesByCategory).map(([category, data]) => {
-                        const pct = monthExpenseTotal > 0 ? Math.round((data.total / monthExpenseTotal) * 100) : 0;
+                        const pct = monthExpenseTotal > 0 ? Math.round((data.total / monthExpenseTotal) * 1000) / 10 : 0;
                         return (
                           <tr key={category}>
                             <td style={TD}><strong>{category}</strong></td>
@@ -529,7 +529,7 @@ export const ReportsView: React.FC = () => {
                   </p>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr>
                         <th style={TH}>Item</th>
@@ -578,7 +578,7 @@ export const ReportsView: React.FC = () => {
               <div>
                 <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Profit &amp; Loss Statement</h2>
                 <p style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '0.15rem' }}>
-                  This month compared with last month
+                  This month so far compared with the same days last month
                 </p>
               </div>
               <div
@@ -601,7 +601,7 @@ export const ReportsView: React.FC = () => {
                   <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase' }}>
                     <th style={{ padding: '0.9rem 1.5rem' }}>Category</th>
                     <th style={{ padding: '0.9rem 1.25rem' }}>This Month</th>
-                    <th style={{ padding: '0.9rem 1.25rem' }}>Last Month</th>
+                    <th style={{ padding: '0.9rem 1.25rem' }}>Last Month (Same Days)</th>
                     <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Change</th>
                   </tr>
                 </thead>

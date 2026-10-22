@@ -8,21 +8,28 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
     try {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
-      await supabase.auth.resetPasswordForEmail(email.trim(), {
+      // Supabase returns errors (e.g. its hourly email limit) instead of throwing them.
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         // The link signs them in through /auth/callback, then lets them choose a new password.
         redirectTo: typeof window !== 'undefined' ? `${window.location.origin}/auth/callback?next=/reset-password` : undefined,
       });
-    } catch (err) {
-      console.warn('Password reset notice:', err);
-    } finally {
+      if (resetError) {
+        setError(resetError.message);
+        return;
+      }
       setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send the reset email. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
@@ -63,7 +70,7 @@ export default function ForgotPasswordPage() {
             }}
           />
 
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-white)' }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-heading)' }}>
             Reset Password
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
@@ -74,8 +81,8 @@ export default function ForgotPasswordPage() {
         {submitted ? (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
             <CheckCircle2 size={42} color="var(--success)" style={{ margin: '0 auto 1rem' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-white)', marginBottom: '0.5rem' }}>
-              Reset Link Dispatched
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-heading)', marginBottom: '0.5rem' }}>
+              Check Your Email
             </h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
               If an administrator account exists for <strong>{email}</strong>, you will receive password reset instructions shortly.
@@ -86,6 +93,20 @@ export default function ForgotPasswordPage() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {error && (
+              <div
+                style={{
+                  padding: '0.75rem 0.9rem',
+                  backgroundColor: '#fef2f2',
+                  border: '1px solid #fee2e2',
+                  borderRadius: '10px',
+                  color: '#991b1b',
+                  fontSize: '0.825rem',
+                }}
+              >
+                {error}
+              </div>
+            )}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
                 Administrator Email Address

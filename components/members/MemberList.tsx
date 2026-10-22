@@ -27,7 +27,6 @@ import { PaymentModal } from '@/components/payments/PaymentModal';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showConfirm, showError, showToast } from '@/lib/ui/swal';
-import { escapeHtml } from '@/lib/ui/escape';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { formatDisplayDate } from '@/lib/ui/date';
 import { checkInWithPrompt } from '@/lib/ui/check-in';
@@ -169,7 +168,7 @@ export const MemberList: React.FC = () => {
       }
       refreshData();
       setActiveMenuId(null);
-      showToast(`${escapeHtml(name)} removed`);
+      showToast(`${name} removed`);
     }
   };
 
@@ -218,6 +217,7 @@ export const MemberList: React.FC = () => {
         >
           {/* Search Input */}
           <div
+            className="phone-fill"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -252,7 +252,7 @@ export const MemberList: React.FC = () => {
           </div>
 
           {/* Filter Dropdowns */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <div className="phone-fill phone-stack" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
             <select
               value={planFilter}
               onChange={(e) => {
@@ -341,31 +341,47 @@ export const MemberList: React.FC = () => {
               <Dumbbell size={30} strokeWidth={1.75} />
             </div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#0f172a', marginBottom: '0.4rem' }}>
-              No members yet
+              {members.length === 0 ? 'No members yet' : 'No members match your search'}
             </h3>
             <p style={{ fontSize: '0.875rem', color: '#64748b', maxWidth: '360px', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              Start by adding your first member to manage memberships and payments.
+              {members.length === 0
+                ? 'Start by adding your first member to manage memberships and payments.'
+                : 'Try a different name or clear the filters to see everyone.'}
             </p>
-            <button
-              onClick={() => {
-                setEditingMember(null);
-                setIsAddModalOpen(true);
-              }}
-              className="btn btn-primary"
-            >
-              <Plus size={16} />
-              <span>Add Member</span>
-            </button>
+            {members.length === 0 ? (
+              <button
+                onClick={() => {
+                  setEditingMember(null);
+                  setIsAddModalOpen(true);
+                }}
+                className="btn btn-primary"
+              >
+                <Plus size={16} />
+                <span>Add Member</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                  setPlanFilter('all');
+                  setCurrentPage(1);
+                }}
+                className="btn btn-secondary"
+              >
+                Clear filters
+              </button>
+            )}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Plan</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Plan</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Status</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Expiration</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Expiration</th>
                   <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
@@ -419,7 +435,7 @@ export const MemberList: React.FC = () => {
                       </td>
 
                       {/* Plan */}
-                      <td style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
                         {planName}
                       </td>
 
@@ -459,6 +475,8 @@ export const MemberList: React.FC = () => {
                             'Active'
                           ) : member.status === 'expiring' ? (
                             'Expiring Soon'
+                          ) : member.status === 'inactive' ? (
+                            'Inactive'
                           ) : (
                             'Expired'
                           )}
@@ -466,7 +484,7 @@ export const MemberList: React.FC = () => {
                       </td>
 
                       {/* Expiration Date */}
-                      <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
                         {formatDisplayDate(member.end_date)}
                       </td>
 

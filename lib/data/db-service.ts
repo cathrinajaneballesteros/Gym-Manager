@@ -182,6 +182,15 @@ function check<T>(result: { data: T | null; error: { message: string } | null })
   return result.data as T;
 }
 
+// Row-level security makes a blocked delete remove nothing without an error. Treat that as a failure, so the
+// item doesn't disappear here only to come back on the next refresh.
+async function deleteById(table: string, id: string): Promise<void> {
+  const rows = check(await db().from(table).delete().eq('id', id).select('id'));
+  if (!rows || rows.length === 0) {
+    throw new Error("It couldn't be deleted. It may already be gone (refresh the page), or you don't have permission.");
+  }
+}
+
 async function fetchAll(table: string, orderBy: string): Promise<Row[]> {
   const rows: Row[] = [];
   for (let from = 0; ; from += PAGE_SIZE) {
@@ -224,10 +233,10 @@ function formatDateLocal(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// Count members whose membership was active at any point within [start, end] (inclusive).
+// Count paid members whose membership was active at any point within [start, end] (inclusive).
 function countMembersActiveInWindow(members: Member[], start: string, end: string): number {
   return members.filter((m) => {
-    if (!m.start_date || !m.end_date) return false;
+    if (m.status === 'pending' || !m.start_date || !m.end_date) return false;
     return m.start_date <= end && m.end_date >= start;
   }).length;
 }
@@ -323,8 +332,9 @@ export class DBService {
   private static async fetchGym({ background = false }: { background?: boolean } = {}): Promise<void> {
     const startedIn = generation;
     const revisionAtStart = revision;
-    const { data: auth } = await db().auth.getUser();
-    const user = auth.user;
+    // The local session saves a round trip to the Auth server; every query below is still checked by RLS.
+    const { data: auth } = await db().auth.getSession();
+    const user = auth.session?.user;
     if (!user) throw new Error('Not signed in');
 
     const [profileRow, myStaffRow] = await Promise.all([
@@ -382,6 +392,24 @@ export class DBService {
     // Something was saved on this device while loading; this copy may be missing it, so wait for the next refresh.
     if (background && revision !== revisionAtStart) return;
     const gym = gymRow ? fromGymRow(gymRow as Row) : null;
+    // Remember which gym this person works at as staff. If the owner removes them they land on onboarding,
+    // and this lets it say why, even after a reload or on their next sign-in on this device.
+    try {
+      const staffGymKey = `sgfm_staff_gym:${user.id}`;
+      if (role === 'staff' && gym) {
+        localStorage.setItem(staffGymKey, gym.name);
+      } else if (role) {
+        localStorage.removeItem(staffGymKey);
+      } else {
+        const removedFrom = localStorage.getItem(staffGymKey);
+        if (removedFrom) {
+          sessionStorage.setItem('sgfm_removed_from', removedFrom);
+          localStorage.removeItem(staffGymKey);
+        }
+      }
+    } catch {
+      // Storage blocked: only the explanation is lost.
+    }
     data = {
       userId: user.id,
       profile: withGym(fromProfileRow(profile), gym),
@@ -405,9 +433,16 @@ export class DBService {
   }
 
   static getFirstName(fullName?: string): string {
-    if (!fullName || !fullName.trim()) return 'Admin';
+    // "Gym Administrator" is the placeholder for accounts made without a name; "Gym" isn't a first name.
+    if (!fullName || !fullName.trim() || fullName.trim() === 'Gym Administrator') return 'Admin';
     const first = fullName.trim().split(/\s+/)[0];
     return first || 'Admin';
+  }
+
+  /** The signed-in person's name, or their email when the account has no real name ("Gym Administrator" is the placeholder). */
+  static displayName(profile?: Pick<UserProfile, 'full_name' | 'email'> | null): string {
+    const name = profile?.full_name?.trim();
+    return name && name !== 'Gym Administrator' ? name : profile?.email || 'Admin';
   }
 
   static getInitials(fullName?: string): string {
@@ -426,6 +461,8 @@ export class DBService {
     ) as Row;
     const updated = withGym(fromProfileRow(row), data.gym);
     data.profile = updated;
+    // The database copies the new name onto the staff list (009_sync_staff_names.sql); mirror it here.
+    data.staff = data.staff.map((s) => (s.user_id === updated.id ? { ...s, full_name: updated.full_name } : s));
     emit('sgfm_profile_updated', updated);
     if (changedFields(current, updates).length > 0) {
       this.recordAudit({
@@ -564,6 +601,12 @@ export class DBService {
     return data.staff;
   }
 
+  /** A team member's name, or their email when the account has no real name ("Gym Administrator" is the placeholder). */
+  static staffName(member: StaffMember): string {
+    const name = member.full_name?.trim();
+    return name && name !== 'Gym Administrator' ? name : member.email;
+  }
+
   /** The person joins this gym the first time they sign up or sign in with this email. */
   static async inviteStaff(email: string): Promise<StaffMember> {
     const address = email.trim().toLowerCase();
@@ -571,8 +614,14 @@ export class DBService {
     if (data.staff.some((s) => s.email.toLowerCase() === address)) {
       throw new Error('That email is already on your staff list');
     }
+    if (!data.gym) throw new Error('Finish setting up your gym first');
+    // gym_staff has no gym_id default (unlike the data tables), so it has to be sent.
     const row = check(
-      await db().from('gym_staff').insert({ email: address, role: 'staff', status: 'invited' }).select().single()
+      await db()
+        .from('gym_staff')
+        .insert({ gym_id: data.gym.id, email: address, role: 'staff', status: 'invited' })
+        .select()
+        .single()
     ) as Row;
     const invite = fromStaffRow(row);
     data.staff = [...withoutId(data.staff, invite.id), invite];
@@ -591,14 +640,14 @@ export class DBService {
     const member = data.staff.find((s) => s.id === id);
     if (!member) throw new Error('Staff member not found');
     if (member.role === 'owner') throw new Error('The owner cannot be removed');
-    check(await db().from('gym_staff').delete().eq('id', id));
+    await deleteById('gym_staff', id);
     data.staff = data.staff.filter((s) => s.id !== id);
 
     this.recordAudit({
       action: 'staff.remove',
       entity_type: 'staff',
       entity_id: id,
-      entity_label: member.full_name || member.email,
+      entity_label: this.staffName(member),
       metadata: { email: member.email, status: member.status },
     });
   }
@@ -819,7 +868,7 @@ export class DBService {
     // The database then unlinks them from the member and removes the member's check-ins.
     const memberName = this.memberLabel(member);
     check(await db().from('payments').update({ member_name: memberName }).eq('member_id', id));
-    check(await db().from('members').delete().eq('id', id));
+    await deleteById('members', id);
 
     let paymentsKept = 0;
     data.payments = data.payments.map((p) => {
@@ -876,7 +925,13 @@ export class DBService {
     const log = check(result) as unknown as AttendanceLog;
     data.attendance = [log, ...withoutId(data.attendance, log.id)];
 
-    await this.saveMember(memberId, { last_visit_date: getTodayKey() });
+    // The visit is saved by now; if updating "last visit" fails, don't report the check-in as failed
+    // (a retry would only say "already checked in"). The visit itself still shows in Attendance.
+    try {
+      await this.saveMember(memberId, { last_visit_date: getTodayKey() });
+    } catch (err) {
+      console.warn('Check-in saved, but last visit date did not update:', err);
+    }
 
     this.notifyAttendanceChanged();
     return log;
@@ -885,7 +940,7 @@ export class DBService {
   static async undoCheckIn(logId: string): Promise<void> {
     const log = data.attendance.find((a) => a.id === logId);
     if (!log) throw new Error('Check-in not found');
-    check(await db().from('attendance_logs').delete().eq('id', logId));
+    await deleteById('attendance_logs', logId);
     data.attendance = data.attendance.filter((a) => a.id !== logId);
 
     // Last visit goes back to the newest remaining check-in, or the start date if there are none.
@@ -959,6 +1014,15 @@ export class DBService {
         status: 'active',
         membership_plan_id: plan.id,
       });
+    } else if (member.membership_plan_id !== plan.id || !member.start_date) {
+      // First payment, but for a different plan than they registered with: their period follows the paid plan.
+      const startDate = member.start_date || today;
+      await this.updateMember(member.id, {
+        start_date: startDate,
+        end_date: addMonthsToDateKey(startDate, plan.duration_months),
+        status: 'active',
+        membership_plan_id: plan.id,
+      });
     } else {
       // First payment for a newly registered member: their dates were set when they registered.
       await this.updateMember(member.id, { status: 'active' });
@@ -993,6 +1057,7 @@ export class DBService {
   }
 
   static async addPayment(input: Omit<Payment, 'id' | 'admin_id' | 'created_at'>): Promise<Payment> {
+    const payer = input.member_id && !input.is_walk_in ? this.getMemberById(input.member_id) : undefined;
     const row = check(
       await db()
         .from('payments')
@@ -1000,6 +1065,9 @@ export class DBService {
           toRow(
             {
               ...input,
+              // Saved now so deleting the member later doesn't have to fill it in on every payment,
+              // which the audit log would record as an edit to each one.
+              member_name: input.member_name || (payer ? this.memberLabel(payer) : undefined),
               receipt_status: input.receipt_status || (input.payment_method === 'Cash' ? 'verified' : 'unverified'),
             },
             PAYMENT_COLUMNS
@@ -1064,7 +1132,8 @@ export class DBService {
       },
     });
 
-    if (previous.payment_status !== 'completed') await this.applySavedPayment(updatedPayment);
+    // Only a pending payment hasn't been applied yet; a refunded one may have been completed before.
+    if (previous.payment_status === 'pending') await this.applySavedPayment(updatedPayment);
     return updatedPayment;
   }
 
@@ -1097,7 +1166,7 @@ export class DBService {
       },
     });
 
-    if (current.payment_status !== 'completed') await this.applySavedPayment(updatedPayment);
+    if (current.payment_status === 'pending') await this.applySavedPayment(updatedPayment);
     return updatedPayment;
   }
 
@@ -1105,6 +1174,9 @@ export class DBService {
     const profile = this.getProfile();
     const current = data.payments.find((p) => p.id === id);
     if (!current) throw new Error('Payment not found');
+    if (current.payment_status === 'completed') {
+      throw new Error('This payment is already counted and extended the membership. Delete it instead if it was a mistake.');
+    }
 
     const updatedPayment = await this.savePayment(id, {
       payment_status: 'pending',
@@ -1136,7 +1208,7 @@ export class DBService {
 
   static async deletePayment(id: string): Promise<void> {
     const payment = data.payments.find((p) => p.id === id);
-    check(await db().from('payments').delete().eq('id', id));
+    await deleteById('payments', id);
     data.payments = data.payments.filter((p) => p.id !== id);
 
     this.recordAudit({
@@ -1206,7 +1278,7 @@ export class DBService {
 
   static async deleteExpense(id: string): Promise<void> {
     const expense = data.expenses.find((e) => e.id === id);
-    check(await db().from('expenses').delete().eq('id', id));
+    await deleteById('expenses', id);
     data.expenses = data.expenses.filter((e) => e.id !== id);
 
     this.recordAudit({
@@ -1224,7 +1296,9 @@ export class DBService {
   }
 
   // 7. Dashboard Financial KPI Calculation
-  static getDashboardKPIs(timeframe: 'this-month' | 'last-month' | 'last-3-months' | 'last-6-months' | 'this-year' = 'this-month'): DashboardKPIs {
+  static getDashboardKPIs(
+    timeframe: 'this-month' | 'last-month' | 'last-month-to-date' | 'last-3-months' | 'last-6-months' | 'this-year' = 'this-month'
+  ): DashboardKPIs {
     const members = this.getMembers();
     const payments = this.getPayments();
     const expenses = this.getExpenses();
@@ -1245,6 +1319,13 @@ export class DBService {
       label = 'Last Month';
       filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(lastMonthKey));
       filteredExpenses = filteredExpenses.filter((e) => (e.expense_date || '').startsWith(lastMonthKey));
+    } else if (timeframe === 'last-month-to-date') {
+      // Last month up to today's day number, so a month in progress is compared fairly.
+      label = 'Last Month to Date';
+      const lastDay = `${lastMonthKey}-${String(now.getDate()).padStart(2, '0')}`;
+      const inRange = (date: string | undefined) => (date || '').startsWith(lastMonthKey) && (date || '') <= lastDay;
+      filteredPayments = filteredPayments.filter((p) => inRange(p.payment_date));
+      filteredExpenses = filteredExpenses.filter((e) => inRange(e.expense_date));
     } else if (timeframe === 'this-month') {
       label = 'This Month';
       filteredPayments = filteredPayments.filter((p) => (p.payment_date || '').startsWith(thisMonthKey));
@@ -1279,10 +1360,14 @@ export class DBService {
     // makes the month-over-month trend arrow meaningful.
     const currentActiveMembers = members.filter((m) => m.status === 'active').length;
     let activeMembers = currentActiveMembers;
-    if (timeframe === 'last-month') {
-      const start = formatDateLocal(new Date(currentYear, currentMonth - 1, 1));
-      const end = formatDateLocal(new Date(currentYear, currentMonth, 0));
-      activeMembers = countMembersActiveInWindow(members, start, end);
+    if (timeframe === 'last-month' || timeframe === 'last-month-to-date') {
+      // Paid members who were "active" on the last day of last month: more than 7 days left, the same rule
+      // as today's active status, so expiring members aren't counted on one side only.
+      const lastDay = formatDateLocal(new Date(currentYear, currentMonth, 0));
+      const activeCutoff = formatDateLocal(new Date(currentYear, currentMonth, 7));
+      activeMembers = members.filter(
+        (m) => m.status !== 'pending' && m.start_date && m.end_date && m.start_date <= lastDay && m.end_date > activeCutoff
+      ).length;
     } else if (timeframe === 'last-3-months' || timeframe === 'last-6-months') {
       const count = timeframe === 'last-3-months' ? 3 : 6;
       const start = formatDateLocal(new Date(currentYear, currentMonth - (count - 1), 1));
@@ -1299,8 +1384,9 @@ export class DBService {
     const expiredMemberships = members.filter((m) => m.status === 'expired').length;
     const inactiveMembers = members.filter((m) => m.status === 'inactive').length;
     const pendingMembers = members.filter((m) => m.status === 'pending').length;
-    const totalMembers = activeMembers + expiringMemberships + expiredMemberships + inactiveMembers + pendingMembers;
-    const renewalRate = totalMembers > 0 ? Math.round((activeMembers / totalMembers) * 1000) / 10 : 0;
+    // Always from today's roster: the period counts above would otherwise add expiring and expired members twice.
+    const totalMembers = currentActiveMembers + expiringMemberships + expiredMemberships + inactiveMembers + pendingMembers;
+    const renewalRate = totalMembers > 0 ? Math.round((currentActiveMembers / totalMembers) * 1000) / 10 : 0;
 
     return {
       totalRevenue,

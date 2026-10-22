@@ -103,8 +103,8 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={initialExpense ? 'Edit Operational Expense' : 'Record New Gym Expense'}
-      subtitle="Track facility overhead, staff payroll, bills, and upkeep"
+      title={initialExpense ? 'Edit Expense' : 'Add Expense'}
+      subtitle="Rent, bills, salaries, supplies and repairs."
     >
       <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div className="grid grid-cols-2 gap-3">
@@ -215,7 +215,7 @@ export const ExpenseModal: React.FC<ExpenseModalProps> = ({
             Cancel
           </button>
           <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
-            {isSubmitting ? 'Recording...' : initialExpense ? 'Update Expense' : 'Record Expense'}
+            {isSubmitting ? (initialExpense ? 'Saving...' : 'Recording...') : initialExpense ? 'Update Expense' : 'Record Expense'}
           </button>
         </div>
       </form>

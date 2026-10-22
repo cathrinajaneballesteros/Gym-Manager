@@ -3,7 +3,7 @@ import { DashboardOverview } from '@/components/dashboard/DashboardOverview';
 
 export const metadata = {
   title: 'Financial Dashboard | Smart Gym Finance Manager',
-  description: 'Real-time telemetry, revenue, expenses, profit and member metrics',
+  description: 'Revenue, expenses, profit and member numbers',
 };
 
 export default function DashboardPage() {

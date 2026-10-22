@@ -43,7 +43,6 @@ export const AnalyticsView: React.FC = () => {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the gym data AppShell already loaded
     loadAnalytics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useGymDataRefresh(loadAnalytics);
 
@@ -73,14 +72,15 @@ export const AnalyticsView: React.FC = () => {
         }),
       });
 
-      const data = await res.json();
+      // A timeout or crash page isn't JSON; fall through to the error message instead of "Unexpected token <".
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Failed to generate AI executive brief');
       }
 
-      const formattedHtml = escapeHtml(data.report)
-        .replace(/### (.*?)\n/g, '<h4 style="font-weight:700; color:#0f172a; margin-top:1rem; margin-bottom:0.4rem; font-size:1rem;">$1</h4>')
+      const formattedHtml = escapeHtml(`${data.report}\n`) // trailing newline so the last line is formatted too
         .replace(/#### (.*?)\n/g, '<h5 style="font-weight:600; color:#334155; margin-top:0.75rem; margin-bottom:0.25rem; font-size:0.9rem;">$1</h5>')
+        .replace(/#{2,3} (.*?)\n/g, '<h4 style="font-weight:700; color:#0f172a; margin-top:1rem; margin-bottom:0.4rem; font-size:1rem;">$1</h4>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\* (.*?)\n/g, '<li style="margin-bottom:0.35rem; color:#475569;">$1</li>')
         .replace(/\n\n/g, '<br/>');
@@ -89,9 +89,7 @@ export const AnalyticsView: React.FC = () => {
         icon: 'success',
         title: 'Executive AI Brief (Gemini)',
         html: `
-          <div style="text-align: left; font-size: 0.875rem; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding: 0.5rem 0.25rem;">
-            ${formattedHtml}
-          </div>
+          <div style="text-align: left; font-size: 0.875rem; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding: 0.5rem 0.25rem; white-space: pre-line;">${formattedHtml.trim()}</div>
         `,
         confirmButtonText: 'Done',
         confirmButtonColor: '#6366f1',
@@ -116,7 +114,7 @@ export const AnalyticsView: React.FC = () => {
           daysUntilExpiry: member.daysUntilExpiration,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) throw new Error(data.error);
 
       showAlert({
@@ -139,9 +137,17 @@ export const AnalyticsView: React.FC = () => {
         confirmButtonColor: '#059669',
       }).then((result) => {
         if (result.isConfirmed) {
-          navigator.clipboard.writeText(data.message);
-          showToast('Copied to clipboard!');
-          setContactedMemberId(member.memberId);
+          const copyFailed = () =>
+            showError('Copy Failed', 'Could not copy the message. Please check your browser permissions.');
+          // The clipboard only exists on https or localhost.
+          if (!navigator.clipboard) return copyFailed();
+          navigator.clipboard
+            .writeText(data.message)
+            .then(() => {
+              showToast('Copied to clipboard!');
+              setContactedMemberId(member.memberId);
+            })
+            .catch(copyFailed);
         }
       });
     } catch {
@@ -179,14 +185,14 @@ export const AnalyticsView: React.FC = () => {
         }),
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.success) {
         throw new Error(data.error || 'Failed to generate cost-saving action plan');
       }
 
-      const formattedHtml = escapeHtml(data.report)
-        .replace(/### (.*?)\n/g, '<h4 style="font-weight:700; color:#0f172a; margin-top:1rem; margin-bottom:0.4rem; font-size:1rem;">$1</h4>')
+      const formattedHtml = escapeHtml(`${data.report}\n`) // trailing newline so the last line is formatted too
         .replace(/#### (.*?)\n/g, '<h5 style="font-weight:600; color:#334155; margin-top:0.75rem; margin-bottom:0.25rem; font-size:0.9rem;">$1</h5>')
+        .replace(/#{2,3} (.*?)\n/g, '<h4 style="font-weight:700; color:#0f172a; margin-top:1rem; margin-bottom:0.4rem; font-size:1rem;">$1</h4>')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\* (.*?)\n/g, '<li style="margin-bottom:0.35rem; color:#475569;">$1</li>')
         .replace(/\n\n/g, '<br/>');
@@ -195,9 +201,7 @@ export const AnalyticsView: React.FC = () => {
         icon: 'success',
         title: 'Gemini Cost-Cutting Roadmap',
         html: `
-          <div style="text-align: left; font-size: 0.875rem; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding: 0.5rem 0.25rem;">
-            ${formattedHtml}
-          </div>
+          <div style="text-align: left; font-size: 0.875rem; line-height: 1.6; max-height: 60vh; overflow-y: auto; padding: 0.5rem 0.25rem; white-space: pre-line;">${formattedHtml.trim()}</div>
         `,
         confirmButtonText: 'Adopt Plan',
         confirmButtonColor: '#059669',
@@ -214,21 +218,13 @@ export const AnalyticsView: React.FC = () => {
   const currency = profile?.currency || '₱';
 
   // Chart data blending historical and projected
-  const chartData =
-    forecast.trendSeries && forecast.trendSeries.length > 0
-      ? forecast.trendSeries.map((pt) => ({
-          month: pt.period,
-          historical: pt.isForecast ? null : pt.projectedRevenue,
-          forecast: pt.isForecast ? pt.projectedRevenue : null,
-        }))
-      : [
-          { month: 'Apr', historical: 0, forecast: null },
-          { month: 'May', historical: 0, forecast: null },
-          { month: 'Jun', historical: 0, forecast: null },
-          { month: 'Jul', historical: 0, forecast: 0 },
-          { month: 'Aug', historical: null, forecast: 0 },
-          { month: 'Sep', historical: null, forecast: 0 },
-        ];
+  // The last real month also starts the forecast line, so the dashed line joins the solid one.
+  const lastHistoricalIndex = (forecast.trendSeries || []).filter((pt) => !pt.isForecast).length - 1;
+  const chartData = (forecast.trendSeries || []).map((pt, i) => ({
+    month: pt.period,
+    historical: pt.isForecast ? null : pt.projectedRevenue,
+    forecast: pt.isForecast || i === lastHistoricalIndex ? pt.projectedRevenue : null,
+  }));
 
   const handleContactMember = async (member: ChurnPredictionMember) => {
     const gymName = profile?.gym_name || 'our gym';
@@ -254,16 +250,16 @@ export const AnalyticsView: React.FC = () => {
         html: `
           <div style="text-align: left; font-size: 0.9rem; color: #475569; line-height: 1.6;">
             <div style="margin-bottom: 0.85rem; padding: 0.5rem 0.75rem; background-color: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; color: #92400e; font-weight: 600; font-size: 0.85rem;">
-              ⚠️ Status: Awaiting Historical Records
+              ⚠️ Not enough data yet
             </div>
             <p style="margin-bottom: 0.75rem; color: #1e293b;">
-              The AI forecasting engine utilizes linear regression and moving average modeling calculated from real member payments and renewal cycles.
+              The forecast uses your past monthly payments to estimate next month (linear regression).
             </p>
             <p style="margin-bottom: 0.75rem;">
-              Since this system is running with zero initial data, no payment transactions have been logged yet to train the projection model.
+              There are no payments yet, so there&apos;s nothing to learn from.
             </p>
             <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.85rem; color: #334155;">
-              💡 <strong>Next Step:</strong> Register gym members in the <em>Members</em> tab and record their subscription payments. Once payments are recorded, forward projections and confidence intervals will calculate automatically.
+              💡 <strong>Next step:</strong> add members in <em>Members</em> and record their payments. The forecast fills in by itself.
             </div>
           </div>
         `,
@@ -273,15 +269,10 @@ export const AnalyticsView: React.FC = () => {
       return;
     }
 
-    const forecastPoints = forecast.trendSeries.filter((p) => p.isForecast);
-    const minBound =
-      forecastPoints.length > 0
-        ? Math.min(...forecastPoints.map((p) => p.lowerConfidence))
-        : Math.round(forecast.forecastedNextMonthRevenue * 0.9);
-    const maxBound =
-      forecastPoints.length > 0
-        ? Math.max(...forecastPoints.map((p) => p.upperConfidence))
-        : Math.round(forecast.forecastedNextMonthRevenue * 1.1);
+    // Range for next month, the same month as the projection shown above it
+    const nextPoint = forecast.trendSeries.find((p) => p.isForecast);
+    const minBound = nextPoint ? nextPoint.lowerConfidence : Math.round(forecast.forecastedNextMonthRevenue * 0.9);
+    const maxBound = nextPoint ? nextPoint.upperConfidence : Math.round(forecast.forecastedNextMonthRevenue * 1.1);
 
     const formatVal = (val: number) => formatCompactAmount(val, currency);
 
@@ -294,7 +285,9 @@ export const AnalyticsView: React.FC = () => {
             ✓ Active Model • ${forecast.confidenceScore}% Confidence Level
           </div>
           <p style="margin-bottom: 0.6rem; color: #1e293b;">
-            <strong>3-Month Projection:</strong> Based on linear regression trend across ${forecast.dataPointsCount} recorded period(s).
+            ${nextPoint
+              ? `<strong>3-Month Projection:</strong> Based on the trend across ${forecast.dataPointsCount} full month(s) of payments.`
+              : '<strong>Early estimate:</strong> Next month is shown at the latest month&apos;s level until there are two full months of payments.'}
           </p>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.75rem; font-size: 0.825rem;">
             <div style="background: #f8fafc; padding: 0.6rem; border-radius: 6px; border: 1px solid #e2e8f0;">
@@ -399,7 +392,7 @@ export const AnalyticsView: React.FC = () => {
               Revenue Forecast
             </h2>
             <p style={{ fontSize: '0.825rem', color: '#64748b' }}>
-              Based on historical data, memberships, and seasonal trends
+              Based on your past payments and memberships
             </p>
           </div>
 
@@ -423,7 +416,7 @@ export const AnalyticsView: React.FC = () => {
                   {currency}{forecast.forecastedNextMonthRevenue.toLocaleString()}
                 </div>
                 <div style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '4px' }}>
-                  Next 3 months
+                  Next month
                 </div>
               </div>
 
@@ -450,7 +443,7 @@ export const AnalyticsView: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1.25rem', marginBottom: '0.5rem', fontSize: '0.785rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <span style={{ width: '16px', height: '2.5px', backgroundColor: '#0284c7' }} />
-                  <span style={{ color: '#475569', fontWeight: 500 }}>Historical</span>
+                  <span style={{ color: '#475569', fontWeight: 500 }}>Actual</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <span style={{ width: '16px', height: '2px', borderTop: '2px dashed #0284c7' }} />
@@ -458,19 +451,26 @@ export const AnalyticsView: React.FC = () => {
                 </div>
               </div>
 
+              {chartData.length === 0 ? (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem', border: '1px dashed #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+                  Revenue trends appear after your first month of payments.
+                </div>
+              ) : (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+                <LineChart data={chartData} margin={{ top: 12, right: 12, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="month" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={{ stroke: '#f1f5f9' }} />
-                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(val) => `${currency}${(val / 1000).toFixed(0)}k`} />
+                  <XAxis dataKey="month" interval={0} stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={{ stroke: '#f1f5f9' }} />
+                  <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} domain={[0, (dataMax: number) => Math.max(dataMax, 1000)]} tickFormatter={(val) => formatCompactAmount(val, currency)} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
                     formatter={(val) => [`${currency}${Number(val).toLocaleString()}`, '']}
                   />
+                  {/* Forecast first so October's solid dot draws on top of where the dashed line starts */}
+                  <Line type="monotone" dataKey="forecast" stroke="#0284c7" strokeWidth={2.5} strokeDasharray="4 4" dot={{ r: 4, fill: '#ffffff', stroke: '#0284c7', strokeWidth: 2, strokeDasharray: '0' }} />
                   <Line type="monotone" dataKey="historical" stroke="#0284c7" strokeWidth={2.5} dot={{ r: 3, fill: '#0284c7' }} />
-                  <Line type="monotone" dataKey="forecast" stroke="#0284c7" strokeWidth={2.5} strokeDasharray="4 4" dot={{ r: 4, fill: '#ffffff', stroke: '#0284c7', strokeWidth: 2 }} />
                 </LineChart>
               </ResponsiveContainer>
+              )}
             </div>
 
             {/* Column 3: Key Factors */}
@@ -483,19 +483,23 @@ export const AnalyticsView: React.FC = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', color: '#64748b', fontSize: '0.8rem', padding: '0.25rem 0' }}>
                   <p style={{ fontWeight: 600, color: '#475569' }}>Awaiting initial activity</p>
                   <p style={{ color: '#94a3b8', fontSize: '0.75rem', lineHeight: 1.4 }}>
-                    Model weights and growth factors will calibrate once members and payments are recorded.
+                    Shows up once you&apos;ve recorded members and payments.
                   </p>
                 </div>
               ) : (
                 [
-                  { factor: 'Renewal retention', impact: `${Math.round(forecast.confidenceScore * 0.9)}%` },
-                  { factor: 'Growth trajectory', impact: `${forecast.projectedGrowthPercent >= 0 ? '+' : ''}${forecast.projectedGrowthPercent}%` },
-                  { factor: 'Predicted new signups', impact: `+${forecast.predictedNewMembers}` },
-                  { factor: 'Expected renewals', impact: `${forecast.expectedRenewals}` },
+                  { factor: 'Renewal retention', impact: `${DBService.getDashboardKPIs('this-month').renewalRate}%`, good: true },
+                  {
+                    factor: 'Growth trend',
+                    impact: `${forecast.projectedGrowthPercent >= 0 ? '+' : ''}${forecast.projectedGrowthPercent}%`,
+                    good: forecast.projectedGrowthPercent >= 0,
+                  },
+                  { factor: 'Predicted new signups', impact: `+${forecast.predictedNewMembers}`, good: true },
+                  { factor: 'Expected renewals', impact: `${forecast.expectedRenewals}`, good: true },
                 ].map((item) => (
                   <div key={item.factor} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
                     <span style={{ color: '#64748b' }}>{item.factor}</span>
-                    <span style={{ fontWeight: 600, color: '#059669' }}>{item.impact}</span>
+                    <span style={{ fontWeight: 600, color: item.good ? '#059669' : '#ef4444' }}>{item.impact}</span>
                   </div>
                 ))
               )}
@@ -511,22 +515,22 @@ export const AnalyticsView: React.FC = () => {
           <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '1.25rem 1.5rem', borderBottom: '1px solid #f1f5f9' }}>
             <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>
-              Members Requiring Retention Attention
+              Members at Risk of Leaving
             </h2>
             <p style={{ fontSize: '0.825rem', color: '#64748b', marginTop: '2px' }}>
-              Identified by inactivity frequency, visit gaps, and imminent expiration dates
+              Based on missed visits and memberships ending soon
             </p>
           </div>
 
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase' }}>
                   <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Risk Level</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Risk Level</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Days Inactive</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Visits (30 days)</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Primary Factor</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Visits (30 days)</th>
+                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Primary Factor</th>
                   <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Outreach</th>
                 </tr>
               </thead>
@@ -543,16 +547,16 @@ export const AnalyticsView: React.FC = () => {
                       <td style={{ padding: '1rem 1.5rem', fontWeight: 600, color: '#0f172a' }}>
                         {m.memberName}
                       </td>
-                      <td style={{ padding: '1rem 1.25rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
                         <span className="badge badge-danger">High Risk</span>
                       </td>
                       <td style={{ padding: '1rem 1.25rem', color: '#ef4444', fontWeight: 600 }}>
                         {m.daysSinceLastVisit} days
                       </td>
-                      <td style={{ padding: '1rem 1.25rem', color: '#334155' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155' }}>
                         {m.visitsLast30Days}
                       </td>
-                      <td style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
                         {m.factors[0] || 'Prolonged attendance drop'}
                       </td>
                       <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
@@ -564,7 +568,7 @@ export const AnalyticsView: React.FC = () => {
                             title="Generate personalized AI message"
                           >
                             <Sparkles size={12} style={{ color: '#a855f7' }} />
-                            <span>AI Draft</span>
+                            <span className="phone-icon-label">AI Draft</span>
                           </button>
                           <button
                             onClick={() => handleContactMember(m)}
@@ -607,7 +611,7 @@ export const AnalyticsView: React.FC = () => {
               <div>
                 <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.25rem 0.65rem', borderRadius: '999px', backgroundColor: 'rgba(255, 255, 255, 0.18)', fontSize: '0.75rem', fontWeight: 600, marginBottom: '0.5rem' }}>
                   <PiggyBank size={13} style={{ color: '#a7f3d0' }} />
-                  <span>Open Gym Cost Optimization</span>
+                  <span>Ways to Save</span>
                 </div>
                 <h2 style={{ fontSize: '1.35rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: '0.25rem', color: '#ffffff' }}>
                   Save up to {currency}{leaks.potentialMonthlySavings.toLocaleString()} / month

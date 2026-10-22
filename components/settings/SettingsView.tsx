@@ -25,11 +25,13 @@ export const SettingsView: React.FC = () => {
   const [email, setEmail] = useState(() => DBService.getProfile().email || '');
   const [phone, setPhone] = useState(() => DBService.getProfile().phone || '');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   // Security password fields
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
 
   useEffect(() => {
     // Show the sign-in email, which can differ from the profile if it was changed in Supabase.
@@ -40,14 +42,30 @@ export const SettingsView: React.FC = () => {
     });
   }, []);
 
+  // Keep the gym name under the avatar current after it's changed on the Gym tab.
+  useEffect(() => {
+    const handleProfileUpdate = () => setProfile(DBService.getProfile());
+    window.addEventListener('sgfm_profile_updated', handleProfileUpdate);
+    return () => window.removeEventListener('sgfm_profile_updated', handleProfileUpdate);
+  }, []);
+
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    const name = fullName.trim();
+    if (!name) {
+      showError('Name Required', 'Enter your full name.');
+      return;
+    }
+    setSavingProfile(true);
     try {
-      const updated = await DBService.updateProfile({ full_name: fullName, phone });
+      const updated = await DBService.updateProfile({ full_name: name, phone: phone.trim() });
+      setFullName(name);
       setProfile(updated);
     } catch (err) {
       showError('Save Failed', err instanceof Error ? err.message : 'Could not save your settings.');
       return;
+    } finally {
+      setSavingProfile(false);
     }
 
     setSaveSuccess(true);
@@ -61,6 +79,7 @@ export const SettingsView: React.FC = () => {
       return;
     }
 
+    setSavingPassword(true);
     try {
       const { createClient } = await import('@/lib/supabase/client');
       const supabase = createClient();
@@ -82,7 +101,10 @@ export const SettingsView: React.FC = () => {
         showError('Current Password Needed', 'Enter your current password to change it.');
         return;
       }
-      const { error: checkError } = await supabase.auth.signInWithPassword({ email: user.email, password: oldPassword });
+      sessionStorage.setItem('sgfm_reauth', '1');
+      const { error: checkError } = await supabase.auth
+        .signInWithPassword({ email: user.email, password: oldPassword })
+        .finally(() => sessionStorage.removeItem('sgfm_reauth'));
       if (checkError) {
         showError('Wrong Password', 'Your current password is incorrect.');
         return;
@@ -97,6 +119,8 @@ export const SettingsView: React.FC = () => {
       setTimeout(() => setPasswordSuccess(false), 3000);
     } catch (err) {
       showError('Password Update Error', err instanceof Error ? err.message : 'Unable to update password');
+    } finally {
+      setSavingPassword(false);
     }
   };
 
@@ -281,8 +305,9 @@ export const SettingsView: React.FC = () => {
                   type="submit"
                   className="btn btn-primary"
                   style={{ backgroundColor: '#0f172a', borderColor: '#0f172a' }}
+                  disabled={savingProfile}
                 >
-                  Save Changes
+                  {savingProfile ? 'Saving...' : 'Save Changes'}
                 </button>
                 {saveSuccess && (
                   <span style={{ fontSize: '0.825rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
@@ -336,8 +361,8 @@ export const SettingsView: React.FC = () => {
               </div>
 
               <div>
-                <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#0f172a', borderColor: '#0f172a' }}>
-                  Update Password
+                <button type="submit" className="btn btn-primary" style={{ backgroundColor: '#0f172a', borderColor: '#0f172a' }} disabled={savingPassword}>
+                  {savingPassword ? 'Updating...' : 'Update Password'}
                 </button>
                 {passwordSuccess && (
                   <span style={{ marginLeft: '1rem', fontSize: '0.825rem', color: '#059669', fontWeight: 600 }}>

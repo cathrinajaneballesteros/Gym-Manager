@@ -22,11 +22,10 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Verifies the session token locally against Supabase's cached signing keys instead of asking the Auth server each time.
+  const { data } = await supabase.auth.getClaims();
 
-  if (!user) {
+  if (!data?.claims) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
     url.search = '?mode=signin';

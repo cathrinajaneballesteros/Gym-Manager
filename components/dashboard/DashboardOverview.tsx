@@ -33,6 +33,7 @@ import { DBService } from '@/lib/data/db-service';
 import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
 import { formatTimeAgo } from '@/lib/ui/date';
 import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
+import { calculateRevenueForecast } from '@/lib/ai/forecasting';
 import { DashboardKPIs, MonthlyTrendData, Member, UserProfile, Payment, Expense } from '@/types/database';
 import { MetricCard } from '@/components/ui/MetricCard';
 import { RevenueExpenseChart } from '@/components/charts/RevenueExpenseChart';
@@ -44,6 +45,65 @@ import { ExpenseModal } from '@/components/expenses/ExpenseModal';
 import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { formatCompactAmount, getPaymentMemberName } from '@/lib/ui/format';
+
+// One of the small cards in the bottom row: icon + title, body, and a link at the bottom.
+const InfoCard: React.FC<{
+  icon: React.ElementType;
+  iconColor: string;
+  iconBg: string;
+  title: string;
+  href: string;
+  linkLabel: string;
+  children: React.ReactNode;
+}> = ({ icon: Icon, iconColor, iconBg, title, href, linkLabel, children }) => (
+  <div
+    className="card"
+    style={{
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'space-between',
+      padding: '1.35rem 1.5rem',
+    }}
+  >
+    <div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
+        <div
+          style={{
+            width: '28px',
+            height: '28px',
+            borderRadius: '7px',
+            backgroundColor: iconBg,
+            color: iconColor,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Icon size={15} />
+        </div>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1d1d1f' }}>{title}</h3>
+      </div>
+      {children}
+    </div>
+
+    <div style={{ marginTop: '1.25rem' }}>
+      <Link
+        href={href}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.35rem',
+          fontSize: '0.825rem',
+          fontWeight: 600,
+          color: '#059669',
+        }}
+      >
+        <span>{linkLabel}</span>
+        <ArrowRight size={14} />
+      </Link>
+    </div>
+  </div>
+);
 
 export const DashboardOverview: React.FC = () => {
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
@@ -87,7 +147,8 @@ export const DashboardOverview: React.FC = () => {
 
   const refreshData = () => {
     setKpis(DBService.getDashboardKPIs('this-month'));
-    setLastMonthKpis(DBService.getDashboardKPIs('last-month'));
+    // Same days of last month, so a month in progress isn't compared with a whole month.
+    setLastMonthKpis(DBService.getDashboardKPIs('last-month-to-date'));
     setTrends(DBService.getMonthlyTrends());
     setMembers(DBService.getMembers());
     setPayments(DBService.getPayments());
@@ -121,14 +182,17 @@ export const DashboardOverview: React.FC = () => {
   const recentPayments = payments
     .filter((p) => p.payment_status === 'completed')
     .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
-    .slice(0, 2);
+    .slice(0, 4);
+
+  const forecast = calculateRevenueForecast();
+  const potentialSavings = detectExpenseLeaks().potentialMonthlySavings;
 
   const revenueTrend = lastMonthKpis && lastMonthKpis.totalRevenue > 0
     ? {
         value: `${kpis.totalRevenue >= lastMonthKpis.totalRevenue ? '+' : '-'}${Math.abs(Math.round(((kpis.totalRevenue - lastMonthKpis.totalRevenue) / lastMonthKpis.totalRevenue) * 100))}%`,
         positive: kpis.totalRevenue >= lastMonthKpis.totalRevenue,
         direction: kpis.totalRevenue >= lastMonthKpis.totalRevenue ? ('up' as const) : ('down' as const),
-        label: 'from last month',
+        label: 'vs same point last month',
       }
     : undefined;
 
@@ -137,9 +201,10 @@ export const DashboardOverview: React.FC = () => {
         const expenseDiff = kpis.totalExpenses - lastMonthKpis.totalExpenses;
         return {
           value: `${expenseDiff >= 0 ? '+' : '-'}${Math.abs(Math.round((expenseDiff / lastMonthKpis.totalExpenses) * 100))}%`,
-          positive: expenseDiff >= 0,
+          // Spending less is the good news.
+          positive: expenseDiff <= 0,
           direction: expenseDiff >= 0 ? ('up' as const) : ('down' as const),
-          label: 'from last month',
+          label: 'vs same point last month',
         };
       })()
     : undefined;
@@ -151,13 +216,14 @@ export const DashboardOverview: React.FC = () => {
           value: `${profitDiff >= 0 ? '+' : '-'}${Math.abs(Math.round((profitDiff / Math.abs(lastMonthKpis.netProfit)) * 100))}%`,
           positive: profitDiff >= 0,
           direction: profitDiff >= 0 ? ('up' as const) : ('down' as const),
-          label: 'from last month',
+          label: 'vs same point last month',
         };
       })()
     : undefined;
 
   const memberTrend = lastMonthKpis && lastMonthKpis.activeMembers > 0
     ? (() => {
+        // Active members today (the number on the card) against those active at the end of last month.
         const memberDiff = kpis.activeMembers - lastMonthKpis.activeMembers;
         return {
           value: `${memberDiff >= 0 ? '+' : '-'}${Math.abs(Math.round((memberDiff / lastMonthKpis.activeMembers) * 100))}%`,
@@ -217,7 +283,6 @@ export const DashboardOverview: React.FC = () => {
 
   const topExpenseEntry = Object.entries(expensesByCategory).sort((a, b) => b[1].total - a[1].total)[0];
   const topCategoryName = topExpenseEntry ? topExpenseEntry[0] : 'None';
-  const topCategoryTotal = topExpenseEntry ? topExpenseEntry[1].total : 0;
 
   const topRevenuePlanEntry = Object.entries(paymentsByPlan).sort((a, b) => b[1].total - a[1].total)[0];
   const topRevenuePlanName = topRevenuePlanEntry ? topRevenuePlanEntry[0] : 'Standard Pass';
@@ -282,12 +347,12 @@ export const DashboardOverview: React.FC = () => {
               {greeting}, {adminFirstName}!
             </h1>
             <p style={{ fontSize: '0.875rem', color: '#86868b' }}>
-              Here&apos;s what&apos;s happening with your gym&apos;s finances today.
+              Here&apos;s how {new Date().toLocaleString('en-US', { month: 'long' })} is going.
             </p>
           </div>
 
           {/* Quick Action Buttons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+          <div className="phone-row" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
             <button
               onClick={() => setIsCheckInModalOpen(true)}
               className="btn btn-outline btn-sm"
@@ -318,18 +383,18 @@ export const DashboardOverview: React.FC = () => {
         <div className="grid grid-cols-4 gap-4">
           <MetricCard
             title="Total Revenue"
-            value={`+${currency}${kpis.totalRevenue.toLocaleString()}`}
+            value={`${currency}${kpis.totalRevenue.toLocaleString()}`}
             icon={TrendingUp}
             trend={revenueTrend}
             variant="emerald"
-            valueColor="#059669"
+            valueColor={kpis.totalRevenue > 0 ? '#059669' : undefined}
             onClick={() => setActiveBreakdown('revenue')}
             clickableHint="Breakdown"
           />
 
           <MetricCard
             title="Total Expenses"
-            value={`-${currency}${kpis.totalExpenses.toLocaleString()}`}
+            value={`${currency}${kpis.totalExpenses.toLocaleString()}`}
             icon={Receipt}
             trend={expenseTrend}
             variant="rose"
@@ -340,11 +405,11 @@ export const DashboardOverview: React.FC = () => {
 
           <MetricCard
             title="Net Profit"
-            value={`${kpis.netProfit >= 0 ? '+' : '-'}${currency}${Math.abs(kpis.netProfit).toLocaleString()}`}
+            value={`${kpis.netProfit > 0 ? '+' : kpis.netProfit < 0 ? '-' : ''}${currency}${Math.abs(kpis.netProfit).toLocaleString()}`}
             icon={CreditCard}
             trend={profitTrend}
             variant={kpis.netProfit >= 0 ? 'emerald' : 'rose'}
-            valueColor={kpis.netProfit >= 0 ? '#059669' : '#ef4444'}
+            valueColor={kpis.netProfit > 0 ? '#059669' : kpis.netProfit < 0 ? '#ef4444' : undefined}
             onClick={() => setActiveBreakdown('profit')}
             clickableHint="Breakdown"
           />
@@ -397,7 +462,11 @@ export const DashboardOverview: React.FC = () => {
               </button>
             </div>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-              <CategoryExpenseChart expenses={DBService.getExpenses()} currency={currency} />
+              {/* This month only, to match the Total Expenses card */}
+              <CategoryExpenseChart
+                expenses={monthExpensesList}
+                currency={currency}
+              />
             </div>
           </div>
         </div>
@@ -406,183 +475,90 @@ export const DashboardOverview: React.FC = () => {
       {/* 4. Bottom 3 Cards: AI Insights, Upcoming Renewals, Recent Activity */}
       <ScrollReveal delay={150}>
         <div className="grid grid-cols-3 gap-4">
-          {/* Card 1: AI Insights */}
-          <div
-            className="card"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              padding: '1.35rem 1.5rem',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
-                <div
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '7px',
-                    backgroundColor: '#ecfdf5',
-                    color: '#059669',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Sparkles size={15} />
-                </div>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1d1d1f' }}>
-                  AI Insights
-                </h3>
-              </div>
-              <p style={{ fontSize: '0.85rem', color: '#424245', lineHeight: 1.55 }}>
-                {members.length > 0
-                  ? `Revenue is projected to increase based on current subscription momentum and renewal trends.`
-                  : `Add gym members and record transactions to begin receiving AI revenue projections and churn warnings.`}
-              </p>
-            </div>
+          <InfoCard icon={Sparkles} iconColor="#059669" iconBg="#ecfdf5" title="AI Insights" href="/analytics" linkLabel="View Forecast">
+            <p style={{ fontSize: '0.85rem', color: '#424245', lineHeight: 1.55 }}>
+              {!forecast.hasSufficientData ? (
+                <>Add gym members and record transactions to begin receiving AI revenue projections and churn warnings.</>
+              ) : forecast.dataPointsCount < 2 ? (
+                <>Next month should land around <strong>{currency}{forecast.forecastedNextMonthRevenue.toLocaleString()}</strong>. A real trend shows up after two months of payments.</>
+              ) : (
+                <>
+                  Revenue is projected to reach <strong>{currency}{forecast.forecastedNextMonthRevenue.toLocaleString()}</strong> next month
+                  {' '}({forecast.projectedGrowthPercent >= 0 ? '+' : ''}{forecast.projectedGrowthPercent}%).
+                </>
+              )}
+              {potentialSavings > 0 && (
+                <> Cost-saving tips could cut up to <strong>{currency}{potentialSavings.toLocaleString()}/mo</strong> in expenses.</>
+              )}
+            </p>
+          </InfoCard>
 
-            <div style={{ marginTop: '1.25rem' }}>
-              <Link
-                href="/analytics"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  fontSize: '0.825rem',
-                  fontWeight: 600,
-                  color: '#059669',
-                }}
-              >
-                <span>View Forecast</span>
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 2: Upcoming Renewals */}
-          <div
-            className="card"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              padding: '1.35rem 1.5rem',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
-                <div
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '7px',
-                    backgroundColor: '#fffbeb',
-                    color: '#d97706',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Calendar size={15} />
-                </div>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1d1d1f' }}>
-                  Upcoming Renewals
-                </h3>
-              </div>
-              <p style={{ fontSize: '0.85rem', color: '#424245', lineHeight: 1.55 }}>
-                {expiringMembers.length > 0 ? (
-                  <><strong>{expiringMembers.length} memberships</strong> expire in the next 7 days. Early outreach recommended to retain at-risk members.</>
-                ) : (
-                  <><strong>No expiring memberships</strong> in the next 7 days. All member accounts are currently active or up to date.</>
-                )}
-              </p>
-            </div>
-
-            <div style={{ marginTop: '1.25rem' }}>
-              <Link
-                href="/members?status=expiring"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  fontSize: '0.825rem',
-                  fontWeight: 600,
-                  color: '#059669',
-                }}
-              >
-                <span>View Members</span>
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
-
-          {/* Card 3: Recent Activity */}
-          <div
-            className="card"
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-              padding: '1.35rem 1.5rem',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.85rem' }}>
-                <div
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '7px',
-                    backgroundColor: '#f1f5f9',
-                    color: '#475569',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Clock size={15} />
-                </div>
-                <h3 style={{ fontSize: '0.95rem', fontWeight: 600, color: '#1d1d1f' }}>
-                  Recent Activity
-                </h3>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
-                {recentPayments.map((p, idx) => (
-                  <div key={p.id || idx} style={{ fontSize: '0.8rem', borderBottom: idx === 0 ? '1px solid #f1f5f9' : 'none', paddingBottom: idx === 0 ? '0.5rem' : '0' }}>
-                    <div style={{ fontWeight: 600, color: '#1d1d1f' }}>
-                      Payment received • {currency}{Number(p.amount).toLocaleString()}
+          <InfoCard icon={Calendar} iconColor="#d97706" iconBg="#fffbeb" title="Upcoming Renewals" href="/members?status=expiring" linkLabel="View Members">
+            {expiringMembers.length > 0 ? (
+              <>
+                <p style={{ fontSize: '0.85rem', color: '#424245', lineHeight: 1.55, marginBottom: '0.65rem' }}>
+                  <strong>{expiringMembers.length} {expiringMembers.length === 1 ? 'membership expires' : 'memberships expire'}</strong> in the next 7 days.
+                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {expiringMembers.slice(0, 3).map((m) => (
+                    <div key={m.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem', fontSize: '0.8rem' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {m.first_name} {m.last_name}
+                        </div>
+                        <div style={{ color: '#86868b', fontSize: '0.75rem' }}>Expires {m.end_date}</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedMemberForReminder(m);
+                          setIsReminderModalOpen(true);
+                        }}
+                        className="btn btn-secondary btn-sm"
+                        style={{ flexShrink: 0, fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
+                      >
+                        <Bell size={12} style={{ color: '#d97706' }} />
+                        <span>Remind</span>
+                      </button>
                     </div>
-                    <div style={{ color: '#86868b', fontSize: '0.75rem', marginTop: '2px' }}>
-                      {getPaymentMemberName(p)} • {p.payment_method} • {formatTimeAgo(p.created_at)}
-                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <p style={{ fontSize: '0.85rem', color: '#424245', lineHeight: 1.55 }}>
+                <strong>No memberships expire</strong> in the next 7 days.
+              </p>
+            )}
+          </InfoCard>
+
+          <InfoCard icon={Clock} iconColor="#475569" iconBg="#f1f5f9" title="Recent Activity" href="/payments" linkLabel="View All">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {recentPayments.map((p, idx) => (
+                <div
+                  key={p.id || idx}
+                  style={{
+                    fontSize: '0.8rem',
+                    borderBottom: idx < recentPayments.length - 1 ? '1px solid #f1f5f9' : 'none',
+                    paddingBottom: idx < recentPayments.length - 1 ? '0.5rem' : '0',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <span style={{ fontWeight: 600, color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {getPaymentMemberName(p)}
+                    </span>
+                    <span style={{ fontWeight: 600, color: '#059669', flexShrink: 0 }}>
+                      {currency}{Number(p.amount).toLocaleString()}
+                    </span>
                   </div>
-                ))}
-                {recentPayments.length === 0 && (
-                  <div style={{ fontSize: '0.8rem', color: '#86868b' }}>No recent activity</div>
-                )}
-              </div>
+                  <div style={{ color: '#86868b', fontSize: '0.75rem', marginTop: '2px' }}>
+                    {p.payment_method} • {formatTimeAgo(p.created_at)}
+                  </div>
+                </div>
+              ))}
+              {recentPayments.length === 0 && (
+                <div style={{ fontSize: '0.8rem', color: '#86868b' }}>No recent activity</div>
+              )}
             </div>
-
-            <div style={{ marginTop: '1.25rem' }}>
-              <Link
-                href="/payments"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '0.35rem',
-                  fontSize: '0.825rem',
-                  fontWeight: 600,
-                  color: '#059669',
-                }}
-              >
-                <span>View All</span>
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
+          </InfoCard>
         </div>
       </ScrollReveal>
 
@@ -683,25 +659,25 @@ export const DashboardOverview: React.FC = () => {
                 {activeBreakdown === 'revenue' && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.25rem 0.75rem', borderRadius: '999px', backgroundColor: '#ecfdf5', border: '1px solid #d1fae5', color: '#059669', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                     <TrendingUp size={13} />
-                    <span>Revenue Intelligence • {kpis.periodLabel}</span>
+                    <span>Revenue • {kpis.periodLabel}</span>
                   </div>
                 )}
                 {activeBreakdown === 'expenses' && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.25rem 0.75rem', borderRadius: '999px', backgroundColor: '#fff1f2', border: '1px solid #ffe4e6', color: '#e11d48', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                     <Receipt size={13} />
-                    <span>Operating Expenditures • {kpis.periodLabel}</span>
+                    <span>Expenses • {kpis.periodLabel}</span>
                   </div>
                 )}
                 {activeBreakdown === 'profit' && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.25rem 0.75rem', borderRadius: '999px', backgroundColor: '#eff6ff', border: '1px solid #dbeafe', color: '#2563eb', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                     <Activity size={13} />
-                    <span>Executive P&L Statement • {kpis.periodLabel}</span>
+                    <span>Profit • {kpis.periodLabel}</span>
                   </div>
                 )}
                 {activeBreakdown === 'members' && (
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.25rem 0.75rem', borderRadius: '999px', backgroundColor: '#f5f3ff', border: '1px solid #ede9fe', color: '#7c3aed', fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
                     <Users size={13} />
-                    <span>Membership Roster & Cohorts</span>
+                    <span>Members</span>
                   </div>
                 )}
 
@@ -724,25 +700,25 @@ export const DashboardOverview: React.FC = () => {
                   </h3>
                   {activeBreakdown === 'profit' && (
                     <span style={{ fontSize: '0.85rem', fontWeight: 700, color: kpis.profitMargin >= 20 ? '#059669' : '#e11d48', backgroundColor: kpis.profitMargin >= 20 ? '#ecfdf5' : '#fff1f2', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>
-                      {kpis.profitMargin}% Net Margin
+                      {kpis.profitMargin}% margin
                     </span>
                   )}
                   {activeBreakdown === 'members' && (
                     <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#64748b' }}>
-                      of {members.length} total registered
+                      of {members.length} total
                     </span>
                   )}
                 </div>
 
                 <p style={{ fontSize: '0.825rem', color: '#64748b', marginTop: '4px' }}>
                   {activeBreakdown === 'revenue' && (activePaymentsList.length > 0
-                    ? `Aggregated across ${activePaymentsList.length} verified member payments in ${kpis.periodLabel}.`
+                    ? `From ${activePaymentsList.length} ${activePaymentsList.length === 1 ? 'payment' : 'payments'} in ${kpis.periodLabel}.`
                     : 'No payments recorded this month.')}
                   {activeBreakdown === 'expenses' && (activeExpensesList.length > 0
-                    ? `Recorded operational expenditures across ${activeExpensesList.length} verified expense entries.`
+                    ? `From ${activeExpensesList.length} ${activeExpensesList.length === 1 ? 'expense' : 'expenses'} in ${kpis.periodLabel}.`
                     : 'No expenses recorded this month.')}
-                  {activeBreakdown === 'profit' && `Reconciled net take-home cash flow after deducting operational facility costs.`}
-                  {activeBreakdown === 'members' && `Current member status, tier distribution, and active retention cohorts.`}
+                  {activeBreakdown === 'profit' && `What's left after this month's expenses.`}
+                  {activeBreakdown === 'members' && `Member status and plan mix.`}
                 </p>
               </div>
 
@@ -799,11 +775,11 @@ export const DashboardOverview: React.FC = () => {
                       </strong>
                     </div>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
-                      <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Primary Channel</span>
+                      <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Top Method</span>
                       <strong style={{ fontSize: '1.15rem', color: '#0f172a' }}>{topPaymentMethodName}</strong>
                     </div>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
-                      <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Leading Tier</span>
+                      <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Top Plan</span>
                       <strong style={{ fontSize: '1.15rem', color: '#0284c7' }}>{topRevenuePlanName}</strong>
                     </div>
                   </div>
@@ -812,11 +788,8 @@ export const DashboardOverview: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                       <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-                        Collections by Payment Method
+                        By Payment Method
                       </h4>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                        Deposit channels breakdown
-                      </span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -878,7 +851,7 @@ export const DashboardOverview: React.FC = () => {
                                     marginTop: '2px',
                                   }}
                                 >
-                                  {pct}% of collections
+                                  {pct}%
                                 </span>
                               </div>
                             </div>
@@ -903,11 +876,8 @@ export const DashboardOverview: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                       <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-                        Revenue by Membership Tier
+                        By Plan
                       </h4>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                        Subscription tiers performance
-                      </span>
                     </div>
 
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
@@ -928,7 +898,7 @@ export const DashboardOverview: React.FC = () => {
                                 {planName}
                               </span>
                               <span style={{ fontSize: '0.725rem', color: '#64748b' }}>
-                                {data.count} subs
+                                {data.count} {data.count === 1 ? 'payment' : 'payments'}
                               </span>
                             </div>
                             <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
@@ -953,16 +923,16 @@ export const DashboardOverview: React.FC = () => {
                 <>
                   <div className="breakdown-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.75rem' }}>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
-                      <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Recorded Items</span>
-                      <strong style={{ fontSize: '1.15rem', color: '#0f172a' }}>{activeExpensesList.length} Entries</strong>
+                      <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Entries</span>
+                      <strong style={{ fontSize: '1.15rem', color: '#0f172a' }}>{activeExpensesList.length}</strong>
                     </div>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
                       <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>Top Category</span>
-                      <strong style={{ fontSize: '1.15rem', color: '#e11d48' }}>{topCategoryName}</strong>
+                      <strong style={{ fontSize: '1.15rem', color: '#ef4444' }}>{topCategoryName}</strong>
                     </div>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
-                      <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>MoM Variance</span>
-                      <strong style={{ fontSize: '1.15rem', color: expenseTrend?.positive ? '#059669' : '#e11d48' }}>
+                      <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>vs Last Month</span>
+                      <strong style={{ fontSize: '1.15rem', color: expenseTrend?.positive ? '#059669' : '#ef4444' }}>
                         {expenseTrend ? expenseTrend.value : '0%'}
                       </strong>
                     </div>
@@ -972,11 +942,8 @@ export const DashboardOverview: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                       <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-                        Outlays by Category
+                        By Category
                       </h4>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                        Share of total monthly overhead
-                      </span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1017,7 +984,7 @@ export const DashboardOverview: React.FC = () => {
                                 <div>
                                   <span style={{ fontWeight: 700, color: '#0f172a', fontSize: '0.925rem' }}>{cat}</span>
                                   <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginTop: '1px' }}>
-                                    {data.count} {data.count === 1 ? 'logged expense' : 'logged expenses'}
+                                    {data.count} {data.count === 1 ? 'expense' : 'expenses'}
                                   </span>
                                 </div>
                               </div>
@@ -1038,7 +1005,7 @@ export const DashboardOverview: React.FC = () => {
                                     marginTop: '2px',
                                   }}
                                 >
-                                  {pct}% of outlays
+                                  {pct}%
                                 </span>
                               </div>
                             </div>
@@ -1063,7 +1030,7 @@ export const DashboardOverview: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                       <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-                        Top Expense Line Items
+                        Biggest Expenses
                       </h4>
                       <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
                         Ranked by amount
@@ -1115,12 +1082,9 @@ export const DashboardOverview: React.FC = () => {
                             </div>
 
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontWeight: 700, color: '#e11d48', fontSize: '0.975rem' }}>
+                              <div style={{ fontWeight: 700, color: '#ef4444', fontSize: '0.975rem' }}>
                                 -{currency}{Number(e.amount).toLocaleString()}
                               </div>
-                              <span style={{ fontSize: '0.675rem', fontWeight: 600, color: '#64748b', backgroundColor: '#f1f5f9', padding: '0.15rem 0.45rem', borderRadius: '4px', display: 'inline-block', marginTop: '2px' }}>
-                                Recorded
-                              </span>
                             </div>
                           </div>
                         );
@@ -1149,9 +1113,6 @@ export const DashboardOverview: React.FC = () => {
                       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.03)',
                     }}
                   >
-                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.85rem' }}>
-                      Monthly Income Reconciliation (P&L)
-                    </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '0.75rem', borderBottom: '1px solid #f1f5f9' }}>
@@ -1159,7 +1120,7 @@ export const DashboardOverview: React.FC = () => {
                           <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <ArrowUpRight size={16} />
                           </div>
-                          <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>(+) Gross Operating Revenue</span>
+                          <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>Revenue</span>
                         </div>
                         <strong style={{ fontSize: '1.05rem', color: '#059669' }}>+{currency}{kpis.totalRevenue.toLocaleString()}</strong>
                       </div>
@@ -1169,15 +1130,14 @@ export const DashboardOverview: React.FC = () => {
                           <div style={{ width: '28px', height: '28px', borderRadius: '8px', backgroundColor: '#fff1f2', color: '#e11d48', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <ArrowDownRight size={16} />
                           </div>
-                          <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>(-) Operating Facility Overhead</span>
+                          <span style={{ fontSize: '0.9rem', color: '#334155', fontWeight: 500 }}>Expenses</span>
                         </div>
                         <strong style={{ fontSize: '1.05rem', color: '#ef4444' }}>-{currency}{kpis.totalExpenses.toLocaleString()}</strong>
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '0.25rem' }}>
                         <div>
-                          <span style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>(=) Net Operating Profit</span>
-                          <span style={{ display: 'block', fontSize: '0.75rem', color: '#64748b' }}>Post-expense net retained earnings</span>
+                          <span style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a' }}>Net profit</span>
                         </div>
                         <strong style={{ fontSize: '1.45rem', fontWeight: 800, color: kpis.netProfit >= 0 ? '#059669' : '#ef4444' }}>
                           {kpis.netProfit >= 0 ? '+' : '-'}{currency}{Math.abs(kpis.netProfit).toLocaleString()}
@@ -1190,14 +1150,11 @@ export const DashboardOverview: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                       <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-                        Multi-Month Profit Trajectory
+                        Profit, Last 6 Months
                       </h4>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                        Past 6 performance periods
-                      </span>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(95px, 1fr))', gap: '0.5rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: '0.5rem' }}>
                       {trends.slice(-6).map((t) => (
                         <div
                           key={t.monthKey}
@@ -1210,7 +1167,7 @@ export const DashboardOverview: React.FC = () => {
                           }}
                         >
                           <span style={{ fontSize: '0.75rem', fontWeight: 600, color: '#64748b', display: 'block' }}>{t.month}</span>
-                          <strong style={{ fontSize: '0.95rem', color: t.profit >= 0 ? '#059669' : '#e11d48', display: 'block', marginTop: '4px' }}>
+                          <strong style={{ fontSize: '0.95rem', color: t.profit > 0 ? '#059669' : t.profit < 0 ? '#ef4444' : '#94a3b8', display: 'block', marginTop: '4px' }}>
                             {formatCompactAmount(t.profit, currency)}
                           </strong>
                         </div>
@@ -1234,16 +1191,13 @@ export const DashboardOverview: React.FC = () => {
                       <Sparkles size={18} />
                     </div>
                     <div style={{ fontSize: '0.825rem', color: '#166534', lineHeight: 1.45 }}>
-                      <strong>AI Profit Maximizer:</strong> Your current operating margin is <strong>{kpis.profitMargin}%</strong>.{' '}
-                      {(() => {
-                        // Same estimate the AI Insights widget and Analytics page show.
-                        const savings = detectExpenseLeaks().potentialMonthlySavings;
-                        return savings > 0 ? (
-                          <>Following the cost-saving tips on the Analytics page could trim expenses by up to <strong>{currency}{savings.toLocaleString()}/mo</strong>.</>
-                        ) : (
-                          <>Record your expenses to get cost-saving tips.</>
-                        );
-                      })()}
+                      <strong>Tip:</strong> Your profit margin is <strong>{kpis.profitMargin}%</strong>.{' '}
+                      {/* Same estimate the AI Insights card and Analytics page show. */}
+                      {potentialSavings > 0 ? (
+                        <>Following the cost-saving tips on the Analytics page could trim expenses by up to <strong>{currency}{potentialSavings.toLocaleString()}/mo</strong>.</>
+                      ) : (
+                        <>Record your expenses to get cost-saving tips.</>
+                      )}
                     </div>
                   </div>
                 </>
@@ -1252,17 +1206,13 @@ export const DashboardOverview: React.FC = () => {
               {/* BREAKDOWN 4: ACTIVE MEMBERS */}
               {activeBreakdown === 'members' && (
                 <>
-                  <div className="breakdown-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: '0.65rem' }}>
-                    <div style={{ padding: '0.85rem', borderRadius: '12px', backgroundColor: '#ecfdf5', border: '1px solid #d1fae5' }}>
-                      <span style={{ fontSize: '0.7rem', color: '#065f46', fontWeight: 600, display: 'block' }}>Active Members</span>
-                      <strong style={{ fontSize: '1.25rem', color: '#059669' }}>{kpis.activeMembers}</strong>
-                    </div>
+                  <div className="breakdown-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.65rem' }}>
                     <div style={{ padding: '0.85rem', borderRadius: '12px', backgroundColor: '#fffbeb', border: '1px solid #fef3c7' }}>
                       <span style={{ fontSize: '0.7rem', color: '#92400e', fontWeight: 600, display: 'block' }}>Expiring (7d)</span>
                       <strong style={{ fontSize: '1.25rem', color: '#b45309' }}>{kpis.expiringMemberships}</strong>
                     </div>
                     <div style={{ padding: '0.85rem', borderRadius: '12px', backgroundColor: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, display: 'block' }}>Expired/Inactive</span>
+                      <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600, display: 'block' }}>Expired</span>
                       <strong style={{ fontSize: '1.25rem', color: '#475569' }}>{kpis.expiredMemberships}</strong>
                     </div>
                     <div style={{ padding: '0.85rem', borderRadius: '12px', backgroundColor: '#f5f3ff', border: '1px solid #ede9fe' }}>
@@ -1275,11 +1225,8 @@ export const DashboardOverview: React.FC = () => {
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                       <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-                        Membership Tier Distribution
+                        By Plan
                       </h4>
-                      <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                        Roster breakdown by package
-                      </span>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
@@ -1325,10 +1272,10 @@ export const DashboardOverview: React.FC = () => {
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.85rem' }}>
                         <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a' }}>
-                          Expiring Memberships • Outreach Needed
+                          Expiring Soon
                         </h4>
                         <span style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: 600 }}>
-                          {expiringMembers.length} requiring renewal
+                          {expiringMembers.length} to renew
                         </span>
                       </div>
 
@@ -1423,10 +1370,10 @@ export const DashboardOverview: React.FC = () => {
                 }}
               >
                 <span>
-                  {activeBreakdown === 'revenue' && 'Open Full Payments Ledger'}
-                  {activeBreakdown === 'expenses' && 'Open Full Expense Ledger & History'}
-                  {activeBreakdown === 'profit' && 'Open AI Profit Optimization'}
-                  {activeBreakdown === 'members' && 'Manage All Members'}
+                  {activeBreakdown === 'revenue' && 'View All Payments'}
+                  {activeBreakdown === 'expenses' && 'View All Expenses'}
+                  {activeBreakdown === 'profit' && 'Open Analytics'}
+                  {activeBreakdown === 'members' && 'View All Members'}
                 </span>
                 <ArrowRight size={13} />
               </Link>

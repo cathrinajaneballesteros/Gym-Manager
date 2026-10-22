@@ -26,15 +26,13 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
     };
   }, []);
 
-  const initials = DBService.getInitials(profile?.full_name);
+  const initials = DBService.getInitials(DBService.displayName(profile));
 
   return (
     <header
+      className="app-header"
       style={{
         height: '56px',
-        backgroundColor: 'rgba(255, 255, 255, 0.82)',
-        backdropFilter: 'blur(25px)',
-        WebkitBackdropFilter: 'blur(25px)',
         borderBottom: '0.5px solid rgba(0, 0, 0, 0.1)',
         display: 'flex',
         alignItems: 'center',

@@ -29,15 +29,17 @@ export const Modal: React.FC<ModalProps> = ({
   }, []);
 
   useEffect(() => {
+    // A closed modal leaves the page alone; otherwise every re-render would undo another
+    // overlay's scroll lock (e.g. the dashboard drawer underneath).
+    if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      window.addEventListener('keydown', handleKeyDown);
-    }
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = previousOverflow;
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [isOpen, onClose]);

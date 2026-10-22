@@ -31,7 +31,7 @@ export const InteractiveProductShowcase: React.FC = () => {
                 display: 'block',
               }}
             >
-              PROPRIETARY MACHINE INTELLIGENCE
+              BUILT-IN INSIGHTS
             </span>
             <h2
               style={{
@@ -43,7 +43,7 @@ export const InteractiveProductShowcase: React.FC = () => {
                 marginBottom: '1rem',
               }}
             >
-              Three pillars of financial control.
+              Know what&apos;s coming.
             </h2>
             <p
               style={{
@@ -54,13 +54,14 @@ export const InteractiveProductShowcase: React.FC = () => {
                 lineHeight: 1.55,
               }}
             >
-              Beyond basic spreadsheets and bookkeeping. SGFM continuously analyzes memberships, attendance telemetry, and recurring outlays.
+              More than a spreadsheet. Smart Gym looks at your payments, check-ins and expenses and tells you what needs attention.
             </p>
           </ScrollReveal>
 
           {/* Apple Segmented Interactive Navigation Pills */}
           <ScrollReveal delay={80} direction="up">
             <div
+              className="showcase-tabs"
               style={{
                 display: 'inline-flex',
                 backgroundColor: 'rgba(0, 0, 0, 0.05)',
@@ -73,13 +74,14 @@ export const InteractiveProductShowcase: React.FC = () => {
               }}
             >
               {([
-                { id: 'forecast', label: '01 Predictive Cashflow' },
-                { id: 'churn', label: '02 Churn Radar' },
-                { id: 'leaks', label: '03 Expense Sentinel' },
+                { id: 'forecast', label: 'Forecast' },
+                { id: 'churn', label: 'At-risk members' },
+                { id: 'leaks', label: 'Expense alerts' },
               ] as const).map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
+                  className="showcase-tab"
                   style={{
                     padding: '0.55rem 1.35rem',
                     borderRadius: '9999px',
@@ -123,23 +125,23 @@ export const InteractiveProductShowcase: React.FC = () => {
               >
                 <div>
                   <div style={{ display: 'inline-flex', padding: '0.35rem 0.75rem', backgroundColor: '#ecfdf5', borderRadius: '8px', color: '#065f46', fontSize: '0.785rem', fontWeight: 600, marginBottom: '1rem' }}>
-                    Linear Regression with Seasonal Modifiers
+                    Based on your past months
                   </div>
                   <h3 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#1d1d1f', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: '1rem' }}>
                     Forecast the next three months of revenue.
                   </h3>
                   <p style={{ color: '#424245', fontSize: '1rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                    Never get surprised by seasonal gym dips. SGFM aggregates active plan expiries, new sign-up velocity, and historical retention curves to simulate your next 90 days of cash intake.
+                    See slow months coming. Smart Gym uses your past payments, renewals and new sign-ups to estimate how much money comes in over the next three months.
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.875rem', color: '#1d1d1f' }}>
                       <CheckCircle size={16} color="#059669" />
-                      <span>Accounting for January fitness surge & summer dips</span>
+                      <span>Picks up busy and slow seasons</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.875rem', color: '#1d1d1f' }}>
                       <CheckCircle size={16} color="#059669" />
-                      <span>Automatic upper/lower confidence bound visualization</span>
+                      <span>Explains what each forecast is based on</span>
                     </div>
                   </div>
                 </div>
@@ -171,15 +173,16 @@ export const InteractiveProductShowcase: React.FC = () => {
                       { month: 'Apr', height: 85, color: '#059669' },
                       { month: 'May*', height: 98, color: '#10b981' },
                     ].map((bar) => (
-                      <div key={bar.month} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ width: '100%', height: `${bar.height}%`, backgroundColor: bar.color, borderRadius: '6px' }} />
+                      // Full height so each bar's percentage resolves against the 110px row (otherwise it renders 0px tall).
+                      <div key={bar.month} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: '100%', height: `${bar.height}%`, flex: 'none', backgroundColor: bar.color, borderRadius: '6px' }} />
                         <span style={{ fontSize: '0.725rem', color: '#64748b' }}>{bar.month}</span>
                       </div>
                     ))}
                   </div>
 
                   <div style={{ fontSize: '0.725rem', color: '#86868b', marginTop: '0.75rem', textAlign: 'center' }}>
-                    *May is projected using 120-day historical linear regression
+                    *May is a forecast based on the months before it
                   </div>
                 </div>
               </div>
@@ -197,23 +200,23 @@ export const InteractiveProductShowcase: React.FC = () => {
               >
                 <div>
                   <div style={{ display: 'inline-flex', padding: '0.35rem 0.75rem', backgroundColor: '#fef2f2', borderRadius: '8px', color: '#991b1b', fontSize: '0.785rem', fontWeight: 600, marginBottom: '1rem' }}>
-                    Attendance Telemetry & Expiry Modeling
+                    Check-ins & expiry dates
                   </div>
                   <h3 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#1d1d1f', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: '1rem' }}>
-                    Stop member drop-offs 14 days before they quit.
+                    Reach members before they quit.
                   </h3>
                   <p style={{ color: '#424245', fontSize: '1rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                    Members don&apos;t cancel on a whim—their check-in frequency decays first. SGFM flags unvisited passes and imminent contract expiries so your front desk can intervene immediately.
+                    Members usually stop showing up before they stop paying. Smart Gym flags people who haven&apos;t checked in lately or whose plan is about to end, so your staff can reach out in time.
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.875rem', color: '#1d1d1f' }}>
                       <CheckCircle size={16} color="#059669" />
-                      <span>One-click SMS/WhatsApp outreach triggers</span>
+                      <span>AI-written reminder message, ready to send</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.875rem', color: '#1d1d1f' }}>
                       <CheckCircle size={16} color="#059669" />
-                      <span>Individual risk score (High / Medium / Low)</span>
+                      <span>High or medium risk for each member</span>
                     </div>
                   </div>
                 </div>
@@ -285,23 +288,23 @@ export const InteractiveProductShowcase: React.FC = () => {
               >
                 <div>
                   <div style={{ display: 'inline-flex', padding: '0.35rem 0.75rem', backgroundColor: '#fffbeb', borderRadius: '8px', color: '#92400e', fontSize: '0.785rem', fontWeight: 600, marginBottom: '1rem' }}>
-                    Category Standard Deviation Sentinel
+                    Compared with your usual months
                   </div>
                   <h3 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#1d1d1f', letterSpacing: '-0.02em', lineHeight: 1.2, marginBottom: '1rem' }}>
-                    Catch utility surges and duplicate vendor outlays.
+                    Spot spending that&apos;s higher than usual.
                   </h3>
                   <p style={{ color: '#424245', fontSize: '1rem', lineHeight: 1.6, marginBottom: '1.5rem' }}>
-                    HVAC repairs, equipment maintenance, and power bills fluctuate wildly. SGFM calculates dynamic statistical baselines and warns you when a category spikes by more than 20%.
+                    Power bills, repairs and supplies go up and down. Smart Gym compares each category with your usual months and warns you when one is more than 20% higher.
                   </p>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.875rem', color: '#1d1d1f' }}>
                       <CheckCircle size={16} color="#059669" />
-                      <span>Historical moving-average baseline comparisons</span>
+                      <span>Compared with your own past spending</span>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', fontSize: '0.875rem', color: '#1d1d1f' }}>
                       <CheckCircle size={16} color="#059669" />
-                      <span>Categorical breakdown by equipment, staff, rent, and power</span>
+                      <span>Broken down by expense category</span>
                     </div>
                   </div>
                 </div>
@@ -319,7 +322,7 @@ export const InteractiveProductShowcase: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
                     <AlertTriangle size={16} color="#f59e0b" />
                     <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1d1d1f' }}>
-                      Unusual Spending Anomaly
+                      Higher than usual
                     </span>
                   </div>
 
@@ -329,12 +332,12 @@ export const InteractiveProductShowcase: React.FC = () => {
                       <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#b45309' }}>₱38,400</span>
                     </div>
                     <div style={{ fontSize: '0.725rem', color: '#b45309' }}>
-                      Baseline: ₱24,000 (+60.0% variance detected)
+                      Usual: ₱24,000 (60% higher)
                     </div>
                   </div>
 
                   <div style={{ fontSize: '0.75rem', color: '#64748b', lineHeight: 1.5 }}>
-                    Recommendation: Verify sub-meter on shower water heaters or AC unit timer in main workout floor.
+                    Tip: check the aircon timers and the shower water heaters.
                   </div>
                 </div>
               </div>
@@ -356,6 +359,15 @@ export const InteractiveProductShowcase: React.FC = () => {
           }
           .showcase-graphic {
             padding: 1.1rem !important;
+          }
+          .showcase-tabs {
+            display: flex !important;
+            width: 100%;
+          }
+          .showcase-tab {
+            flex: 1;
+            padding: 0.55rem 0.5rem !important;
+            font-size: 0.78rem !important;
           }
         }
       `}</style>

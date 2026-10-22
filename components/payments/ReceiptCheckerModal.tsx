@@ -16,6 +16,7 @@ import { printReceipt } from '@/lib/export/receipt-print';
 import { Payment } from '@/types/database';
 import { showToast, showError } from '@/lib/ui/swal';
 import { getPaymentMemberName } from '@/lib/ui/format';
+import { formatDisplayDate } from '@/lib/ui/date';
 
 interface ReceiptCheckerModalProps {
   isOpen: boolean;
@@ -53,7 +54,9 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   const currency = profile.currency || '₱';
   const member = payment.member || (payment.member_id ? DBService.getMemberById(payment.member_id) : undefined);
   const memberName = getPaymentMemberName({ ...payment, member });
-  const planName = payment.plan?.name || 'Membership Plan';
+  const planName = payment.is_walk_in ? 'Walk-in (day pass)' : payment.plan?.name || 'Membership Plan';
+  // Same short number as the printed receipt.
+  const receiptNo = payment.id.replace(/-/g, '').slice(0, 8).toUpperCase();
 
   // Automated Fraud / Sanity Verification Checks
   // GCash reference numbers are 13 digits; spaces are ignored so "1012 345 678901" matches "1012345678901".
@@ -65,6 +68,9 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
     : [];
   const isDuplicateRef = duplicatePayments.length > 0;
   const isFormatValid = /^\d{13}$/.test(ref);
+  // Cash payments have no GCash reference, so a blank one is fine.
+  const refNotNeeded = !ref && payment.payment_method === 'Cash';
+  const isRefOk = isFormatValid || refNotNeeded;
   const isAmountMatching = payment.plan ? payment.amount === payment.plan.price : true;
 
   const handleVerify = async () => {
@@ -107,25 +113,39 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
   };
 
   const handlePrint = () => {
+    // The member's end date is only what this payment paid up to if it's their latest completed payment;
+    // an older receipt would show a later renewal's date, and a pending one the date before it's extended.
+    const latestCompleted = DBService.getPayments()
+      .filter((p) => p.member_id === payment.member_id && p.payment_status === 'completed' && !p.is_walk_in)
+      .sort(
+        (a, b) =>
+          (b.payment_date || '').localeCompare(a.payment_date || '') ||
+          (b.created_at || '').localeCompare(a.created_at || '')
+      )[0];
     const opened = printReceipt({
       payment: { ...payment, member },
       gym: DBService.getGym(),
       gymName: profile.gym_name || 'Gym',
       currency,
-      validUntil: member?.end_date,
+      validUntil: payment.payment_status === 'completed' && latestCompleted?.id === payment.id ? member?.end_date : undefined,
     });
     if (!opened) showError('Pop-up blocked', 'Allow pop-ups for this site to print the receipt.');
   };
 
+  // The clipboard only exists on https or localhost, e.g. not on a phone opening the app by its LAN address.
   const copyRefNumber = () => {
-    if (ref) {
-      navigator.clipboard.writeText(ref);
-      showToast('Reference number copied!');
+    if (!navigator.clipboard) {
+      showToast('Copying needs a secure (https) connection', 'error');
+      return;
     }
+    navigator.clipboard
+      .writeText(ref || receiptNo)
+      .then(() => showToast(ref ? 'Reference number copied!' : 'Receipt number copied!'))
+      .catch(() => showToast('Could not copy', 'error'));
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Manual Receipt Checker" maxWidth="620px">
+    <Modal isOpen={isOpen} onClose={onClose} title="Check GCash Receipt" maxWidth="620px">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {/* Top Header Card with Status Badge */}
         <div
@@ -155,7 +175,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
               <span style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#64748b' }}>
-                Receipt Verification Status
+                Receipt Status
               </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -169,7 +189,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
                 </span>
               ) : (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#b45309', fontWeight: 700, fontSize: '1rem' }}>
-                  <Clock size={18} /> Pending Manual Review
+                  <Clock size={18} /> Needs Checking
                 </span>
               )}
             </div>
@@ -212,7 +232,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
         {/* Automated Inspection Warnings */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>
-            Automated Checker Checklist
+            Quick Checks
           </div>
 
           {/* Three across in the modal on wider screens, stacked on phones. */}
@@ -223,17 +243,17 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
                 padding: '0.65rem',
                 borderRadius: '8px',
                 border: '1px solid',
-                borderColor: isFormatValid ? '#bbf7d0' : '#fed7aa',
-                backgroundColor: isFormatValid ? '#f0fdf4' : '#fff7ed',
+                borderColor: isRefOk ? '#bbf7d0' : '#fed7aa',
+                backgroundColor: isRefOk ? '#f0fdf4' : '#fff7ed',
                 fontSize: '0.75rem',
               }}
             >
-              <div style={{ fontWeight: 600, color: isFormatValid ? '#166534' : '#c2410c', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                {isFormatValid ? <CheckCircle size={13} /> : <AlertTriangle size={13} />}
+              <div style={{ fontWeight: 600, color: isRefOk ? '#166534' : '#c2410c', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                {isRefOk ? <CheckCircle size={13} /> : <AlertTriangle size={13} />}
                 <span>Ref Format</span>
               </div>
               <div style={{ color: '#64748b', marginTop: '0.2rem' }}>
-                {isFormatValid ? '13-digit GCash ref' : ref ? 'Not 13 digits; double-check it' : 'No reference entered'}
+                {isFormatValid ? '13-digit GCash ref' : refNotNeeded ? 'Not needed for cash' : ref ? 'Not 13 digits; double-check it' : 'No reference entered'}
               </div>
             </div>
 
@@ -273,7 +293,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
                 <span>Amount Match</span>
               </div>
               <div style={{ color: '#64748b', marginTop: '0.2rem' }}>
-                {isAmountMatching ? 'Matches plan price' : 'Mismatch with plan'}
+                {payment.is_walk_in ? 'Walk-in, no plan to check' : isAmountMatching ? 'Matches plan price' : 'Mismatch with plan'}
               </div>
             </div>
           </div>
@@ -293,7 +313,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <Receipt size={18} color="#0071e3" />
               <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#0f172a' }}>
-                Proof of Payment Slip
+                Payment Details
               </span>
             </div>
             <button
@@ -311,7 +331,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
               }}
             >
               <Copy size={13} />
-              <span>Copy Ref #{ref || payment.id}</span>
+              <span>{ref ? `Copy Ref #${ref}` : `Copy Receipt #${receiptNo}`}</span>
             </button>
           </div>
 
@@ -332,7 +352,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
               <tr>
                 <td style={{ padding: '0.4rem 0', color: '#64748b' }}>Payment Date:</td>
                 <td style={{ padding: '0.4rem 0', fontWeight: 600, color: '#0f172a', textAlign: 'right' }}>
-                  {payment.payment_date}
+                  {formatDisplayDate(payment.payment_date)}
                 </td>
               </tr>
               <tr>
@@ -397,7 +417,7 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
         ) : (
           <div>
             <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 500, color: '#475569', marginBottom: '0.35rem' }}>
-              Admin Verification Note (Optional)
+              Note (optional)
             </label>
             <input
               type="text"
@@ -434,7 +454,8 @@ export const ReceiptCheckerModal: React.FC<ReceiptCheckerModalProps> = ({
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
-            {!isRejecting && payment.receipt_status !== 'rejected' && (
+            {/* A completed payment already extended the membership, so it can't be sent back to pending. */}
+            {!isRejecting && payment.receipt_status !== 'rejected' && payment.payment_status !== 'completed' && (
               <button
                 type="button"
                 onClick={() => setIsRejecting(true)}

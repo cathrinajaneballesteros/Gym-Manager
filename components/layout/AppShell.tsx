@@ -84,7 +84,24 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             <button className="btn btn-primary" onClick={() => window.location.reload()}>Try again</button>
           </div>
         ) : (
-          <p style={{ fontSize: '0.9rem', color: '#6e6e73' }}>Loading your gym…</p>
+          <div className="gym-loader" role="status" aria-live="polite">
+            <div className="gym-loader-badge">
+              <svg className="gym-loader-dumbbell" viewBox="0 0 64 24" width="44" height="17" aria-hidden="true">
+                <rect x="17" y="10" width="30" height="4" rx="2" fill="#ffffff" />
+                <rect x="11" y="3" width="6" height="18" rx="2" fill="#ffffff" />
+                <rect x="4" y="6" width="5" height="12" rx="2" fill="#ffffff" />
+                <rect x="47" y="3" width="6" height="18" rx="2" fill="#ffffff" />
+                <rect x="55" y="6" width="5" height="12" rx="2" fill="#ffffff" />
+              </svg>
+              <span className="gym-loader-shadow" aria-hidden="true" />
+            </div>
+            <p style={{ fontSize: '0.9rem', color: '#6e6e73' }}>
+              Loading your gym
+              <span className="gym-loader-dot" aria-hidden="true">.</span>
+              <span className="gym-loader-dot" aria-hidden="true">.</span>
+              <span className="gym-loader-dot" aria-hidden="true">.</span>
+            </p>
+          </div>
         )}
       </div>
     );
@@ -165,7 +182,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
                 href={item.href}
                 className={`ios-tab-item ${isActive ? 'active' : ''}`}
               >
-                <Icon size={19} color={isActive ? '#34c759' : '#8e8e93'} strokeWidth={isActive ? 2.2 : 1.9} />
+                <Icon size={19} color={isActive ? '#059669' : '#8e8e93'} strokeWidth={isActive ? 2.2 : 1.9} />
                 <span>{item.name}</span>
               </Link>
             );
@@ -176,7 +193,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             className={`ios-tab-item ${moreActive ? 'active' : ''}`}
             aria-label="More pages"
           >
-            <Menu size={19} color={moreActive ? '#34c759' : '#8e8e93'} strokeWidth={moreActive ? 2.2 : 1.9} />
+            <Menu size={19} color={moreActive ? '#059669' : '#8e8e93'} strokeWidth={moreActive ? 2.2 : 1.9} />
             <span>More</span>
           </button>
         </nav>
@@ -204,9 +221,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             bottom: 0;
             left: 0;
             right: 0;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(25px);
-            -webkit-backdrop-filter: blur(25px);
+            /* Solid instead of frosted: a live blur on a fixed bar repaints on every scroll frame on phones. */
+            background: rgba(255, 255, 255, 0.97);
             border-top: 0.5px solid rgba(0, 0, 0, 0.12);
             z-index: 40;
             padding-bottom: env(safe-area-inset-bottom);
@@ -245,7 +261,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
             white-space: nowrap;
           }
           .ios-tab-item.active {
-            color: #34c759;
+            color: #059669;
             font-weight: 600;
           }
         }

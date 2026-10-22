@@ -7,7 +7,7 @@ import { DBService } from '@/lib/data/db-service';
 import { Member, Payment } from '@/types/database';
 import { getPaymentMemberName } from '@/lib/ui/format';
 import { buildReminderSms } from '@/lib/ui/reminder-text';
-import { getTodayKey } from '@/lib/ui/date';
+import { formatDisplayDate, getTodayKey } from '@/lib/ui/date';
 import { showAlert, showError } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
 
@@ -29,6 +29,18 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
   const [channel, setChannel] = useState<'both' | 'sms' | 'email'>('both');
   const [customNote, setCustomNote] = useState('');
   const [isSending, setIsSending] = useState(false);
+
+  // This modal stays mounted between uses, so start each opening fresh; otherwise one member's note
+  // would be pre-filled (and sent) for the next.
+  const openKey = isOpen ? `${member?.id ?? ''}:${payment?.id ?? ''}` : null;
+  const [lastOpenKey, setLastOpenKey] = useState(openKey);
+  if (openKey !== lastOpenKey) {
+    setLastOpenKey(openKey);
+    if (openKey) {
+      setChannel('both');
+      setCustomNote('');
+    }
+  }
 
   // Everything below comes from the member or payment; the server looks the contact details up again.
   const profile = DBService.getProfile();
@@ -150,7 +162,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
         action: 'member.reminder_sent',
         entity_type: 'member',
         entity_id: memberId,
-        entity_label: `${memberFullName} · ${channel.toUpperCase()}`,
+        entity_label: `${memberFullName} · ${channel === 'both' ? 'SMS & Email' : channel === 'sms' ? 'SMS' : 'Email'}`,
         metadata: {
           channel,
           email: email || 'N/A',
@@ -168,12 +180,12 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
         title: failureCount > 0 ? 'Reminder Partially Sent' : 'Payment Reminder Sent!',
         html: `
           <div style="text-align: left; font-size: 0.875rem; color: #334155; line-height: 1.5;">
-            <p style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">${failureCount > 0 ? 'Some channels failed:' : 'Reminder dispatched successfully:'}</p>
+            <p style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">${failureCount > 0 ? 'Some channels failed:' : 'Reminder sent:'}</p>
             <ul style="padding-left: 1.25rem; margin-bottom: 0.85rem;">
               ${results.map((r) => `<li style="margin-bottom: 0.25rem;">${escapeHtml(r)}</li>`).join('')}
             </ul>
             <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.75rem; font-size: 0.8rem; color: #64748b;">
-              Logged to the User Audit Trail for compliance records.
+              Saved in the Audit Log.
             </div>
           </div>
         `,
@@ -227,7 +239,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
               {currency}{Number(amount || 0).toLocaleString()}
             </div>
             <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-              Due on {dueDate}
+              Due on {formatDisplayDate(dueDate)}
             </div>
           </div>
         </div>
@@ -406,7 +418,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
               <>
                 <Send size={15} />
                 <span>
-                  Send via {channel === 'both' ? 'SMS & Email' : channel.toUpperCase()}
+                  Send via {channel === 'both' ? 'SMS & Email' : channel === 'sms' ? 'SMS' : 'Email'}
                 </span>
               </>
             )}

@@ -76,7 +76,7 @@ export default function ResetPasswordPage() {
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-white)' }}>Choose a New Password</h1>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-heading)' }}>Choose a New Password</h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
             You&apos;ll use it the next time you sign in.
           </p>

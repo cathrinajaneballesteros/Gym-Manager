@@ -33,8 +33,9 @@ export type GymMemberResult =
  * For API routes that spend money: the caller must be signed in and on a gym's team, and still
  * within `max` uses of `kind` per `window` (a Postgres interval like '1 hour').
  * Gym details come from the database, never from the request, so a caller can't send as another gym.
+ * Leave out `kind` to skip the usage limit here and call takeApiQuota after the route's own checks.
  */
-export async function requireGymMember(kind: string, max: number, window: string): Promise<GymMemberResult> {
+export async function requireGymMember(kind?: string, max = 0, window = ''): Promise<GymMemberResult> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -43,17 +44,36 @@ export async function requireGymMember(kind: string, max: number, window: string
     return { error: NextResponse.json({ error: 'Please sign in again.' }, { status: 401 }) };
   }
 
-  const { data: staff } = await supabase
+  const { data: staff, error: staffError } = await supabase
     .from('gym_staff')
     .select('role, gym:gyms(id, name, phone, address, email, currency)')
     .eq('user_id', user.id)
     .eq('status', 'active')
     .maybeSingle();
+  if (staffError) {
+    console.error('Gym lookup failed:', staffError);
+    return { error: NextResponse.json({ error: 'Could not load your gym. Please try again.' }, { status: 500 }) };
+  }
   const gym = (staff?.gym ?? null) as RouteGym | null;
   if (!staff || !gym) {
     return { error: NextResponse.json({ error: 'Finish setting up your gym first.' }, { status: 403 }) };
   }
 
+  if (kind) {
+    const limited = await takeApiQuota(supabase, kind, max, window);
+    if (limited) return { error: limited };
+  }
+
+  return { error: null, supabase, userId: user.id, role: staff.role as 'owner' | 'staff', gym };
+}
+
+/** Uses up one of `max` uses of `kind` per `window`; returns an error response when none are left. */
+export async function takeApiQuota(
+  supabase: SupabaseServer,
+  kind: string,
+  max: number,
+  window: string
+): Promise<NextResponse | null> {
   const { data: allowed, error } = await supabase.rpc('take_api_quota', {
     p_kind: kind,
     p_max: max,
@@ -61,15 +81,12 @@ export async function requireGymMember(kind: string, max: number, window: string
   });
   if (error) {
     console.error('Rate limit check failed:', error);
-    return { error: NextResponse.json({ error: 'Could not check your usage. Please try again.' }, { status: 500 }) };
+    return NextResponse.json({ error: 'Could not check your usage. Please try again.' }, { status: 500 });
   }
   if (!allowed) {
-    return {
-      error: NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 }),
-    };
+    return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
   }
-
-  return { error: null, supabase, userId: user.id, role: staff.role as 'owner' | 'staff', gym };
+  return null;
 }
 
 /** Trims a value from a request body to a string of at most `max` characters. */

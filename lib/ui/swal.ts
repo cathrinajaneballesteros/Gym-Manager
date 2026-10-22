@@ -28,7 +28,7 @@ export const showAlert = (options: SweetAlertOptions) => {
 export const showSuccess = (title: string, text?: string) => {
   return AppSwal.fire({
     icon: 'success',
-    title,
+    titleText: title,
     text,
     confirmButtonText: 'Done',
     confirmButtonColor: '#059669',
@@ -38,7 +38,7 @@ export const showSuccess = (title: string, text?: string) => {
 export const showError = (title: string, text?: string) => {
   return AppSwal.fire({
     icon: 'error',
-    title,
+    titleText: title,
     text,
     confirmButtonText: 'OK',
     confirmButtonColor: '#ef4444',
@@ -48,7 +48,7 @@ export const showError = (title: string, text?: string) => {
 export const showInfo = (title: string, text?: string) => {
   return AppSwal.fire({
     icon: 'info',
-    title,
+    titleText: title,
     text,
     confirmButtonText: 'Understood',
     confirmButtonColor: '#059669',
@@ -58,7 +58,7 @@ export const showInfo = (title: string, text?: string) => {
 export const showWarning = (title: string, text?: string) => {
   return AppSwal.fire({
     icon: 'warning',
-    title,
+    titleText: title,
     text,
     confirmButtonText: 'OK',
     confirmButtonColor: '#d97706',
@@ -72,7 +72,7 @@ export const showConfirm = async (
   confirmButtonColor: string = '#ef4444'
 ): Promise<boolean> => {
   const result = await AppSwal.fire({
-    title,
+    titleText: title,
     text,
     icon: 'warning',
     showCancelButton: true,
@@ -90,7 +90,7 @@ export const showToast = (title: string, icon: SweetAlertIcon = 'success') => {
     toast: true,
     position: 'top-end',
     icon,
-    title,
+    titleText: title,
     showConfirmButton: false,
     timer: 3000,
     timerProgressBar: true,

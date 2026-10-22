@@ -88,7 +88,7 @@ export const AppleHero: React.FC = () => {
                 color: '#1d1d1f',
               }}
             >
-              FINANCIAL INTELLIGENCE FOR FITNESS CENTERS
+              MONEY & MEMBERS FOR GYMS
             </span>
           </div>
         </ScrollReveal>
@@ -97,7 +97,7 @@ export const AppleHero: React.FC = () => {
         <ScrollReveal delay={50} direction="up" distance={20}>
           <h1
             style={{
-              fontSize: 'clamp(2.75rem, 6.5vw, 4.75rem)',
+              fontSize: 'clamp(2.1rem, 6.5vw, 4.75rem)',
               fontWeight: 800,
               letterSpacing: '-0.04em',
               lineHeight: 1.08,
@@ -124,7 +124,7 @@ export const AppleHero: React.FC = () => {
               fontWeight: 400,
             }}
           >
-            The financial operating system engineered for athletic clubs and gym franchises. Real-time cashflow intelligence, predictive churn defense, and automated reconciliation in one calm, unified interface.
+            Track members, cash and GCash payments, expenses and check-ins in one place, and see which members need a reminder before they stop coming.
           </p>
         </ScrollReveal>
 
@@ -157,7 +157,7 @@ export const AppleHero: React.FC = () => {
           </div>
 
           <div style={{ fontSize: '0.8rem', color: '#86868b', marginBottom: '4rem' }}>
-            Production Ready • Encrypted & Synchronized with Supabase
+            Works on phone and desktop • Your data synced in the cloud
           </div>
         </ScrollReveal>
 
@@ -216,12 +216,12 @@ export const AppleHero: React.FC = () => {
                 </div>
 
                 <div className="hero-window-title" style={{ fontSize: '0.75rem', color: '#86868b', fontWeight: 500, letterSpacing: '0.01em' }}>
-                  Smart Gym Finance Manager • Live Executive View
+                  Smart Gym • Dashboard
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#34c759' }} />
-                  <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 600 }}>Sync Active</span>
+                  <span style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 600 }}>Synced</span>
                 </div>
               </div>
 
@@ -241,7 +241,7 @@ export const AppleHero: React.FC = () => {
                     { label: 'Total Revenue', value: '₱245,820', change: '+12.5%', icon: PhilippinePeso, color: '#059669' },
                     { label: 'Active Members', value: '328', change: '+18 this mo', icon: Users, color: '#0071e3' },
                     { label: 'Net Profit Margin', value: '61.6%', change: '+3.4%', icon: TrendingUp, color: '#5856d6' },
-                    { label: 'Churn Risk Radar', value: '2.4%', change: 'Lowest ever', icon: ShieldCheck, color: '#34c759' },
+                    { label: 'At-risk members', value: '2.4%', change: 'Lowest yet', icon: ShieldCheck, color: '#34c759' },
                   ].map((stat) => {
                     const Icon = stat.icon;
                     return (
@@ -293,10 +293,10 @@ export const AppleHero: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
                       <div>
                         <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1d1d1f' }}>
-                          Cashflow Trajectory & AI Projections
+                          Revenue & Forecast
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#86868b' }}>
-                          Historical performance blended with predictive linear models
+                          Past months plus next month&apos;s forecast
                         </div>
                       </div>
 
@@ -363,8 +363,8 @@ export const AppleHero: React.FC = () => {
                         <path
                           d={
                             activeView === 'revenue'
-                              ? 'M0,110 C80,95 160,80 240,65 C320,50 400,35 480,25 C540,18 600,10'
-                              : 'M0,120 C80,110 160,115 240,95 C320,100 400,85 480,80 C540,75 600,70'
+                              ? 'M0,110 C80,95 160,80 240,65 C320,50 400,35 480,25 C540,18 600,10 600,10'
+                              : 'M0,120 C80,110 160,115 240,95 C320,100 400,85 480,80 C540,75 600,70 600,70'
                           }
                           fill="none"
                           stroke={activeView === 'revenue' ? '#059669' : '#0284c7'}
@@ -381,7 +381,7 @@ export const AppleHero: React.FC = () => {
                       <span>Feb</span>
                       <span>Mar</span>
                       <span>Apr (Current)</span>
-                      <span style={{ color: '#059669', fontWeight: 600 }}>May (AI Forecast)</span>
+                      <span style={{ color: '#059669', fontWeight: 600 }}>May (forecast)</span>
                     </div>
                   </div>
 
@@ -402,26 +402,26 @@ export const AppleHero: React.FC = () => {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', marginBottom: '0.75rem' }}>
                         <Sparkles size={15} color="#059669" />
                         <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#1d1d1f' }}>
-                          Neural Insights
+                          Insights
                         </span>
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                         <div style={{ padding: '0.65rem', backgroundColor: '#f0fdf4', borderRadius: '10px', border: '1px solid #dcfce7' }}>
                           <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#166534', marginBottom: '2px' }}>
-                            Renewal Acceleration
+                            Renewals due
                           </div>
                           <div style={{ fontSize: '0.725rem', color: '#15803d' }}>
-                            42 members due this week. Automated SMS reminder queued.
+                            42 members due this week. Send them a reminder.
                           </div>
                         </div>
 
                         <div style={{ padding: '0.65rem', backgroundColor: '#eff6ff', borderRadius: '10px', border: '1px solid #dbeafe' }}>
                           <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1e40af', marginBottom: '2px' }}>
-                            Utility Leak Detected
+                            Spending alert
                           </div>
                           <div style={{ fontSize: '0.725rem', color: '#1d4ed8' }}>
-                            Electricity surge 18% higher than historical baseline.
+                            Electricity is 28% higher than your usual months.
                           </div>
                         </div>
                       </div>
@@ -429,7 +429,7 @@ export const AppleHero: React.FC = () => {
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', fontSize: '0.75rem', color: '#636366', marginTop: '0.75rem' }}>
                       <CheckCircle2 size={13} color="#34c759" />
-                      <span>Ledger synchronized with Supabase</span>
+                      <span>All payments synced</span>
                     </div>
                   </div>
                 </div>
@@ -461,8 +461,8 @@ export const AppleHero: React.FC = () => {
                 <ShieldCheck size={16} color="#0071e3" />
               </div>
               <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1d1d1f' }}>Instant PDF / Excel</div>
-                <div style={{ fontSize: '0.685rem', color: '#86868b' }}>Board-ready financial audits</div>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#1d1d1f' }}>PDF & Excel</div>
+                <div style={{ fontSize: '0.685rem', color: '#86868b' }}>Monthly reports</div>
               </div>
             </div>
           </div>

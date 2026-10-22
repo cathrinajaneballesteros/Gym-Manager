@@ -166,15 +166,19 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
               {member.first_name} {member.last_name}
             </h1>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap', fontSize: '0.85rem', color: '#64748b' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Mail size={14} color="#94a3b8" />
-                {member.email}
-              </span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-                <Phone size={14} color="#94a3b8" />
-                {member.phone}
-              </span>
-              <span>•</span>
+              {member.email && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Mail size={14} color="#94a3b8" />
+                  {member.email}
+                </span>
+              )}
+              {member.phone && (
+                <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <Phone size={14} color="#94a3b8" />
+                  {member.phone}
+                </span>
+              )}
+              {(member.email || member.phone) && <span>•</span>}
               <span>Member since {formatDisplayDate(member.created_at)}</span>
             </div>
           </div>
@@ -228,8 +232,8 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
         </div>
       </div>
 
-      {/* 3. Navigation Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem' }}>
+      {/* 3. Navigation Tabs (scroll sideways on phones instead of widening the page) */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem', overflowX: 'auto', flexWrap: 'nowrap' }}>
         {([
           { key: 'overview', label: 'Overview' },
           { key: 'payments', label: 'Payment History' },
@@ -247,6 +251,8 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
               color: activeTab === tab.key ? '#059669' : '#64748b',
               borderBottom: activeTab === tab.key ? '2px solid #059669' : '2px solid transparent',
               transition: 'all 0.15s ease',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
             {tab.label}
@@ -441,7 +447,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
       {activeTab === 'payments' && (
         <div className="card">
           <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a', marginBottom: '1rem' }}>
-            Full Payment Ledger ({payments.length} records)
+            Payment History ({payments.length})
           </h2>
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
@@ -462,8 +468,12 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
                     <td style={{ padding: '0.75rem', color: '#64748b' }}>{p.payment_method}</td>
                     <td style={{ padding: '0.75rem', color: '#94a3b8', fontSize: '0.75rem' }}>{p.reference_number || '—'}</td>
                     <td style={{ padding: '0.75rem', textAlign: 'right' }}>
-                      <span className={`badge ${p.payment_status === 'completed' ? 'badge-completed' : 'badge-pending'}`}>
-                        {p.payment_status === 'completed' ? 'Paid' : p.payment_status}
+                      <span
+                        className={`badge ${
+                          p.payment_status === 'completed' ? 'badge-completed' : p.payment_status === 'refunded' ? 'badge-neutral' : 'badge-pending'
+                        }`}
+                      >
+                        {p.payment_status === 'completed' ? 'Paid' : p.payment_status === 'refunded' ? 'Refunded' : 'Pending'}
                       </span>
                     </td>
                   </tr>

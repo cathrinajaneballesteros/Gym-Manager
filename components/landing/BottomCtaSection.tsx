@@ -62,7 +62,7 @@ export const BottomCtaSection: React.FC = () => {
                   display: 'block',
                 }}
               >
-                ELEVATE YOUR CLUB’S FUTURE
+                READY WHEN YOU ARE
               </span>
 
               <h2
@@ -75,7 +75,7 @@ export const BottomCtaSection: React.FC = () => {
                   marginBottom: '1.25rem',
                 }}
               >
-                Experience financial clarity from day one.
+                Know where your gym&apos;s money goes.
               </h2>
 
               <p
@@ -86,7 +86,7 @@ export const BottomCtaSection: React.FC = () => {
                   marginBottom: '2.5rem',
                 }}
               >
-                Join forward-thinking gym operators who have automated payment matching, eliminated revenue blind spots, and protected member renewals.
+                Set up your gym, add your members and start recording payments today.
               </p>
 
               <div
@@ -126,11 +126,11 @@ export const BottomCtaSection: React.FC = () => {
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   <ShieldCheck size={15} color="#34d399" />
-                  <span>Bank-Grade 256-Bit SSL</span>
+                  <span>Secure sign-in</span>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
                   <Zap size={15} color="#34d399" />
-                  <span>Instant Deployment</span>
+                  <span>Set up in minutes</span>
                 </div>
               </div>
             </div>

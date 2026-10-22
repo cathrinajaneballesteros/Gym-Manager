@@ -51,6 +51,12 @@ export async function GET(request: Request) {
     if (existing.user) {
       return NextResponse.redirect(`${siteOrigin}${next}`);
     }
+    // Opened on another device or browser than the one that asked for the link. A signup link has already
+    // confirmed the email by now, so that just needs a normal sign-in; a reset link has to be opened where it was requested.
+    if (error?.code === 'pkce_code_verifier_not_found') {
+      const notice = next === '/reset-password' ? 'reset_other_device' : 'email_confirmed';
+      return NextResponse.redirect(`${siteOrigin}/login?mode=signin&notice=${notice}`);
+    }
     failure = error?.message || 'Sign-in could not be completed.';
     console.error('Auth callback failed:', failure);
   }
