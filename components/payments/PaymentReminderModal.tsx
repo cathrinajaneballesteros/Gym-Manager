@@ -418,7 +418,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
               <>
                 <Send size={15} />
                 <span>
-                  Send via {channel === 'both' ? 'SMS & Email' : channel.toUpperCase()}
+                  Send via {channel === 'both' ? 'SMS & Email' : channel === 'sms' ? 'SMS' : 'Email'}
                 </span>
               </>
             )}
