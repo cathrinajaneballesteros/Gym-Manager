@@ -70,7 +70,7 @@ export default function ForgotPasswordPage() {
             }}
           />
 
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-white)' }}>
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, color: 'var(--text-heading)' }}>
             Reset Password
           </h1>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.35rem' }}>
@@ -81,7 +81,7 @@ export default function ForgotPasswordPage() {
         {submitted ? (
           <div style={{ textAlign: 'center', padding: '1rem 0' }}>
             <CheckCircle2 size={42} color="var(--success)" style={{ margin: '0 auto 1rem' }} />
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-white)', marginBottom: '0.5rem' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-heading)', marginBottom: '0.5rem' }}>
               Check Your Email
             </h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', lineHeight: 1.5 }}>
