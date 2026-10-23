@@ -21,6 +21,7 @@ import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
 import { getTodayKey, toDateKey } from '@/lib/ui/date';
 import { canOpen } from '@/lib/ui/roles';
+import { signOut } from '@/lib/ui/sign-out';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -84,23 +85,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ onClose }) => {
   const initials = DBService.getInitials(adminName);
 
   const handleLogout = async () => {
-    DBService.recordAudit({
-      action: 'auth.logout',
-      entity_type: 'auth',
-      entity_label: profile?.email || 'Unknown user',
-    });
-    try {
-      await DBService.flushAudit();
-      const { createClient } = await import('@/lib/supabase/client');
-      const supabase = createClient();
-      await supabase.auth.signOut();
-    } catch {
-      // Ignore
-    }
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('sgfm_authenticated');
-    }
-    DBService.clear();
+    await signOut(profile?.email);
     router.push('/login');
   };
 
