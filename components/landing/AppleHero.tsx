@@ -9,7 +9,8 @@ import {
   ShieldCheck,
   Sparkles,
   CheckCircle2,
-  PhilippinePeso,
+  Receipt,
+  CreditCard,
 } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
@@ -247,11 +248,12 @@ export const AppleHero: React.FC = () => {
                   }}
                   className="hero-mockup-kpis"
                 >
+                  {/* The same four cards as the real dashboard, in the same order and colours. */}
                   {[
-                    { label: 'Total Revenue', value: '₱245,820', change: '+12.5%', icon: PhilippinePeso, color: '#059669' },
-                    { label: 'Active Members', value: '328', change: '+18 this mo', icon: Users, color: '#0071e3' },
-                    { label: 'Net Profit Margin', value: '61.6%', change: '+3.4%', icon: TrendingUp, color: '#5856d6' },
-                    { label: 'At-risk members', value: '2.4%', change: 'Lowest yet', icon: ShieldCheck, color: '#34c759' },
+                    { label: 'Total Revenue', value: '₱245,820', change: '↗ +12.5%', icon: TrendingUp, color: '#059669', valueColor: '#059669' },
+                    { label: 'Total Expenses', value: '₱94,400', change: '↘ -3.1%', icon: Receipt, color: '#ef4444', valueColor: '#ef4444' },
+                    { label: 'Net Profit', value: '+₱151,420', change: '↗ +18.2%', icon: CreditCard, color: '#059669', valueColor: '#059669' },
+                    { label: 'Active Members', value: '328', change: '↗ +18 this mo', icon: Users, color: '#5856d6', valueColor: '#1d1d1f' },
                   ].map((stat) => {
                     const Icon = stat.icon;
                     return (
@@ -272,7 +274,7 @@ export const AppleHero: React.FC = () => {
                             <Icon size={14} color={stat.color} />
                           </div>
                         </div>
-                        <div className="hero-kpi-value" style={{ fontSize: '1.45rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: '0.25rem' }}>
+                        <div className="hero-kpi-value" style={{ fontSize: '1.45rem', fontWeight: 700, color: stat.valueColor, letterSpacing: '-0.02em', lineHeight: 1.1, marginBottom: '0.25rem' }}>
                           {stat.value}
                         </div>
                         <span style={{ fontSize: '0.725rem', color: '#059669', fontWeight: 600 }}>{stat.change}</span>
