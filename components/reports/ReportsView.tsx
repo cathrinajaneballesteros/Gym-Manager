@@ -445,7 +445,7 @@ export const ReportsView: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(paymentsByPlan).map(([planName, data]) => (
+                      {Object.entries(paymentsByPlan).sort((a, b) => b[1].total - a[1].total).map(([planName, data]) => (
                         <tr key={planName}>
                           <td style={TD}><strong>{planName}</strong></td>
                           <td style={TD}>{data.count}</td>
