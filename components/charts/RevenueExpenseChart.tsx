@@ -65,6 +65,23 @@ const TrendTooltip: React.FC<{ point?: MonthlyTrendData; label?: string; currenc
   );
 };
 
+// Month label under the chart. This month's "(so far)" goes on a second, smaller line, so all six months fit on a phone.
+const MonthTick = ({ x = 0, y = 0, payload }: { x?: number; y?: number; payload?: { value?: string } }) => {
+  const [month, note] = String(payload?.value ?? '').split(' (');
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text dy={12} textAnchor="middle" fill="#94a3b8" fontSize={11}>
+        {month}
+      </text>
+      {note && (
+        <text dy={24} textAnchor="middle" fill="#94a3b8" fontSize={9}>
+          ({note}
+        </text>
+      )}
+    </g>
+  );
+};
+
 export const RevenueExpenseChart: React.FC<RevenueExpenseChartProps> = ({
   data,
   currency = '₱',
@@ -90,7 +107,8 @@ export const RevenueExpenseChart: React.FC<RevenueExpenseChartProps> = ({
       {/* Own height below the legend, so the month labels don't run into the card's edge. */}
       <div style={{ width: '100%', height: 240 }}>
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -10, bottom: 0 }}>
+          {/* Extra right margin so the last month's "(so far)" isn't cut off at the edge. */}
+          <AreaChart data={chartData} margin={{ top: 5, right: 22, left: -10, bottom: 0 }}>
             <defs>
               <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor={REVENUE_COLOR} stopOpacity={0.15} />
@@ -108,6 +126,9 @@ export const RevenueExpenseChart: React.FC<RevenueExpenseChartProps> = ({
               fontSize={11}
               tickLine={false}
               axisLine={{ stroke: '#f1f5f9' }}
+              interval={0}
+              height={36}
+              tick={<MonthTick />}
             />
             <YAxis
               stroke="#94a3b8"
