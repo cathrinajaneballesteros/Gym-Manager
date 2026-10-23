@@ -333,8 +333,16 @@ export const ExpenseList: React.FC = () => {
               </h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.85rem' }}>
                 {historicalSummary.monthlyTotals.map((m) => (
-                  <div
+                  // Opens that month's expenses in Records.
+                  <button
+                    type="button"
                     key={m.monthKey}
+                    title={`See ${m.month} expenses`}
+                    onClick={() => {
+                      setTimeframeFilter(m.monthKey);
+                      setCurrentPage(1);
+                      setActiveTab('records');
+                    }}
                     style={{
                       backgroundColor: m.monthKey === thisMonthKey ? '#eff6ff' : '#f8fafc',
                       border: '1px solid',
@@ -342,6 +350,8 @@ export const ExpenseList: React.FC = () => {
                       borderRadius: '10px',
                       padding: '1rem',
                       textAlign: 'center',
+                      cursor: 'pointer',
+                      font: 'inherit',
                     }}
                   >
                     <div style={{ fontSize: '0.785rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -353,7 +363,7 @@ export const ExpenseList: React.FC = () => {
                     {m.monthKey === thisMonthKey && (
                       <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>So far</div>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
