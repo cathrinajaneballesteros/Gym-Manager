@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Member, Payment } from '@/types/database';
 import { getPaymentMemberName } from '@/lib/ui/format';
-import { buildReminderSms } from '@/lib/ui/reminder-text';
+import { buildReminderSms, hasMembershipEnded } from '@/lib/ui/reminder-text';
 import { formatDisplayDate, getTodayKey } from '@/lib/ui/date';
 import { showAlert, showError } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
@@ -233,13 +233,13 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
 
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
-              Amount Due
+              {hasMembershipEnded(dueDate) ? 'Renewal Price' : 'Amount Due'}
             </div>
             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#d97706' }}>
               {currency}{Number(amount || 0).toLocaleString()}
             </div>
             <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-              Due on {formatDisplayDate(dueDate)}
+              {hasMembershipEnded(dueDate) ? 'Ended on' : 'Due on'} {formatDisplayDate(dueDate)}
             </div>
           </div>
         </div>

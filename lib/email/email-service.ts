@@ -5,6 +5,7 @@
 
 import { escapeHtml } from '@/lib/ui/escape';
 import { formatDisplayDate } from '@/lib/ui/date';
+import { hasMembershipEnded } from '@/lib/ui/reminder-text';
 
 export interface EmailPayload {
   to: string | string[];
@@ -147,6 +148,8 @@ export class EmailService {
   }) {
     const { to, memberName, gymName, amount, planName, customNote, gymPhone, gymAddress, gymEmail } = options;
     const dueDate = formatDisplayDate(options.dueDate);
+    // A lapsed member gets a come-back note instead of a payment reminder.
+    const ended = hasMembershipEnded(options.dueDate);
     // How to reach the gym, shown in the footer; empty details are left out.
     const contactLines = [gymAddress?.trim(), gymPhone?.trim() ? `Call ${gymPhone.trim()}` : '']
       .filter(Boolean)
@@ -157,18 +160,22 @@ export class EmailService {
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 560px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background-color: #ffffff; color: #1e293b;">
         <div style="text-align: center; margin-bottom: 24px;">
           <h2 style="margin: 0; color: #0f172a; font-size: 22px; font-weight: 700;">${escapeHtml(gymName)}</h2>
-          <p style="margin: 4px 0 0 0; color: #f59e0b; font-size: 13px; font-weight: 600;">Membership Renewal & Payment Reminder</p>
+          <p style="margin: 4px 0 0 0; color: #f59e0b; font-size: 13px; font-weight: 600;">${ended ? 'We Miss You!' : 'Membership Renewal & Payment Reminder'}</p>
         </div>
 
         <div style="background-color: #fefce8; border: 1px solid #fef08a; border-radius: 8px; padding: 18px; margin-bottom: 24px;">
-          <p style="margin: 0 0 4px 0; font-size: 13px; color: #854d0e; text-transform: uppercase; font-weight: 600;">Amount Due</p>
+          <p style="margin: 0 0 4px 0; font-size: 13px; color: #854d0e; text-transform: uppercase; font-weight: 600;">${ended ? 'Renewal Price' : 'Amount Due'}</p>
           <h1 style="margin: 0; font-size: 32px; font-weight: 800; color: #ca8a04;">${escapeHtml(amount)}</h1>
-          <p style="margin: 6px 0 0 0; font-size: 13px; color: #a16207;">Due Date: <strong>${escapeHtml(dueDate)}</strong></p>
+          <p style="margin: 6px 0 0 0; font-size: 13px; color: #a16207;">${ended ? 'Membership ended' : 'Due Date'}: <strong>${escapeHtml(dueDate)}</strong></p>
         </div>
 
         <div style="margin-bottom: 20px; font-size: 14px; line-height: 1.6; color: #334155;">
           <p>Hi <strong>${escapeHtml(memberName)}</strong>,</p>
-          <p>This is a friendly reminder that your gym subscription for <strong>${escapeHtml(planName)}</strong> is due for payment.</p>
+          <p>${
+            ended
+              ? `Your <strong>${escapeHtml(planName)}</strong> membership ended on ${escapeHtml(dueDate)}, and we'd love to have you back.`
+              : `This is a friendly reminder that your gym subscription for <strong>${escapeHtml(planName)}</strong> is due for payment.`
+          }</p>
           ${
             customNote
               ? `<div style="background-color: #f8fafc; border-left: 3px solid #0071e3; padding: 10px 14px; margin: 14px 0; font-style: italic; color: #334155;">
@@ -176,7 +183,11 @@ export class EmailService {
                 </div>`
               : ''
           }
-          <p>To avoid any disruption to your gym access and training routine, please settle your renewal at the front desk (Cash) or via GCash.</p>
+          <p>${
+            ended
+              ? 'Renew anytime at the front desk (Cash) or via GCash and pick up where you left off.'
+              : 'To avoid any disruption to your gym access and training routine, please settle your renewal at the front desk (Cash) or via GCash.'
+          }</p>
         </div>
 
         <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 14px;">
@@ -189,7 +200,7 @@ export class EmailService {
             <td style="padding: 10px 0; font-weight: 600; text-align: right; color: #0f172a;">${escapeHtml(memberName)}</td>
           </tr>
           <tr style="border-bottom: 1px solid #f1f5f9;">
-            <td style="padding: 10px 0; color: #64748b;">Renewal Due</td>
+            <td style="padding: 10px 0; color: #64748b;">${ended ? 'Ended On' : 'Renewal Due'}</td>
             <td style="padding: 10px 0; font-weight: 600; text-align: right; color: #d97706;">${escapeHtml(dueDate)}</td>
           </tr>
         </table>
@@ -203,7 +214,9 @@ export class EmailService {
 
     return this.sendEmail({
       to,
-      subject: `Payment Reminder: ${planName} due on ${dueDate} - ${gymName}`,
+      subject: ended
+        ? `We miss you at ${gymName}! Renew your ${planName}`
+        : `Payment Reminder: ${planName} due on ${dueDate} - ${gymName}`,
       html,
       fromName: gymName,
       replyTo: gymEmail?.trim() || undefined,
