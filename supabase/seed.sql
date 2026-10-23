@@ -82,19 +82,19 @@ BEGIN
     join_days INT, end_offset INT, away_days INT, visit_gap INT, unverified BOOLEAN
   ) ON COMMIT DROP;
   INSERT INTO seed_members VALUES
-    (1,  'Juan',      'Dela Cruz',  'Monthly Regular',          'Cash',  170,  20,    0,    2, false),
-    (2,  'Maria',     'Santos',     'Monthly Regular',          'GCash', 150,  9,     1,    3, false),
-    (3,  'Mark',      'Reyes',      'Monthly Regular',          'Cash',  120,  25,    0,    2, false),
-    (4,  'Angelica',  'Bautista',   'Monthly Regular',          'GCash', 90,   3,     2,    3, true),
+    (1,  'Juan',      'Dela Cruz',  'Monthly Regular',          'Cash',  210,  20,    0,    2, false),
+    (2,  'Maria',     'Santos',     'Monthly Regular',          'GCash', 210,  9,     1,    3, false),
+    (3,  'Mark',      'Reyes',      'Monthly Regular',          'Cash',  200,  25,    0,    2, false),
+    (4,  'Angelica',  'Bautista',   'Monthly Regular',          'GCash', 190,  3,     2,    3, true),
     (5,  'Paolo',     'Garcia',     'Monthly Regular',          'Cash',  60,   11,    1,    4, false),
     (6,  'Kristine',  'Mendoza',    'Monthly Regular',          'GCash', 25,   5,     3,    3, false),
-    (7,  'Ramon',     'Villanueva', 'Monthly Regular',          'Cash',  140,  -10,   22,   3, false),
-    (8,  'Bea',       'Navarro',    'Student Monthly Discount', 'GCash', 130,  4,     1,    2, true),
+    (7,  'Ramon',     'Villanueva', 'Monthly Regular',          'Cash',  200,  -10,   22,   3, false),
+    (8,  'Bea',       'Navarro',    'Student Monthly Discount', 'GCash', 200,  4,     1,    2, true),
     (9,  'Carlo',     'Aquino',     'Student Monthly Discount', 'Cash',  45,   2,     2,    3, false),
-    (10, 'Janine',    'Flores',     'Student Monthly Discount', 'GCash', 80,   -18,   30,   4, false),
-    (11, 'Miguel',    'Torres',     'Quarterly Pro',            'Cash',  160,  40,    1,    2, false),
-    (12, 'Patricia',  'Lim',        'Quarterly Pro',            'GCash', 70,   60,    2,    3, false),
-    (13, 'Joshua',    'Ramos',      'Quarterly Pro',            'Cash',  100,  30,    20,   4, false),
+    (10, 'Janine',    'Flores',     'Student Monthly Discount', 'GCash', 190,  -18,   30,   4, false),
+    (11, 'Miguel',    'Torres',     'Quarterly Pro',            'Cash',  200,  40,    1,    2, false),
+    (12, 'Patricia',  'Lim',        'Quarterly Pro',            'GCash', 200,  15,    2,    3, false),
+    (13, 'Joshua',    'Ramos',      'Quarterly Pro',            'Cash',  200,  30,    20,   4, false),
     (14, 'Andrea',    'Castillo',   'Quarterly Pro',            'GCash', 200,  70,    3,    4, false),
     (15, 'Daniel',    'Cruz',       'Annual VIP Access',        'Cash',  10,   355,   0,    2, false),
     (16, 'Liza',      'Manalo',     'Monthly Regular',          'Cash',  NULL, NULL,  NULL, 2, false);
@@ -212,18 +212,18 @@ BEGIN
     END IF;
   END LOOP;
 
-  -- Walk-ins: a few ₱100 day passes each month
+  -- Walk-ins: about two ₱100 day passes a week
   INSERT INTO public.payments (
     gym_id, admin_id, member_name, amount, payment_date, payment_method,
     payment_status, receipt_status, is_walk_in, created_at
   )
   SELECT
-    v_gym_id, v_admin_id, v_walk_in_names[((m * 4 + j) % 3) + 1], 100.00, w.d, 'Cash',
+    v_gym_id, v_admin_id, v_walk_in_names[((m * 8 + j) % 3) + 1], 100.00, w.d, 'Cash',
     'completed', 'verified', true, (w.d + time '17:00') AT TIME ZONE 'Asia/Manila'
   FROM generate_series(0, 5) AS m
-  CROSS JOIN generate_series(0, 3) AS j
+  CROSS JOIN generate_series(0, 7) AS j
   CROSS JOIN LATERAL (
-    SELECT ((v_month - make_interval(months => m))::date + 4 + j * 7) AS d
+    SELECT ((v_month - make_interval(months => m))::date + 2 + (j * 7) / 2) AS d
   ) w
   WHERE w.d <= v_today;
 
@@ -243,7 +243,7 @@ BEGIN
   FROM generate_series(0, 5) AS m
   CROSS JOIN (
     VALUES
-      ('Rent', 'Rent', 10000.00, 0, 'Cash', 'Monthly facility lease / rent (₱10,000 per month).'),
+      ('Rent', 'Rent', 8000.00, 0, 'Cash', 'Monthly facility lease / rent (₱8,000 per month).'),
       ('Utilities', 'Internet', 1399.00, 1, 'GCash', 'Monthly internet subscription (₱1,399 per month).'),
       ('Utilities', 'Electric', 1500.00, 2, 'Cash', 'Monthly electricity bill (about ₱1,500 per month).'),
       ('Supplies', 'Mineral water', 500.00, 3, 'Cash', 'Monthly mineral water refill and dispenser supply (₱500 monthly).'),
