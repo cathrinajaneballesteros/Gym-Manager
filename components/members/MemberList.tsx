@@ -322,6 +322,81 @@ export const MemberList: React.FC = () => {
       {/* 3. Table or Empty State Card */}
       <ScrollReveal delay={90}>
         <div className="card" style={{ padding: 0, overflow: 'visible' }}>
+        {/* Pagination, above the table so it stays put whatever the rows' height */}
+        {filteredMembers.length > 0 && (
+          <div
+            style={{
+              padding: '1rem 1.5rem',
+              borderBottom: '1px solid #f1f5f9',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.825rem',
+              color: '#64748b',
+              flexWrap: 'wrap',
+              gap: '1rem',
+            }}
+          >
+            <div>
+              Showing {Math.min((currentPage - 1) * pageSize + 1, filteredMembers.length)}-
+              {Math.min(currentPage * pageSize, filteredMembers.length)} of {filteredMembers.length}
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                style={{
+                  padding: '0.35rem 0.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  color: currentPage === 1 ? '#cbd5e1' : '#334155',
+                  backgroundColor: '#ffffff',
+                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ChevronLeft size={14} />
+              </button>
+
+              {getPageWindow(currentPage, totalPages).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: currentPage === page ? 700 : 500,
+                    color: currentPage === page ? '#ffffff' : '#334155',
+                    backgroundColor: currentPage === page ? '#0f172a' : '#ffffff',
+                    border: '1px solid',
+                    borderColor: currentPage === page ? '#0f172a' : '#e2e8f0',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {page}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                style={{
+                  padding: '0.35rem 0.5rem',
+                  borderRadius: '6px',
+                  border: '1px solid #e2e8f0',
+                  color: currentPage === totalPages ? '#cbd5e1' : '#334155',
+                  backgroundColor: '#ffffff',
+                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+
         {filteredMembers.length === 0 ? (
           /* Empty State matching reference bottom-right illustration */
           <div style={{ padding: '4.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -533,81 +608,6 @@ export const MemberList: React.FC = () => {
                 })}
               </tbody>
             </table>
-          </div>
-        )}
-
-        {/* 4. Pagination Footer */}
-        {filteredMembers.length > 0 && (
-          <div
-            style={{
-              padding: '1rem 1.5rem',
-              borderTop: '1px solid #f1f5f9',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '0.825rem',
-              color: '#64748b',
-              flexWrap: 'wrap',
-              gap: '1rem',
-            }}
-          >
-            <div>
-              Showing {Math.min((currentPage - 1) * pageSize + 1, filteredMembers.length)}-
-              {Math.min(currentPage * pageSize, filteredMembers.length)} of {filteredMembers.length}
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                style={{
-                  padding: '0.35rem 0.5rem',
-                  borderRadius: '6px',
-                  border: '1px solid #e2e8f0',
-                  color: currentPage === 1 ? '#cbd5e1' : '#334155',
-                  backgroundColor: '#ffffff',
-                  cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <ChevronLeft size={14} />
-              </button>
-
-              {getPageWindow(currentPage, totalPages).map((page) => (
-                <button
-                  key={page}
-                  onClick={() => setCurrentPage(page)}
-                  style={{
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    fontWeight: currentPage === page ? 700 : 500,
-                    color: currentPage === page ? '#ffffff' : '#334155',
-                    backgroundColor: currentPage === page ? '#0f172a' : '#ffffff',
-                    border: '1px solid',
-                    borderColor: currentPage === page ? '#0f172a' : '#e2e8f0',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {page}
-                </button>
-              ))}
-
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                style={{
-                  padding: '0.35rem 0.5rem',
-                  borderRadius: '6px',
-                  border: '1px solid #e2e8f0',
-                  color: currentPage === totalPages ? '#cbd5e1' : '#334155',
-                  backgroundColor: '#ffffff',
-                  cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <ChevronRight size={14} />
-              </button>
-            </div>
           </div>
         )}
       </div>

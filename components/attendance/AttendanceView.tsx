@@ -437,43 +437,11 @@ export const AttendanceView: React.FC = () => {
             </div>
           ) : (
             <>
-              <div style={{ overflowX: 'auto' }}>
-                <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-                  <thead>
-                    <tr style={headRowStyle}>
-                      <th style={{ ...thStyle, width: '18%' }}>Date</th>
-                      <th className="hide-on-phone" style={{ ...thStyle, width: '14%' }}>Time</th>
-                      <th style={thStyle}>Member</th>
-                      <th className="hide-on-phone" style={{ ...thStyle, width: '28%' }}>Plan</th>
-                      <th style={{ ...thStyle, width: '110px', textAlign: 'right' }}></th>
-                    </tr>
-                  </thead>
-                  {/* Keyed by page so the rows fade in when the page changes. */}
-                  <tbody key={currentPage} className="page-rows">
-                    {paginated.map((a) => {
-                      const m = memberMap.get(a.member_id);
-                      return (
-                        <tr key={a.id} style={{ borderBottom: '1px solid #f8fafc' }}>
-                          <td style={{ ...tdStyle, color: '#334155' }}>{formatDisplayDate(visitDay(a))}</td>
-                          <td className="hide-on-phone" style={{ ...tdStyle, color: '#64748b' }}>{formatTime(a.check_in_time)}</td>
-                          <td style={tdStyle}>
-                            {m ? <Link href={`/members/${m.id}`} style={linkStyle}>{memberName(m)}</Link> : memberName(m)}
-                            {/* The Plan column is hidden on phones. */}
-                            <span className="show-on-phone" style={{ fontSize: '0.785rem', color: '#64748b' }}>{m?.plan?.name ?? '—'}</span>
-                          </td>
-                          <td className="hide-on-phone" style={{ ...tdStyle, color: '#64748b' }}>{m?.plan?.name ?? '—'}</td>
-                          <td style={{ ...tdStyle, textAlign: 'right' }}>{undoButton(a)}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
+              {/* Pagination, above the table so it stays put whatever the rows' height */}
               <div
                 style={{
                   padding: '0.9rem 1.5rem',
-                  borderTop: '1px solid #f1f5f9',
+                  borderBottom: '1px solid #f1f5f9',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
@@ -539,6 +507,39 @@ export const AttendanceView: React.FC = () => {
                     </button>
                   </div>
                 )}
+              </div>
+
+              <div style={{ overflowX: 'auto' }}>
+                <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                  <thead>
+                    <tr style={headRowStyle}>
+                      <th style={{ ...thStyle, width: '18%' }}>Date</th>
+                      <th className="hide-on-phone" style={{ ...thStyle, width: '14%' }}>Time</th>
+                      <th style={thStyle}>Member</th>
+                      <th className="hide-on-phone" style={{ ...thStyle, width: '28%' }}>Plan</th>
+                      <th style={{ ...thStyle, width: '110px', textAlign: 'right' }}></th>
+                    </tr>
+                  </thead>
+                  {/* Keyed by page so the rows fade in when the page changes. */}
+                  <tbody key={currentPage} className="page-rows">
+                    {paginated.map((a) => {
+                      const m = memberMap.get(a.member_id);
+                      return (
+                        <tr key={a.id} style={{ borderBottom: '1px solid #f8fafc' }}>
+                          <td style={{ ...tdStyle, color: '#334155' }}>{formatDisplayDate(visitDay(a))}</td>
+                          <td className="hide-on-phone" style={{ ...tdStyle, color: '#64748b' }}>{formatTime(a.check_in_time)}</td>
+                          <td style={tdStyle}>
+                            {m ? <Link href={`/members/${m.id}`} style={linkStyle}>{memberName(m)}</Link> : memberName(m)}
+                            {/* The Plan column is hidden on phones. */}
+                            <span className="show-on-phone" style={{ fontSize: '0.785rem', color: '#64748b' }}>{m?.plan?.name ?? '—'}</span>
+                          </td>
+                          <td className="hide-on-phone" style={{ ...tdStyle, color: '#64748b' }}>{m?.plan?.name ?? '—'}</td>
+                          <td style={{ ...tdStyle, textAlign: 'right' }}>{undoButton(a)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </>
           )}
