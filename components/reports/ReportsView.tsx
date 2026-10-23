@@ -596,7 +596,7 @@ export const ReportsView: React.FC = () => {
             </div>
 
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase' }}>
                     <th style={{ padding: '0.9rem 1.5rem' }}>Category</th>
@@ -641,14 +641,15 @@ export const ReportsView: React.FC = () => {
               </p>
             </div>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
                     <th style={TH}>Month</th>
                     <th style={{ ...TH, textAlign: 'right' }}>Revenue</th>
                     <th style={{ ...TH, textAlign: 'right' }}>Expenses</th>
                     <th style={{ ...TH, textAlign: 'right' }}>Net Profit</th>
-                    <th style={{ ...TH, textAlign: 'right' }}>Margin</th>
+                    {/* Margin is Net Profit ÷ Revenue; dropped on phones so the five columns fit. */}
+                    <th className="hide-on-phone" style={{ ...TH, textAlign: 'right' }}>Margin</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -661,7 +662,7 @@ export const ReportsView: React.FC = () => {
                         <td style={{ ...TD, textAlign: 'right', fontWeight: 600, color: pt.profit >= 0 ? '#0f172a' : '#ef4444' }}>
                           {pt.profit >= 0 ? '+' : '-'}{currency}{Math.abs(pt.profit).toLocaleString()}
                         </td>
-                        <td style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{formatMargin(pt.profit, pt.revenue)}</td>
+                        <td className="hide-on-phone" style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{formatMargin(pt.profit, pt.revenue)}</td>
                       </tr>
                     );
                   })}
@@ -680,7 +681,7 @@ export const ReportsView: React.FC = () => {
                         <td style={{ ...TF, textAlign: 'right', color: totalProfit >= 0 ? '#0f172a' : '#ef4444' }}>
                           {formatSigned(totalProfit, currency)}
                         </td>
-                        <td style={{ ...TF, textAlign: 'right', color: '#64748b' }}>{formatMargin(totalProfit, totalRevenue)}</td>
+                        <td className="hide-on-phone" style={{ ...TF, textAlign: 'right', color: '#64748b' }}>{formatMargin(totalProfit, totalRevenue)}</td>
                       </tr>
                     );
                   })()}
@@ -726,7 +727,7 @@ export const ReportsView: React.FC = () => {
                 <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Month-by-Month ({now.getFullYear()})</h2>
               </div>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
                       <th style={TH}>Month</th>

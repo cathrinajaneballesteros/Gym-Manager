@@ -389,12 +389,13 @@ export const ExpenseList: React.FC = () => {
               </div>
 
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                {/* Phones show the latest two months and the average; the older months need a wider screen. */}
+                <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       <th style={{ padding: '0.9rem 1.5rem' }}>Category</th>
-                      {historicalSummary.monthlyTotals.map((m) => (
-                        <th key={m.monthKey} style={{ padding: '0.9rem 1.25rem', textAlign: 'right' }}>
+                      {historicalSummary.monthlyTotals.map((m, idx) => (
+                        <th key={m.monthKey} className={idx >= 2 ? 'hide-on-phone' : undefined} style={{ padding: '0.9rem 1.25rem', textAlign: 'right' }}>
                           {m.month}
                         </th>
                       ))}
@@ -423,7 +424,7 @@ export const ExpenseList: React.FC = () => {
                           </span>
                         </td>
                         {catData.recentMonths.map((rm, idx) => (
-                          <td key={idx} style={{ padding: '1rem 1.25rem', textAlign: 'right', color: rm.amount > 0 ? '#0f172a' : '#94a3b8' }}>
+                          <td key={idx} className={idx >= 2 ? 'hide-on-phone' : undefined} style={{ padding: '1rem 1.25rem', textAlign: 'right', color: rm.amount > 0 ? '#0f172a' : '#94a3b8' }}>
                             {rm.amount > 0 ? `${currency}${rm.amount.toLocaleString()}` : '—'}
                           </td>
                         ))}
