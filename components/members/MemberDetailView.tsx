@@ -178,7 +178,6 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
                   {member.phone}
                 </span>
               )}
-              {(member.email || member.phone) && <span>•</span>}
               <span>Member since {formatDisplayDate(member.created_at)}</span>
             </div>
           </div>
