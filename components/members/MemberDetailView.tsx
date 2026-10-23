@@ -232,14 +232,14 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
         </div>
       </div>
 
-      {/* 3. Navigation Tabs (scroll sideways on phones instead of widening the page) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem', overflowX: 'auto', flexWrap: 'nowrap' }}>
+      {/* 3. Navigation Tabs (shorter names on phones so all five fit without scrolling) */}
+      <div className="profile-tabs" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem', overflowX: 'auto', flexWrap: 'nowrap' }}>
         {([
-          { key: 'overview', label: 'Overview' },
-          { key: 'payments', label: 'Payment History' },
-          { key: 'attendance', label: 'Attendance' },
-          { key: 'history', label: 'Membership History' },
-          { key: 'notes', label: 'Notes' },
+          { key: 'overview', label: 'Overview', short: 'Overview' },
+          { key: 'payments', label: 'Payment History', short: 'Payments' },
+          { key: 'attendance', label: 'Attendance', short: 'Attendance' },
+          { key: 'history', label: 'Membership History', short: 'History' },
+          { key: 'notes', label: 'Notes', short: 'Notes' },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -255,7 +255,8 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
               flexShrink: 0,
             }}
           >
-            {tab.label}
+            <span className="tab-label-long">{tab.label}</span>
+            <span className="tab-label-short">{tab.short}</span>
           </button>
         ))}
       </div>
