@@ -935,9 +935,15 @@ export const DashboardOverview: React.FC = () => {
                     </div>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
                       <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>vs Last Month</span>
-                      <strong style={{ fontSize: '1.15rem', color: expenseTrend?.positive ? '#059669' : '#ef4444' }}>
-                        {expenseTrend ? expenseTrend.value : '0%'}
-                      </strong>
+                      {/* A change that rounds to 0% is no change: grey, like the card above. */}
+                      {(() => {
+                        const isFlat = !expenseTrend || /^[+-]?0%$/.test(expenseTrend.value);
+                        return (
+                          <strong style={{ fontSize: '1.15rem', color: isFlat ? '#64748b' : expenseTrend.positive ? '#059669' : '#ef4444' }}>
+                            {isFlat ? '0%' : expenseTrend.value}
+                          </strong>
+                        );
+                      })()}
                     </div>
                   </div>
 

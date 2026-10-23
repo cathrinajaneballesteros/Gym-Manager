@@ -11,6 +11,7 @@ import {
   Edit,
   ArrowDownRight,
   ArrowUpRight,
+  ArrowRight,
   History,
   Download,
 } from 'lucide-react';
@@ -208,11 +209,14 @@ export const ExpenseList: React.FC = () => {
               (() => {
                 const diff = thisMonthExpenses - lastMonthExpenses;
                 const isPos = diff >= 0;
+                const pct = Math.abs(Math.round((diff / lastMonthExpenses) * 100));
+                // A change that rounds to 0% is no change: grey, not red or green.
+                const isFlat = pct === 0;
                 return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: isPos ? '#ef4444' : '#059669', fontWeight: 600 }}>
-                    {isPos ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: isFlat ? '#64748b' : isPos ? '#ef4444' : '#059669', fontWeight: 600 }}>
+                    {isFlat ? <ArrowRight size={14} /> : isPos ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                     <span>
-                      {isPos ? '+' : '-'}{Math.abs(Math.round((diff / lastMonthExpenses) * 100))}% vs same point last month ({currency}{lastMonthExpenses.toLocaleString()})
+                      {isFlat ? '0%' : `${isPos ? '+' : '-'}${pct}%`} vs same point last month ({currency}{lastMonthExpenses.toLocaleString()})
                     </span>
                   </div>
                 );

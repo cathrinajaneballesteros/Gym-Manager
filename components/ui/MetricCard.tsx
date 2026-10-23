@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { LucideIcon, ArrowUpRight, ArrowDownRight, ChevronRight } from 'lucide-react';
+import { LucideIcon, ArrowUpRight, ArrowDownRight, ArrowRight, ChevronRight } from 'lucide-react';
 
 interface MetricCardProps {
   title: string;
@@ -31,6 +31,9 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   onClick,
   clickableHint,
 }) => {
+  // A change that rounds to 0% ("+0%", "-0%") is no change, not good or bad news.
+  const isFlat = Boolean(trend && /^[+-]?0%$/.test(String(trend.value)));
+
   const variantStyles = {
     emerald: {
       iconBg: 'rgba(5, 150, 105, 0.1)',
@@ -162,19 +165,21 @@ export const MetricCard: React.FC<MetricCardProps> = ({
           <span
             style={{
               fontWeight: 600,
-              // Good or bad news, not the sign: expenses going up is shown in red.
-              color: trend.positive ? '#059669' : '#ef4444',
+              // Good or bad news, not the sign: expenses going up is shown in red. No change is neither.
+              color: isFlat ? '#86868b' : trend.positive ? '#059669' : '#ef4444',
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.15rem',
             }}
           >
-            {(trend.direction ?? (trend.positive ? 'up' : 'down')) === 'up' ? (
+            {isFlat ? (
+              <ArrowRight size={13} />
+            ) : (trend.direction ?? (trend.positive ? 'up' : 'down')) === 'up' ? (
               <ArrowUpRight size={13} />
             ) : (
               <ArrowDownRight size={13} />
             )}
-            {trend.value}
+            {isFlat ? '0%' : trend.value}
           </span>
           <span style={{ color: '#86868b' }}>
             {trend.label || 'from last month'}
