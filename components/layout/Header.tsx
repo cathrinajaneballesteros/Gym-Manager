@@ -3,16 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Menu, Settings, LogOut } from 'lucide-react';
+import { Settings, LogOut } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
 import { signOut } from '@/lib/ui/sign-out';
 
-interface HeaderProps {
-  onToggleMobileMenu?: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
+export const Header: React.FC = () => {
   // AppShell only renders the header once the gym's data has loaded.
   const [profile, setProfile] = useState<UserProfile>(() => DBService.getProfile());
 
@@ -73,26 +69,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
         zIndex: 30,
       }}
     >
-      {/* Left: Mobile Toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-        <button
-          onClick={onToggleMobileMenu}
-          style={{
-            display: 'none',
-            width: '40px',
-            height: '40px',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#636366',
-            borderRadius: '8px',
-            backgroundColor: 'rgba(118, 118, 128, 0.08)',
-          }}
-          className="mobile-menu-btn"
-          aria-label="Toggle navigation"
-        >
-          <Menu size={17} />
-        </button>
-      </div>
+      {/* Left side kept empty so the avatar stays on the right. Phones open the menu from More in the tab bar. */}
+      <div />
 
       {/* Right: Profile Avatar with the account menu */}
       <div ref={menuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>

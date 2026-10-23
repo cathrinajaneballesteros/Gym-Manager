@@ -187,7 +187,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
 
       {/* Main Content Area */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, paddingBottom: 'calc(60px + env(safe-area-inset-bottom))' }} className="main-content-wrapper">
-        <Header onToggleMobileMenu={() => setMobileMenuOpen(!mobileMenuOpen)} />
+        <Header />
         <main style={{ flex: 1, padding: '2rem 2.25rem', overflowY: 'auto' }} className="main-content-inner">
           <div key={pathname} className="page-transition-content" style={{ maxWidth: '1320px', margin: '0 auto', width: '100%' }}>
             {children}
@@ -233,9 +233,6 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
         @media (max-width: 900px) {
           .desktop-sidebar {
             display: none !important;
-          }
-          .mobile-menu-btn {
-            display: flex !important;
           }
           .main-content-inner {
             padding: 1.25rem 1rem !important;
