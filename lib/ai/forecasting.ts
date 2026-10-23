@@ -157,7 +157,8 @@ export function calculateRevenueForecast(useDemoData: boolean = false): RevenueF
     currentMonthlyRevenue: currentRevenue,
     forecastedNextMonthRevenue: forecastedRevenue,
     projectedGrowthPercent: growthPercent,
-    confidenceScore: Math.min(95, 60 + n * 8),
+    // Grows with each full month of history, capped at 85%: a small gym's few months of data never justify more.
+    confidenceScore: Math.min(85, 50 + n * 5),
     expectedRenewals,
     predictedNewMembers,
     trendSeries: series,
