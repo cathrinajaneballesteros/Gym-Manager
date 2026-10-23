@@ -17,7 +17,6 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState('');
   const [gymName, setGymName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -628,35 +627,6 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
-
-          {/* Remember Me */}
-          {mode === 'signin' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
-              <input
-                type="checkbox"
-                id="rememberMe"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  accentColor: '#059669',
-                  cursor: 'pointer',
-                }}
-              />
-              <label
-                htmlFor="rememberMe"
-                style={{
-                  fontSize: '0.825rem',
-                  color: '#636366',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-              >
-                Remember this device
-              </label>
-            </div>
-          )}
 
           {/* Submit Button */}
           <button
