@@ -160,7 +160,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={initialMember ? 'Edit Gym Member' : 'Register New Member'}
-      subtitle={initialMember ? 'Update subscription details and emergency contacts' : 'Register member into active roster. Payments can be recorded manually in Payments.'}
+      subtitle={initialMember ? 'Update subscription details and emergency contacts' : 'Add a new member. They stay Pending until their first payment is recorded in Payments.'}
     >
       <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div className="grid grid-cols-2 gap-3">
@@ -363,7 +363,7 @@ export const MemberModal: React.FC<MemberModalProps> = ({
             Cancel
           </button>
           <button type="submit" className="btn btn-primary" disabled={isSubmitting || selectablePlans.length === 0}>
-            {isSubmitting ? 'Saving...' : initialMember ? 'Update Member' : 'Register & Activate'}
+            {isSubmitting ? 'Saving...' : initialMember ? 'Update Member' : 'Register Member'}
           </button>
         </div>
       </form>
