@@ -622,6 +622,7 @@ export const PaymentList: React.FC = () => {
                       <td style={{ padding: '1rem 1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
                           <div
+                            className="hide-on-phone"
                             style={{
                               width: '36px',
                               height: '36px',
@@ -715,7 +716,9 @@ export const PaymentList: React.FC = () => {
                       {/* Member Info */}
                       <td style={{ padding: '1rem 1.5rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                          {/* Hidden on phones to give the name and plan room. */}
                           <div
+                            className="hide-on-phone"
                             style={{
                               width: '36px',
                               height: '36px',

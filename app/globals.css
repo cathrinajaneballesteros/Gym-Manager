@@ -446,7 +446,8 @@ input[type='number'] {
   }
   /* Wide tables keep only their key columns on phones so nothing is cut off. */
   .hide-on-phone {
-    display: none;
+    /* !important: some hidden elements set their own display inline (e.g. flex). */
+    display: none !important;
   }
   .phone-tight-table th,
   .phone-tight-table td {

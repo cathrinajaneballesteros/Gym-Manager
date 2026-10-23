@@ -692,7 +692,7 @@ export const ExpenseList: React.FC = () => {
                     onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
                     onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                   >
-                    <td style={{ padding: '1rem 1.5rem', color: '#64748b' }}>
+                    <td className="phone-wrap" style={{ padding: '1rem 1.5rem', color: '#64748b', whiteSpace: 'nowrap' }}>
                       {formatDisplayDate(exp.expense_date)}
                     </td>
 
@@ -714,8 +714,9 @@ export const ExpenseList: React.FC = () => {
 
                     <td style={{ padding: '1rem 1.25rem' }}>
                       <div style={{ fontWeight: 600, color: '#0f172a' }}>{exp.title}</div>
+                      {/* Too long for a phone row; the title says enough there. */}
                       {exp.description && (
-                        <div style={{ fontSize: '0.785rem', color: '#64748b' }}>{exp.description}</div>
+                        <div className="hide-on-phone" style={{ fontSize: '0.785rem', color: '#64748b' }}>{exp.description}</div>
                       )}
                     </td>
 

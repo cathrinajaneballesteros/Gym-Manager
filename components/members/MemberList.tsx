@@ -485,7 +485,9 @@ export const MemberList: React.FC = () => {
                           href={`/members/${member.id}`}
                           style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', textDecoration: 'none' }}
                         >
+                          {/* Hidden on phones to give the name and plan room. */}
                           <div
+                            className="hide-on-phone"
                             style={{
                               width: '38px',
                               height: '38px',
