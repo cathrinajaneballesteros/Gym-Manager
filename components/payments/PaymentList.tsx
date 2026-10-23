@@ -524,7 +524,8 @@ export const PaymentList: React.FC = () => {
               </thead>
               <tbody>
                 {paginated.map((p) => {
-                  const memberName = getPaymentMemberName(p);
+                  // The Plan column already says "Walk-in", so the name doesn't repeat it here.
+                  const memberName = p.is_walk_in && p.member_name ? p.member_name : getPaymentMemberName(p);
                   const initials = p.member
                     ? `${p.member.first_name[0]}${p.member.last_name[0]}`
                     : (p.member_name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
