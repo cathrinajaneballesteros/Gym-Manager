@@ -217,13 +217,18 @@ export const AnalyticsView: React.FC = () => {
 
   const currency = profile?.currency || '₱';
 
-  // Chart data blending historical and projected
-  // The last real month also starts the forecast line, so the dashed line joins the solid one.
+  // Chart data blending historical and projected.
+  // The forecast is fitted on full months only, so this month (still in progress) is drawn on its own as
+  // "so far": a one-off like an annual plan paid this month would otherwise make the forecast look like a drop.
+  // The dashed line starts at the last full month, the one the forecast carries on from.
   const lastHistoricalIndex = (forecast.trendSeries || []).filter((pt) => !pt.isForecast).length - 1;
+  const hasForecastPoints = (forecast.trendSeries || []).some((pt) => pt.isForecast);
+  const forecastStartIndex = hasForecastPoints ? lastHistoricalIndex - 1 : lastHistoricalIndex;
   const chartData = (forecast.trendSeries || []).map((pt, i) => ({
     month: pt.period,
-    historical: pt.isForecast ? null : pt.projectedRevenue,
-    forecast: pt.isForecast || i === lastHistoricalIndex ? pt.projectedRevenue : null,
+    historical: pt.isForecast || (hasForecastPoints && i === lastHistoricalIndex) ? null : pt.projectedRevenue,
+    soFar: hasForecastPoints && i === lastHistoricalIndex ? pt.projectedRevenue : null,
+    forecast: pt.isForecast || i === forecastStartIndex ? pt.projectedRevenue : null,
   }));
 
   const handleViewForecastDetails = () => {
@@ -423,8 +428,9 @@ export const AnalyticsView: React.FC = () => {
             </div>
 
             {/* Column 2: Historical vs Forecast Line Chart */}
-            <div style={{ width: '100%', height: 240 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '1.25rem', marginBottom: '0.5rem', fontSize: '0.785rem' }}>
+            {/* Column layout: the legend may wrap to two lines on phones, and the chart takes whatever height is left. */}
+            <div style={{ width: '100%', height: 260, display: 'flex', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', flexWrap: 'wrap', gap: '0.4rem 1.25rem', marginBottom: '0.5rem', fontSize: '0.785rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <span style={{ width: '16px', height: '2.5px', backgroundColor: '#0284c7' }} />
                   <span style={{ color: '#475569', fontWeight: 500 }}>Actual</span>
@@ -433,13 +439,20 @@ export const AnalyticsView: React.FC = () => {
                   <span style={{ width: '16px', height: '2px', borderTop: '2px dashed #0284c7' }} />
                   <span style={{ color: '#475569', fontWeight: 500 }}>Forecast</span>
                 </div>
+                {hasForecastPoints && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <span style={{ width: '9px', height: '9px', borderRadius: '50%', border: '2px solid #94a3b8', backgroundColor: '#ffffff' }} />
+                    <span style={{ color: '#475569', fontWeight: 500 }}>This month so far</span>
+                  </div>
+                )}
               </div>
 
               {chartData.length === 0 ? (
-                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem', border: '1px dashed #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#94a3b8', fontSize: '0.85rem', border: '1px dashed #e2e8f0', borderRadius: '10px', padding: '1rem' }}>
                   Revenue trends appear after your first month of payments.
                 </div>
               ) : (
+              <div style={{ flex: 1, minHeight: 0 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 12, right: 12, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -447,13 +460,15 @@ export const AnalyticsView: React.FC = () => {
                   <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} domain={[0, (dataMax: number) => Math.max(dataMax, 1000)]} tickFormatter={(val) => formatCompactAmount(val, currency)} />
                   <Tooltip
                     contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.06)' }}
-                    formatter={(val) => [`${currency}${Number(val).toLocaleString()}`, '']}
+                    formatter={(val, name) => [`${currency}${Number(val).toLocaleString()}`, name === 'soFar' ? 'So far' : '']}
                   />
-                  {/* Forecast first so October's solid dot draws on top of where the dashed line starts */}
-                  <Line type="monotone" dataKey="forecast" stroke="#0284c7" strokeWidth={2.5} strokeDasharray="4 4" dot={{ r: 4, fill: '#ffffff', stroke: '#0284c7', strokeWidth: 2, strokeDasharray: '0' }} />
+                  {/* Forecast first so the last full month's solid dot draws on top of where the dashed line starts */}
+                  <Line type="monotone" dataKey="forecast" stroke="#0284c7" strokeWidth={2.5} strokeDasharray="4 4" connectNulls dot={{ r: 4, fill: '#ffffff', stroke: '#0284c7', strokeWidth: 2, strokeDasharray: '0' }} />
                   <Line type="monotone" dataKey="historical" stroke="#0284c7" strokeWidth={2.5} dot={{ r: 3, fill: '#0284c7' }} />
+                  <Line type="monotone" dataKey="soFar" stroke="transparent" isAnimationActive={false} dot={{ r: 4, fill: '#ffffff', stroke: '#94a3b8', strokeWidth: 2 }} />
                 </LineChart>
               </ResponsiveContainer>
+              </div>
               )}
             </div>
 
