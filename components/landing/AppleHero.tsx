@@ -13,14 +13,24 @@ import {
 } from 'lucide-react';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
 
+// The last 6 months ending with this one, like the dashboard's Revenue vs Expenses chart.
+const recentMonthLabels = (): string[] => {
+  const now = new Date();
+  return Array.from({ length: 6 }, (_, i) =>
+    new Date(now.getFullYear(), now.getMonth() - 5 + i, 1).toLocaleString('en-US', { month: 'short' })
+  );
+};
+
 export const AppleHero: React.FC = () => {
-  const [activeView, setActiveView] = useState<'revenue' | 'expenses'>('revenue');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [monthLabels, setMonthLabels] = useState(recentMonthLabels);
 
   React.useEffect(() => {
     if (typeof window !== 'undefined') {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- sessionStorage and the URL are only readable in the browser
       setIsLoggedIn(sessionStorage.getItem('sgfm_authenticated') === 'true');
+      // The page may have been built in an earlier month; use the visitor's own date.
+      setMonthLabels(recentMonthLabels());
     }
   }, []);
 
@@ -293,95 +303,71 @@ export const AppleHero: React.FC = () => {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
                       <div>
                         <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1d1d1f' }}>
-                          Revenue & Forecast
+                          Revenue vs Expenses
                         </div>
                         <div style={{ fontSize: '0.75rem', color: '#86868b' }}>
-                          Past months plus next month&apos;s forecast
+                          Money in and out over the last 6 months
                         </div>
                       </div>
 
-                      {/* Interactive Segmented Pill Switcher */}
-                      <div
-                        style={{
-                          display: 'inline-flex',
-                          backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                          padding: '2px',
-                          borderRadius: '8px',
-                        }}
-                      >
-                        <button
-                          onClick={() => setActiveView('revenue')}
-                          style={{
-                            padding: '0.25rem 0.65rem',
-                            borderRadius: '6px',
-                            fontSize: '0.725rem',
-                            fontWeight: activeView === 'revenue' ? 600 : 500,
-                            backgroundColor: activeView === 'revenue' ? '#ffffff' : 'transparent',
-                            color: activeView === 'revenue' ? '#1d1d1f' : '#86868b',
-                            boxShadow: activeView === 'revenue' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Revenue
-                        </button>
-                        <button
-                          onClick={() => setActiveView('expenses')}
-                          style={{
-                            padding: '0.25rem 0.65rem',
-                            borderRadius: '6px',
-                            fontSize: '0.725rem',
-                            fontWeight: activeView === 'expenses' ? 600 : 500,
-                            backgroundColor: activeView === 'expenses' ? '#ffffff' : 'transparent',
-                            color: activeView === 'expenses' ? '#1d1d1f' : '#86868b',
-                            boxShadow: activeView === 'expenses' ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Outlays
-                        </button>
+                      {/* Legend, same colours as the dashboard chart */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', fontSize: '0.725rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#0284c7' }} />
+                          <span style={{ color: '#475569', fontWeight: 500 }}>Revenue</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                          <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#ef4444' }} />
+                          <span style={{ color: '#475569', fontWeight: 500 }}>Expenses</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Simulated Clean Vector Curve */}
+                    {/* Simulated chart: revenue climbing over steady running costs */}
                     <div style={{ height: '140px', width: '100%', position: 'relative' }}>
-                      <svg viewBox="0 0 600 140" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
+                      <svg viewBox="0 0 600 140" preserveAspectRatio="none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
                         <defs>
-                          <linearGradient id="heroGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stopColor="#059669" stopOpacity="0.2" />
-                            <stop offset="100%" stopColor="#059669" stopOpacity="0" />
+                          <linearGradient id="heroRevenueGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#0284c7" stopOpacity="0.15" />
+                            <stop offset="100%" stopColor="#0284c7" stopOpacity="0" />
+                          </linearGradient>
+                          <linearGradient id="heroExpenseGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stopColor="#ef4444" stopOpacity="0.08" />
+                            <stop offset="100%" stopColor="#ef4444" stopOpacity="0" />
                           </linearGradient>
                         </defs>
+                        {[35, 70, 105].map((y) => (
+                          <line key={y} x1="0" x2="600" y1={y} y2={y} stroke="#f1f5f9" strokeDasharray="3 3" />
+                        ))}
                         <path
-                          d={
-                            activeView === 'revenue'
-                              ? 'M0,110 C80,95 160,80 240,65 C320,50 400,35 480,25 C540,18 600,10 600,10 L600,140 L0,140 Z'
-                              : 'M0,120 C80,110 160,115 240,95 C320,100 400,85 480,80 C540,75 600,70 600,70 L600,140 L0,140 Z'
-                          }
-                          fill="url(#heroGradient)"
-                          style={{ transition: 'd 0.4s ease' }}
+                          d="M0,85 C40,82 80,78 120,75 C160,72 200,70 240,68 C280,64 320,60 360,55 C400,50 440,46 480,42 C520,38 560,33 600,30 L600,140 L0,140 Z"
+                          fill="url(#heroRevenueGradient)"
                         />
                         <path
-                          d={
-                            activeView === 'revenue'
-                              ? 'M0,110 C80,95 160,80 240,65 C320,50 400,35 480,25 C540,18 600,10 600,10'
-                              : 'M0,120 C80,110 160,115 240,95 C320,100 400,85 480,80 C540,75 600,70 600,70'
-                          }
+                          d="M0,105 C40,104 80,103 120,103 C160,103 200,104 240,104 C280,103 320,101 360,100 C400,100 440,102 480,102 C520,101 560,100 600,99 L600,140 L0,140 Z"
+                          fill="url(#heroExpenseGradient)"
+                        />
+                        <path
+                          d="M0,105 C40,104 80,103 120,103 C160,103 200,104 240,104 C280,103 320,101 360,100 C400,100 440,102 480,102 C520,101 560,100 600,99"
                           fill="none"
-                          stroke={activeView === 'revenue' ? '#059669' : '#0284c7'}
-                          strokeWidth="3"
-                          style={{ transition: 'all 0.4s ease' }}
+                          stroke="#ef4444"
+                          strokeWidth="2.5"
+                          vectorEffect="non-scaling-stroke"
                         />
-                        {/* Projected Dotted Extension */}
-                        <circle cx="480" cy={activeView === 'revenue' ? 25 : 80} r="4.5" fill="#059669" />
+                        <path
+                          d="M0,85 C40,82 80,78 120,75 C160,72 200,70 240,68 C280,64 320,60 360,55 C400,50 440,46 480,42 C520,38 560,33 600,30"
+                          fill="none"
+                          stroke="#0284c7"
+                          strokeWidth="2.5"
+                          vectorEffect="non-scaling-stroke"
+                        />
                       </svg>
                     </div>
 
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem', color: '#86868b', marginTop: '0.5rem' }}>
-                      <span>Jan</span>
-                      <span>Feb</span>
-                      <span>Mar</span>
-                      <span>Apr (Current)</span>
-                      <span style={{ color: '#059669', fontWeight: 600 }}>May (forecast)</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem', color: '#94a3b8', marginTop: '0.5rem' }}>
+                      {monthLabels.map((label, i) => (
+                        <span key={label}>{i === monthLabels.length - 1 ? `${label} (so far)` : label}</span>
+                      ))}
                     </div>
                   </div>
 
