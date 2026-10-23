@@ -41,8 +41,17 @@ export default function LoginPage() {
         setMode('signup');
       }
 
+      // A sign-out that brought them here has finished; nothing is waiting for the flag any more.
+      try {
+        sessionStorage.removeItem('sgfm_signing_out');
+      } catch {
+        // Storage blocked: nothing to clean up.
+      }
+
       // Sent back here by /auth/callback when an email link was opened on another device.
-      if (params.get('notice') === 'email_confirmed') {
+      if (params.get('notice') === 'session_expired') {
+        setNotice('Your session expired. Please sign in again.');
+      } else if (params.get('notice') === 'email_confirmed') {
         setNotice('Your email is confirmed. Please sign in.');
       } else if (params.get('notice') === 'reset_other_device') {
         setError('Open the password reset link in the same browser you requested it from, or request a new one.');

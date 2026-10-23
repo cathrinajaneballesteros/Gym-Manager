@@ -8,6 +8,9 @@ import { Sidebar } from './Sidebar';
 import { Header } from './Header';
 import { DBService } from '@/lib/data/db-service';
 import { STAFF_HOME, canOpen } from '@/lib/ui/roles';
+import { createClient } from '@/lib/supabase/client';
+
+const SESSION_EXPIRED_LOGIN = '/login?mode=signin&notice=session_expired';
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -17,6 +20,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [ready, setReady] = useState(() => DBService.isLoaded());
   const [loadError, setLoadError] = useState('');
+  const [sessionEnded, setSessionEnded] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -28,13 +32,34 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
       .then(() => !cancelled && setReady(true))
       .catch((err: Error) => {
         if (cancelled) return;
-        if (err.message === 'Not signed in') router.replace('/login?mode=signin');
+        if (err.message === 'Not signed in') router.replace(SESSION_EXPIRED_LOGIN);
         else setLoadError(err.message || 'Could not load your gym data.');
       });
     return () => {
       cancelled = true;
     };
   }, [ready, router]);
+
+  // The session can end while the app is open (it expired and couldn't be renewed). The gym data is cleared then,
+  // so leave right away with a reason instead of showing empty pages with the staff menu.
+  useEffect(() => {
+    const {
+      data: { subscription },
+    } = createClient().auth.onAuthStateChange((event) => {
+      if (event !== 'SIGNED_OUT') return;
+      try {
+        if (sessionStorage.getItem('sgfm_signing_out') === '1') {
+          sessionStorage.removeItem('sgfm_signing_out');
+          return;
+        }
+      } catch {
+        // Storage blocked: treat it as expired.
+      }
+      setSessionEnded(true);
+      router.replace(SESSION_EXPIRED_LOGIN);
+    });
+    return () => subscription.unsubscribe();
+  }, [router]);
 
   // Pick up changes made on other devices: when the tab comes back into view (at most every 30s) and every 2 minutes.
   const [, setDataVersion] = useState(0);
@@ -62,7 +87,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
   }, [ready]);
 
   // A gym that isn't set up goes to onboarding; staff on an owner-only page go to their home page.
-  const redirectTo = !ready
+  // Skipped once the session has ended: the cleared data would look like a gym with no setup and send them to onboarding.
+  const redirectTo = !ready || sessionEnded || !DBService.isLoaded()
     ? null
     : DBService.needsOnboarding()
       ? '/onboarding'
@@ -74,7 +100,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children }) => {
     if (redirectTo) router.replace(redirectTo);
   }, [redirectTo, router]);
 
-  if (!ready || redirectTo) {
+  if (!ready || redirectTo || sessionEnded || !DBService.isLoaded()) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f5f5f7', padding: '1rem' }}>
         {loadError ? (

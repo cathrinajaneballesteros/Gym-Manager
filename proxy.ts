@@ -28,7 +28,9 @@ export async function proxy(request: NextRequest) {
   if (!data?.claims) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    url.search = '?mode=signin';
+    // A leftover Supabase auth cookie means they were signed in and the session ran out, so the login page says so.
+    const hadSession = request.cookies.getAll().some((c) => c.name.startsWith('sb-') && c.name.includes('auth-token'));
+    url.search = hadSession ? '?mode=signin&notice=session_expired' : '?mode=signin';
     return NextResponse.redirect(url);
   }
 
