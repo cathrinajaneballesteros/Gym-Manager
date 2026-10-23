@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CreditCard,
   Search,
@@ -20,7 +21,7 @@ import { ScrollReveal } from '@/components/ui/ScrollReveal';
 import { showToast, showConfirm, showError } from '@/lib/ui/swal';
 import { formatDisplayDate } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
-import { Bell, CheckCircle2, Clock, AlertTriangle, Edit, UserPlus, Trash2, UserRound } from 'lucide-react';
+import { Bell, CheckCircle2, Clock, AlertTriangle, Edit, UserPlus, Trash2, UserRound, MoreVertical } from 'lucide-react';
 import { getPageWindow } from '@/lib/ui/pagination';
 
 export const PaymentList: React.FC = () => {
@@ -41,6 +42,71 @@ export const PaymentList: React.FC = () => {
   const [remindingPayment, setRemindingPayment] = useState<Payment | null>(null);
   const pageSize = 8;
   const isOwner = DBService.isOwner();
+
+  // The ⋮ menu for the less common actions on a row (same pattern as the Members list).
+  const [menuPayment, setMenuPayment] = useState<Payment | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; right: number } | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- portals need document, which only exists after mount
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!menuPayment) return;
+
+    const handleClose = () => {
+      setMenuPayment(null);
+      setMenuPosition(null);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleClose();
+    };
+
+    document.addEventListener('click', handleClose);
+    window.addEventListener('resize', handleClose);
+    window.addEventListener('scroll', handleClose, true);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('click', handleClose);
+      window.removeEventListener('resize', handleClose);
+      window.removeEventListener('scroll', handleClose, true);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuPayment]);
+
+  const handleToggleMenu = (p: Payment, e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (menuPayment?.id === p.id) {
+      setMenuPayment(null);
+      setMenuPosition(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuHeight = 200;
+    const openUpwards = window.innerHeight - rect.bottom < menuHeight && rect.top > menuHeight;
+    setMenuPosition({
+      top: openUpwards ? Math.max(10, rect.top - menuHeight - 6) : rect.bottom + 6,
+      right: Math.max(16, window.innerWidth - rect.right),
+    });
+    setMenuPayment(p);
+  };
+
+  // A rejected GCash receipt must not be counted with one click; edit or delete it instead.
+  const canMarkPaid = (p: Payment) => p.payment_status === 'pending' && p.receipt_status !== 'rejected';
+  const needsReceiptCheck = (p: Payment) =>
+    p.payment_status === 'pending' && (p.receipt_status || 'unverified') === 'unverified' && p.payment_method !== 'Cash';
+
+  const openEdit = (p: Payment) => {
+    if (p.is_walk_in) {
+      setEditingWalkIn(p);
+      setIsWalkInOpen(true);
+      return;
+    }
+    setEditingPayment(p);
+    setIsModalOpen(true);
+  };
 
   const refreshData = () => {
     setPayments(DBService.getPayments());
@@ -619,133 +685,51 @@ export const PaymentList: React.FC = () => {
                         {formatDisplayDate(p.payment_date)}
                       </td>
 
-                      {/* Actions */}
+                      {/* Actions: the one thing to do next, the rest under ⋮ */}
                       <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'flex-end', gap: '0.45rem' }}>
-                          {/* A rejected GCash receipt must not be counted with one click; edit or delete it instead. */}
-                          {p.payment_status === 'pending' && p.receipt_status !== 'rejected' && (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.35rem', whiteSpace: 'nowrap' }}>
+                          {needsReceiptCheck(p) ? (
+                            <button
+                              onClick={() => setCheckingPayment(p)}
+                              title="Check the GCash receipt"
+                              style={{ ...actionButtonStyle, border: '1px solid #d97706', backgroundColor: '#fffbeb', color: '#b45309' }}
+                            >
+                              <FileCheck size={13} />
+                              <span className="phone-icon-label">Check Receipt</span>
+                            </button>
+                          ) : canMarkPaid(p) ? (
                             <button
                               onClick={() => handleMarkAsPaid(p)}
                               title="Confirm & Mark Payment as Paid"
-                              style={{
-                                padding: '0.35rem 0.65rem',
-                                borderRadius: '6px',
-                                border: '1px solid #10b981',
-                                backgroundColor: '#ecfdf5',
-                                color: '#047857',
-                                fontSize: '0.75rem',
-                                fontWeight: 600,
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '0.3rem',
-                              }}
+                              style={{ ...actionButtonStyle, border: '1px solid #10b981', backgroundColor: '#ecfdf5', color: '#047857' }}
                             >
                               <CheckCircle2 size={13} />
-                              <span>Mark Paid</span>
+                              <span className="phone-icon-label">Mark Paid</span>
+                            </button>
+                          ) : (
+                            <button onClick={() => setCheckingPayment(p)} title="View receipt" style={actionButtonStyle}>
+                              <FileCheck size={13} />
+                              <span className="phone-icon-label">Receipt</span>
                             </button>
                           )}
-
-                          {p.member && (
                           <button
-                            onClick={() => setRemindingPayment(p)}
-                            title="Send Payment Reminder (SMS/Email)"
+                            type="button"
+                            onClick={(e) => handleToggleMenu(p, e)}
+                            aria-label={`More actions for ${getPaymentMemberName(p)}`}
+                            aria-expanded={menuPayment?.id === p.id}
                             style={{
-                              padding: '0.35rem 0.6rem',
-                              borderRadius: '6px',
-                              border: '1px solid #e2e8f0',
-                              backgroundColor: '#ffffff',
-                              color: '#475569',
-                              fontSize: '0.75rem',
-                              fontWeight: 500,
+                              padding: '0.4rem',
+                              borderRadius: '7px',
+                              border: 'none',
+                              backgroundColor: menuPayment?.id === p.id ? '#f1f5f9' : 'transparent',
+                              color: menuPayment?.id === p.id ? '#0f172a' : '#64748b',
                               cursor: 'pointer',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '0.3rem',
                             }}
                           >
-                            <Bell size={13} />
-                            <span className="phone-icon-label">Remind</span>
+                            <MoreVertical size={16} />
                           </button>
-                          )}
-
-                          <button
-                            onClick={() => setCheckingPayment(p)}
-                            title="Manual Receipt Checker & Inspector"
-                            style={{
-                              padding: '0.35rem 0.65rem',
-                              borderRadius: '6px',
-                              border: '1px solid',
-                              borderColor:
-                                (p.receipt_status || 'unverified') === 'unverified' && p.payment_method !== 'Cash'
-                                  ? '#d97706'
-                                  : '#e2e8f0',
-                              backgroundColor:
-                                (p.receipt_status || 'unverified') === 'unverified' && p.payment_method !== 'Cash'
-                                  ? '#fffbeb'
-                                  : '#ffffff',
-                              color:
-                                (p.receipt_status || 'unverified') === 'unverified' && p.payment_method !== 'Cash'
-                                  ? '#b45309'
-                                  : '#0f172a',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem',
-                            }}
-                          >
-                            <FileCheck size={13} />
-                            <span className="phone-icon-label">Receipt</span>
-                          </button>
-                          <button
-                            onClick={() => {
-                              if (p.is_walk_in) {
-                                setEditingWalkIn(p);
-                                setIsWalkInOpen(true);
-                                return;
-                              }
-                              setEditingPayment(p);
-                              setIsModalOpen(true);
-                            }}
-                            title="Edit Payment Details"
-                            style={{
-                              padding: '0.35rem 0.65rem',
-                              borderRadius: '6px',
-                              border: '1px solid #e2e8f0',
-                              backgroundColor: '#ffffff',
-                              color: '#334155',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '0.3rem',
-                            }}
-                          >
-                            <Edit size={13} />
-                            <span className="phone-icon-label">Edit</span>
-                          </button>
-                          {isOwner && (
-                            <button
-                              onClick={() => handleDeletePayment(p)}
-                              title="Delete Payment"
-                              aria-label="Delete payment"
-                              style={{
-                                padding: '0.35rem 0.5rem',
-                                borderRadius: '6px',
-                                border: '1px solid #fecaca',
-                                backgroundColor: '#ffffff',
-                                color: '#dc2626',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                              }}
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          )}
                         </div>
                       </td>
                     </tr>
@@ -881,6 +865,98 @@ export const PaymentList: React.FC = () => {
           refreshData();
         }}
       />
+
+      {/* Row actions menu (portal, so the table's overflow never clips it) */}
+      {mounted && menuPayment && menuPosition && createPortal(
+        <div
+          role="menu"
+          aria-orientation="vertical"
+          style={{
+            position: 'fixed',
+            top: menuPosition.top,
+            right: menuPosition.right,
+            backgroundColor: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: '12px',
+            boxShadow: '0 16px 36px -6px rgba(0, 0, 0, 0.14), 0 6px 16px -2px rgba(0, 0, 0, 0.05)',
+            zIndex: 9999,
+            minWidth: '190px',
+            padding: '0.35rem',
+            textAlign: 'left',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '2px',
+            animation: 'modalSlideUp 0.15s cubic-bezier(0.16, 1, 0.3, 1)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {(() => {
+            const p = menuPayment;
+            const close = () => setMenuPayment(null);
+            const items: { key: string; icon: React.ReactNode; label: string; onClick: () => void; danger?: boolean }[] = [];
+            // Whatever the row's main button doesn't already do.
+            if (canMarkPaid(p) && needsReceiptCheck(p)) {
+              items.push({ key: 'paid', icon: <CheckCircle2 size={15} color="#059669" />, label: 'Mark Paid', onClick: () => handleMarkAsPaid(p) });
+            }
+            if (canMarkPaid(p) && !needsReceiptCheck(p)) {
+              items.push({ key: 'receipt', icon: <FileCheck size={15} color="#64748b" />, label: 'Receipt', onClick: () => setCheckingPayment(p) });
+            }
+            if (p.member) {
+              items.push({ key: 'remind', icon: <Bell size={15} color="#64748b" />, label: 'Send Reminder', onClick: () => setRemindingPayment(p) });
+            }
+            items.push({ key: 'edit', icon: <Edit size={15} color="#64748b" />, label: 'Edit', onClick: () => openEdit(p) });
+            if (isOwner) {
+              items.push({ key: 'delete', icon: <Trash2 size={15} color="#dc2626" />, label: 'Delete', onClick: () => handleDeletePayment(p), danger: true });
+            }
+            return items.map((item) => (
+              <button
+                key={item.key}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  close();
+                  item.onClick();
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.65rem',
+                  padding: '0.55rem 0.75rem',
+                  fontSize: '0.825rem',
+                  color: item.danger ? '#dc2626' : '#1e293b',
+                  borderRadius: '7px',
+                  width: '100%',
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontWeight: 500,
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = item.danger ? '#fef2f2' : '#f8fafc')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </button>
+            ));
+          })()}
+        </div>,
+        document.body
+      )}
     </div>
   );
+};
+
+const actionButtonStyle: React.CSSProperties = {
+  padding: '0.35rem 0.65rem',
+  borderRadius: '6px',
+  border: '1px solid #e2e8f0',
+  backgroundColor: '#ffffff',
+  color: '#0f172a',
+  fontSize: '0.75rem',
+  fontWeight: 600,
+  cursor: 'pointer',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '0.3rem',
 };
