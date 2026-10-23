@@ -438,14 +438,14 @@ export const AttendanceView: React.FC = () => {
           ) : (
             <>
               <div style={{ overflowX: 'auto' }}>
-                <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                   <thead>
                     <tr style={headRowStyle}>
-                      <th style={thStyle}>Date</th>
-                      <th className="hide-on-phone" style={thStyle}>Time</th>
+                      <th style={{ ...thStyle, width: '18%' }}>Date</th>
+                      <th className="hide-on-phone" style={{ ...thStyle, width: '14%' }}>Time</th>
                       <th style={thStyle}>Member</th>
-                      <th className="hide-on-phone" style={thStyle}>Plan</th>
-                      <th style={{ ...thStyle, textAlign: 'right' }}></th>
+                      <th className="hide-on-phone" style={{ ...thStyle, width: '28%' }}>Plan</th>
+                      <th style={{ ...thStyle, width: '110px', textAlign: 'right' }}></th>
                     </tr>
                   </thead>
                   <tbody>

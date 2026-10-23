@@ -409,13 +409,13 @@ export const AuditLogView: React.FC = () => {
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    <th style={{ padding: '0.9rem 1.5rem' }}>Time</th>
-                    <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Actor</th>
-                    <th style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>Action</th>
-                    <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>Entity</th>
+                    <th style={{ width: '18%', padding: '0.9rem 1.5rem' }}>Time</th>
+                    <th className="hide-on-phone" style={{ width: '20%', padding: '0.9rem 1.25rem' }}>Actor</th>
+                    <th style={{ width: '16%', padding: '0.9rem 1.25rem', textAlign: 'center' }}>Action</th>
+                    <th className="hide-on-phone" style={{ width: '13%', padding: '0.9rem 1.25rem', textAlign: 'center' }}>Entity</th>
                     <th style={{ padding: '0.9rem 1.5rem' }}>Details</th>
                   </tr>
                 </thead>

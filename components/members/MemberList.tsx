@@ -375,14 +375,14 @@ export const MemberList: React.FC = () => {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
-                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Plan</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Status</th>
-                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Expiration</th>
-                  <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
+                  <th className="hide-on-phone" style={{ width: '24%', padding: '0.9rem 1.25rem' }}>Plan</th>
+                  <th style={{ width: '15%', padding: '0.9rem 1.25rem' }}>Status</th>
+                  <th className="hide-on-phone" style={{ width: '15%', padding: '0.9rem 1.25rem' }}>Expiration</th>
+                  <th style={{ width: '110px', padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -423,7 +423,7 @@ export const MemberList: React.FC = () => {
                           >
                             {member.first_name[0]}{member.last_name[0]}
                           </div>
-                          <div>
+                          <div style={{ minWidth: 0, overflowWrap: 'break-word' }}>
                             <div style={{ fontWeight: 600, color: '#0f172a' }}>
                               {fullName}
                             </div>
@@ -488,7 +488,7 @@ export const MemberList: React.FC = () => {
                       </td>
 
                       {/* Expiration Date */}
-                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                         {formatDisplayDate(member.end_date)}
                       </td>
 

@@ -141,6 +141,11 @@ body {
   overflow-x: hidden;
 }
 
+/* Keep room for the scrollbar even on short pages, so tables don't widen a few pixels when switching pages. */
+body {
+  scrollbar-gutter: stable;
+}
+
 a {
   color: inherit;
   text-decoration: none;

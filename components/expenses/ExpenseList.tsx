@@ -591,15 +591,15 @@ export const ExpenseList: React.FC = () => {
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>
-            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+            <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th style={{ padding: '0.9rem 1.5rem' }}>Date</th>
-                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Category</th>
+                  <th style={{ width: '14%', padding: '0.9rem 1.5rem' }}>Date</th>
+                  <th className="hide-on-phone" style={{ width: '13%', padding: '0.9rem 1.25rem' }}>Category</th>
                   <th style={{ padding: '0.9rem 1.25rem' }}>Description</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Amount</th>
-                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Method</th>
-                  <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
+                  <th style={{ width: '12%', padding: '0.9rem 1.25rem' }}>Amount</th>
+                  <th className="hide-on-phone" style={{ width: '10%', padding: '0.9rem 1.25rem' }}>Method</th>
+                  <th style={{ width: '130px', padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
