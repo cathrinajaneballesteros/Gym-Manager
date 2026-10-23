@@ -124,9 +124,9 @@ BEGIN
     CONTINUE WHEN NOT FOUND;
 
     IF v_m.end_offset IS NULL THEN
-      -- Signed up two days ago, hasn't paid yet
+      -- Just signed up at the front desk today; her first payment isn't recorded yet
       v_n := 0;
-      v_start := v_today - 2;
+      v_start := v_today;
       v_end := (v_start + make_interval(months => v_plan.duration_months))::date;
     ELSE
       -- Count the paid periods that fit between the join window and the end date
