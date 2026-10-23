@@ -430,6 +430,10 @@ export const MemberList: React.FC = () => {
                             <div style={{ fontSize: '0.785rem', color: '#64748b' }}>
                               {member.email}
                             </div>
+                            {/* The Plan column is hidden on phones. */}
+                            <div className="show-on-phone" style={{ fontSize: '0.785rem', color: '#334155', fontWeight: 500 }}>
+                              {planName}
+                            </div>
                           </div>
                         </Link>
                       </td>

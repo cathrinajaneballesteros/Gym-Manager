@@ -406,6 +406,11 @@ input[type='number'] {
   }
 }
 
+/* Shown only on phones, e.g. the plan under a member's name when the Plan column is hidden. */
+.show-on-phone {
+  display: none;
+}
+
 /* Tables whose columns keep the same widths from page to page instead of resizing to each page's rows. */
 .steady-table {
   table-layout: fixed;
@@ -427,6 +432,9 @@ input[type='number'] {
   }
   .steady-table th {
     width: auto !important;
+  }
+  .show-on-phone {
+    display: block;
   }
   .card {
     padding: 1rem;

@@ -526,6 +526,7 @@ export const PaymentList: React.FC = () => {
                 {paginated.map((p) => {
                   // The Plan column already says "Walk-in", so the name doesn't repeat it here.
                   const memberName = p.is_walk_in && p.member_name ? p.member_name : getPaymentMemberName(p);
+                  const planLabel = p.is_walk_in ? 'Walk-in' : p.plan?.name || p.member?.plan?.name || 'No plan';
                   const initials = p.member
                     ? `${p.member.first_name[0]}${p.member.last_name[0]}`
                     : (p.member_name || '?').split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
@@ -570,13 +571,17 @@ export const PaymentList: React.FC = () => {
                                 {p.member.email}
                               </div>
                             )}
+                            {/* The Plan column is hidden on phones. */}
+                            <div className="show-on-phone" style={{ fontSize: '0.785rem', color: '#334155', fontWeight: 500 }}>
+                              {planLabel}
+                            </div>
                           </div>
                         </div>
                       </td>
 
                       {/* Plan */}
                       <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
-                        {p.is_walk_in ? 'Walk-in' : p.plan?.name || p.member?.plan?.name || 'No plan'}
+                        {planLabel}
                       </td>
 
                       {/* Amount: only completed payments count as revenue, so only they get the green "+". */}

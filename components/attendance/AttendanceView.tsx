@@ -457,6 +457,8 @@ export const AttendanceView: React.FC = () => {
                           <td className="hide-on-phone" style={{ ...tdStyle, color: '#64748b' }}>{formatTime(a.check_in_time)}</td>
                           <td style={tdStyle}>
                             {m ? <Link href={`/members/${m.id}`} style={linkStyle}>{memberName(m)}</Link> : memberName(m)}
+                            {/* The Plan column is hidden on phones. */}
+                            <span className="show-on-phone" style={{ fontSize: '0.785rem', color: '#64748b' }}>{m?.plan?.name ?? '—'}</span>
                           </td>
                           <td className="hide-on-phone" style={{ ...tdStyle, color: '#64748b' }}>{m?.plan?.name ?? '—'}</td>
                           <td style={{ ...tdStyle, textAlign: 'right' }}>{undoButton(a)}</td>
