@@ -406,7 +406,28 @@ input[type='number'] {
   }
 }
 
+/* Tables whose columns keep the same widths from page to page instead of resizing to each page's rows. */
+.steady-table {
+  table-layout: fixed;
+  min-width: 900px;
+}
+/* Narrower padding between the middle columns so the fixed widths fit beside the sidebar. */
+@media (min-width: 641px) {
+  .steady-table th:not(:first-child):not(:last-child),
+  .steady-table td:not(:first-child):not(:last-child) {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+}
+
 @media (max-width: 640px) {
+  .steady-table {
+    table-layout: auto;
+    min-width: 0;
+  }
+  .steady-table th {
+    width: auto !important;
+  }
   .card {
     padding: 1rem;
   }
