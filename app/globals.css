@@ -459,6 +459,15 @@ input[type='number'] {
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
   }
+  /* Big enough to tap: 44px for the main buttons (Apple's guideline), 40px for everything else
+     (page numbers, ⋮ menus, row actions, filters, text links like Undo). */
+  main button {
+    min-height: 40px;
+    min-width: 40px;
+  }
+  main .btn {
+    min-height: 44px;
+  }
   .tab-label-long {
     display: none;
   }
