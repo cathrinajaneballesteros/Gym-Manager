@@ -1,16 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Menu } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Settings, LogOut } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { UserProfile } from '@/types/database';
+import { signOut } from '@/lib/ui/sign-out';
 
-interface HeaderProps {
-  onToggleMobileMenu?: () => void;
-}
-
-export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
+export const Header: React.FC = () => {
   // AppShell only renders the header once the gym's data has loaded.
   const [profile, setProfile] = useState<UserProfile>(() => DBService.getProfile());
 
@@ -26,7 +24,38 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
     };
   }, []);
 
-  const initials = DBService.getInitials(DBService.displayName(profile));
+  const displayName = DBService.displayName(profile);
+  // Read on every render; the profile-updated event re-renders the header when the owner renames the gym or changes its logo.
+  const gymLogo = DBService.getGym()?.logo_url;
+  const gymName = DBService.getGym()?.name || profile.gym_name || 'Smart Gym';
+  const initials = DBService.getInitials(displayName);
+
+  // Account menu under the avatar: Settings and Sign out.
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [menuOpen]);
+
+  const handleSignOut = async () => {
+    setMenuOpen(false);
+    await signOut(profile.email);
+    router.push('/login');
+  };
 
   return (
     <header
@@ -43,40 +72,45 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
         zIndex: 30,
       }}
     >
-      {/* Left: Mobile Toggle */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-        <button
-          onClick={onToggleMobileMenu}
+      {/* Left: the gym's logo and name on phones and tablets, where the sidebar (which shows them on desktop) is hidden.
+          The menu itself is under More in the tab bar. */}
+      <div className="header-brand" style={{ alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- same small logo as the sidebar; may be an uploaded file */}
+        <img
+          src={gymLogo || '/logo.svg'}
+          alt=""
+          width={28}
+          height={28}
           style={{
-            display: 'none',
-            width: '40px',
-            height: '40px',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#636366',
-            borderRadius: '8px',
-            backgroundColor: 'rgba(118, 118, 128, 0.08)',
+            borderRadius: '7px',
+            objectFit: gymLogo ? 'cover' : 'contain',
+            backgroundColor: gymLogo ? '#ffffff' : undefined,
+            flexShrink: 0,
           }}
-          className="mobile-menu-btn"
-          aria-label="Toggle navigation"
-        >
-          <Menu size={17} />
-        </button>
+        />
+        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.015em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {gymName}
+        </span>
       </div>
 
-      {/* Right: Profile Avatar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-        {/* Profile Avatar */}
-        <Link
-          href="/settings"
-          aria-label="Account settings"
+      {/* Right: Profile Avatar with the account menu */}
+      <div ref={menuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.85rem', marginLeft: 'auto' }}>
+        <button
+          type="button"
+          onClick={() => setMenuOpen((open) => !open)}
+          aria-label="Account menu"
+          aria-expanded={menuOpen}
+          aria-haspopup="menu"
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             width: '40px',
             height: '40px',
-            textDecoration: 'none',
+            border: 'none',
+            background: 'none',
+            cursor: 'pointer',
+            padding: 0,
           }}
         >
           <div
@@ -91,13 +125,79 @@ export const Header: React.FC<HeaderProps> = ({ onToggleMobileMenu }) => {
               justifyContent: 'center',
               fontSize: '0.75rem',
               fontWeight: 700,
-              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              boxShadow: menuOpen ? '0 0 0 3px rgba(0, 113, 227, 0.25)' : '0 1px 3px rgba(0, 0, 0, 0.1)',
             }}
           >
             {initials}
           </div>
-        </Link>
+        </button>
+
+        {menuOpen && (
+          <div
+            role="menu"
+            style={{
+              position: 'absolute',
+              top: 'calc(100% + 6px)',
+              right: 0,
+              minWidth: '220px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              boxShadow: '0 16px 36px -6px rgba(0, 0, 0, 0.14), 0 6px 16px -2px rgba(0, 0, 0, 0.05)',
+              padding: '0.35rem',
+              zIndex: 50,
+            }}
+          >
+            <div style={{ padding: '0.6rem 0.75rem 0.7rem', borderBottom: '1px solid #f1f5f9', marginBottom: '0.3rem' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#0f172a', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {displayName}
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {profile.email}
+              </div>
+            </div>
+            <Link
+              href="/settings"
+              role="menuitem"
+              onClick={() => setMenuOpen(false)}
+              style={menuItemStyle}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              <Settings size={15} color="#64748b" />
+              <span>Settings</span>
+            </Link>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleSignOut}
+              style={{ ...menuItemStyle, color: '#dc2626' }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#fef2f2')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+            >
+              <LogOut size={15} />
+              <span>Sign out</span>
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
+};
+
+const menuItemStyle: React.CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '0.65rem',
+  width: '100%',
+  padding: '0.55rem 0.75rem',
+  fontSize: '0.825rem',
+  fontWeight: 500,
+  color: '#1e293b',
+  borderRadius: '7px',
+  border: 'none',
+  backgroundColor: 'transparent',
+  cursor: 'pointer',
+  textAlign: 'left',
+  textDecoration: 'none',
 };

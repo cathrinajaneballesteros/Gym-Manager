@@ -222,6 +222,7 @@ export const CalendarView: React.FC = () => {
 
   // Selected date data
   const selectedDayData = selectedDateStr ? dateDataMap.get(selectedDateStr) : null;
+  const selectedIsPast = Boolean(selectedDateStr && selectedDateStr < todayStr);
   const selectedDateFormatted = selectedDateStr
     ? new Date(selectedDateStr + 'T00:00:00').toLocaleDateString('en-US', {
         weekday: 'long',
@@ -556,9 +557,10 @@ export const CalendarView: React.FC = () => {
                           alignItems: 'center',
                           gap: '3px',
                         }}
-                        title={`${data?.expirations.length} member(s) expiring`}
+                        title={`${data?.expirations.length} member(s) ${cell.dateStr < todayStr ? 'expired' : 'expiring'}`}
                       >
-                        <span>⏰ {data?.expirations.length} Expiring</span>
+                        {/* Days already gone say Expired; those memberships have ended. */}
+                        <span>⏰ {data?.expirations.length} {cell.dateStr < todayStr ? 'Expired' : 'Expiring'}</span>
                       </div>
                     )}
 
@@ -668,7 +670,7 @@ export const CalendarView: React.FC = () => {
             {/* Daily Summary Metric Cards */}
             <div className="calendar-day-summary" style={{ display: 'grid', gridTemplateColumns: `repeat(${isOwner ? 3 : 2}, minmax(0, 1fr))`, gap: '0.75rem', marginBottom: '1.5rem' }}>
               <div style={{ backgroundColor: '#fffbeb', padding: '0.75rem', borderRadius: '8px', border: '1px solid #fef3c7' }}>
-                <span style={{ fontSize: '0.725rem', color: '#92400e', fontWeight: 600, display: 'block' }}>Expiring Members</span>
+                <span style={{ fontSize: '0.725rem', color: '#92400e', fontWeight: 600, display: 'block' }}>{selectedIsPast ? 'Expired Members' : 'Expiring Members'}</span>
                 <strong style={{ fontSize: '1.2rem', color: '#b45309' }}>{selectedDayData?.expirations.length || 0}</strong>
               </div>
               <div style={{ backgroundColor: '#ecfdf5', padding: '0.75rem', borderRadius: '8px', border: '1px solid #d1fae5' }}>
@@ -688,13 +690,13 @@ export const CalendarView: React.FC = () => {
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.65rem' }}>
                 <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                   <Clock size={16} style={{ color: '#f59e0b' }} />
-                  <span>Memberships Expiring ({selectedDayData?.expirations.length || 0})</span>
+                  <span>{selectedIsPast ? 'Memberships Expired' : 'Memberships Expiring'} ({selectedDayData?.expirations.length || 0})</span>
                 </h4>
               </div>
 
               {!selectedDayData || selectedDayData.expirations.length === 0 ? (
                 <div style={{ padding: '0.85rem', backgroundColor: '#f8fafc', borderRadius: '8px', fontSize: '0.825rem', color: '#64748b' }}>
-                  No member subscriptions expiring on this date.
+                  {selectedIsPast ? 'No memberships ended on this date.' : 'No member subscriptions expiring on this date.'}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>

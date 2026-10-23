@@ -11,6 +11,7 @@ import {
   Edit,
   ArrowDownRight,
   ArrowUpRight,
+  ArrowRight,
   History,
   Download,
 } from 'lucide-react';
@@ -24,6 +25,7 @@ import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { getRecentMonthKeys, getTodayKey, formatDisplayDate } from '@/lib/ui/date';
 import { downloadCSV } from '@/lib/ui/csv';
 import { getPageWindow } from '@/lib/ui/pagination';
+import { useSteadyHeight } from '@/lib/ui/use-steady-height';
 
 export const ExpenseList: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -34,6 +36,8 @@ export const ExpenseList: React.FC = () => {
   const [timeframeFilter, setTimeframeFilter] = useState('all');
   const [activeTab, setActiveTab] = useState<'records' | 'historical'>('records');
   const [currentPage, setCurrentPage] = useState(1);
+  // The table keeps its tallest page's height, so a short last page doesn't make the card jump.
+  const steadyTableRef = useSteadyHeight([searchQuery, categoryFilter, methodFilter, timeframeFilter].join('|'), currentPage);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const pageSize = 8;
@@ -208,11 +212,14 @@ export const ExpenseList: React.FC = () => {
               (() => {
                 const diff = thisMonthExpenses - lastMonthExpenses;
                 const isPos = diff >= 0;
+                const pct = Math.abs(Math.round((diff / lastMonthExpenses) * 100));
+                // A change that rounds to 0% is no change: grey, not red or green.
+                const isFlat = pct === 0;
                 return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: isPos ? '#ef4444' : '#059669', fontWeight: 600 }}>
-                    {isPos ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: isFlat ? '#64748b' : isPos ? '#ef4444' : '#059669', fontWeight: 600 }}>
+                    {isFlat ? <ArrowRight size={14} /> : isPos ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
                     <span>
-                      {isPos ? '+' : '-'}{Math.abs(Math.round((diff / lastMonthExpenses) * 100))}% vs same point last month ({currency}{lastMonthExpenses.toLocaleString()})
+                      {isFlat ? '0%' : `${isPos ? '+' : '-'}${pct}%`} vs same point last month ({currency}{lastMonthExpenses.toLocaleString()})
                     </span>
                   </div>
                 );
@@ -333,8 +340,16 @@ export const ExpenseList: React.FC = () => {
               </h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.85rem' }}>
                 {historicalSummary.monthlyTotals.map((m) => (
-                  <div
+                  // Opens that month's expenses in Records.
+                  <button
+                    type="button"
                     key={m.monthKey}
+                    title={`See ${m.month} expenses`}
+                    onClick={() => {
+                      setTimeframeFilter(m.monthKey);
+                      setCurrentPage(1);
+                      setActiveTab('records');
+                    }}
                     style={{
                       backgroundColor: m.monthKey === thisMonthKey ? '#eff6ff' : '#f8fafc',
                       border: '1px solid',
@@ -342,6 +357,8 @@ export const ExpenseList: React.FC = () => {
                       borderRadius: '10px',
                       padding: '1rem',
                       textAlign: 'center',
+                      cursor: 'pointer',
+                      font: 'inherit',
                     }}
                   >
                     <div style={{ fontSize: '0.785rem', color: '#64748b', fontWeight: 600, textTransform: 'uppercase' }}>
@@ -353,7 +370,7 @@ export const ExpenseList: React.FC = () => {
                     {m.monthKey === thisMonthKey && (
                       <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>So far</div>
                     )}
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
@@ -372,12 +389,13 @@ export const ExpenseList: React.FC = () => {
               </div>
 
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+                {/* Phones show the latest two months and the average; the older months need a wider screen. */}
+                <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                       <th style={{ padding: '0.9rem 1.5rem' }}>Category</th>
-                      {historicalSummary.monthlyTotals.map((m) => (
-                        <th key={m.monthKey} style={{ padding: '0.9rem 1.25rem', textAlign: 'right' }}>
+                      {historicalSummary.monthlyTotals.map((m, idx) => (
+                        <th key={m.monthKey} className={idx >= 2 ? 'hide-on-phone' : undefined} style={{ padding: '0.9rem 1.25rem', textAlign: 'right' }}>
                           {m.month}
                         </th>
                       ))}
@@ -406,7 +424,7 @@ export const ExpenseList: React.FC = () => {
                           </span>
                         </td>
                         {catData.recentMonths.map((rm, idx) => (
-                          <td key={idx} style={{ padding: '1rem 1.25rem', textAlign: 'right', color: rm.amount > 0 ? '#0f172a' : '#94a3b8' }}>
+                          <td key={idx} className={idx >= 2 ? 'hide-on-phone' : undefined} style={{ padding: '1rem 1.25rem', textAlign: 'right', color: rm.amount > 0 ? '#0f172a' : '#94a3b8' }}>
                             {rm.amount > 0 ? `${currency}${rm.amount.toLocaleString()}` : '—'}
                           </td>
                         ))}
@@ -571,113 +589,12 @@ export const ExpenseList: React.FC = () => {
             </h2>
           </div>
 
-        {filteredExpenses.length === 0 ? (
-          <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
-            No expenses found matching the criteria.
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th style={{ padding: '0.9rem 1.5rem' }}>Date</th>
-                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Category</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Description</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Amount</th>
-                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Method</th>
-                  <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginated.map((exp) => (
-                  <tr
-                    key={exp.id}
-                    style={{
-                      borderBottom: '1px solid #f8fafc',
-                      transition: 'background-color 0.15s ease',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                  >
-                    <td style={{ padding: '1rem 1.5rem', color: '#64748b' }}>
-                      {formatDisplayDate(exp.expense_date)}
-                    </td>
-
-                    <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
-                      <span
-                        style={{
-                          padding: '0.25rem 0.65rem',
-                          borderRadius: '6px',
-                          backgroundColor: '#f1f5f9',
-                          color: '#334155',
-                          fontSize: '0.785rem',
-                          fontWeight: 600,
-                          border: '1px solid #e2e8f0',
-                        }}
-                      >
-                        {exp.category}
-                      </span>
-                    </td>
-
-                    <td style={{ padding: '1rem 1.25rem' }}>
-                      <div style={{ fontWeight: 600, color: '#0f172a' }}>{exp.title}</div>
-                      {exp.description && (
-                        <div style={{ fontSize: '0.785rem', color: '#64748b' }}>{exp.description}</div>
-                      )}
-                    </td>
-
-                    <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#ef4444', whiteSpace: 'nowrap' }}>
-                      -{currency}{Number(exp.amount).toLocaleString()}
-                    </td>
-
-                    <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
-                      {exp.payment_method}
-                    </td>
-
-                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <button
-                          onClick={() => {
-                            setEditingExpense(exp);
-                            setIsModalOpen(true);
-                          }}
-                          style={{
-                            padding: '0.35rem',
-                            color: '#64748b',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                          }}
-                          title="Edit"
-                        >
-                          <Edit size={15} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(exp.id, exp.title)}
-                          style={{
-                            padding: '0.35rem',
-                            color: '#ef4444',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                          }}
-                          title="Delete"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Pagination Footer */}
+        {/* Pagination, above the table so it stays put whatever the rows' height */}
         {filteredExpenses.length > 0 && (
           <div
             style={{
               padding: '1rem 1.5rem',
-              borderTop: '1px solid #f1f5f9',
+              borderBottom: '1px solid #f1f5f9',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -744,6 +661,109 @@ export const ExpenseList: React.FC = () => {
                 <ChevronRight size={14} />
               </button>
             </div>
+          </div>
+        )}
+
+        {filteredExpenses.length === 0 ? (
+          <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
+            No expenses found matching the criteria.
+          </div>
+        ) : (
+          <div ref={steadyTableRef} style={{ overflowX: 'auto' }}>
+            <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <th style={{ width: '14%', padding: '0.9rem 1.5rem' }}>Date</th>
+                  <th className="hide-on-phone" style={{ width: '13%', padding: '0.9rem 1.25rem' }}>Category</th>
+                  <th style={{ padding: '0.9rem 1.25rem' }}>Description</th>
+                  <th style={{ width: '12%', padding: '0.9rem 1.25rem' }}>Amount</th>
+                  <th className="hide-on-phone" style={{ width: '10%', padding: '0.9rem 1.25rem' }}>Method</th>
+                  <th style={{ width: '130px', padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              {/* Keyed by page so the rows fade in when the page changes. */}
+              <tbody key={currentPage} className="page-rows">
+                {paginated.map((exp) => (
+                  <tr
+                    key={exp.id}
+                    style={{
+                      borderBottom: '1px solid #f8fafc',
+                      transition: 'background-color 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <td className="phone-wrap" style={{ padding: '1rem 1.5rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                      {formatDisplayDate(exp.expense_date)}
+                    </td>
+
+                    <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
+                      <span
+                        style={{
+                          padding: '0.25rem 0.65rem',
+                          borderRadius: '6px',
+                          backgroundColor: '#f1f5f9',
+                          color: '#334155',
+                          fontSize: '0.785rem',
+                          fontWeight: 600,
+                          border: '1px solid #e2e8f0',
+                        }}
+                      >
+                        {exp.category}
+                      </span>
+                    </td>
+
+                    <td style={{ padding: '1rem 1.25rem' }}>
+                      <div style={{ fontWeight: 600, color: '#0f172a' }}>{exp.title}</div>
+                      {/* Too long for a phone row; the title says enough there. */}
+                      {exp.description && (
+                        <div className="hide-on-phone" style={{ fontSize: '0.785rem', color: '#64748b' }}>{exp.description}</div>
+                      )}
+                    </td>
+
+                    <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#ef4444', whiteSpace: 'nowrap' }}>
+                      -{currency}{Number(exp.amount).toLocaleString()}
+                    </td>
+
+                    <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
+                      {exp.payment_method}
+                    </td>
+
+                    <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <button
+                          onClick={() => {
+                            setEditingExpense(exp);
+                            setIsModalOpen(true);
+                          }}
+                          style={{
+                            padding: '0.35rem',
+                            color: '#64748b',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                          }}
+                          title="Edit"
+                        >
+                          <Edit size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(exp.id, exp.title)}
+                          style={{
+                            padding: '0.35rem',
+                            color: '#ef4444',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                          }}
+                          title="Delete"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

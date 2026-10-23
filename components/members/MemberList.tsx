@@ -30,6 +30,7 @@ import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { formatDisplayDate } from '@/lib/ui/date';
 import { checkInWithPrompt } from '@/lib/ui/check-in';
+import { useSteadyHeight } from '@/lib/ui/use-steady-height';
 
 // Statuses the filter can start on from a link (e.g. the dashboard's /members?status=expiring).
 const STATUS_FILTERS = ['pending', 'active', 'expiring', 'expired'];
@@ -46,6 +47,8 @@ export const MemberList: React.FC = () => {
   const [planFilter, setPlanFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'end_date' | 'created_at'>('end_date');
   const [currentPage, setCurrentPage] = useState(1);
+  // The table keeps its tallest page's height, so a short last page doesn't make the card jump.
+  const steadyTableRef = useSteadyHeight([searchQuery, statusFilter, planFilter].join('|'), currentPage);
   const pageSize = 10;
 
   // Modals & Menu
@@ -322,221 +325,12 @@ export const MemberList: React.FC = () => {
       {/* 3. Table or Empty State Card */}
       <ScrollReveal delay={90}>
         <div className="card" style={{ padding: 0, overflow: 'visible' }}>
-        {filteredMembers.length === 0 ? (
-          /* Empty State matching reference bottom-right illustration */
-          <div style={{ padding: '4.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div
-              style={{
-                width: '64px',
-                height: '64px',
-                borderRadius: '50%',
-                backgroundColor: '#f1f5f9',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#64748b',
-                marginBottom: '1.25rem',
-              }}
-            >
-              <Dumbbell size={30} strokeWidth={1.75} />
-            </div>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#0f172a', marginBottom: '0.4rem' }}>
-              {members.length === 0 ? 'No members yet' : 'No members match your search'}
-            </h3>
-            <p style={{ fontSize: '0.875rem', color: '#64748b', maxWidth: '360px', marginBottom: '1.5rem', lineHeight: 1.5 }}>
-              {members.length === 0
-                ? 'Start by adding your first member to manage memberships and payments.'
-                : 'Try a different name or clear the filters to see everyone.'}
-            </p>
-            {members.length === 0 ? (
-              <button
-                onClick={() => {
-                  setEditingMember(null);
-                  setIsAddModalOpen(true);
-                }}
-                className="btn btn-primary"
-              >
-                <Plus size={16} />
-                <span>Add Member</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setStatusFilter('all');
-                  setPlanFilter('all');
-                  setCurrentPage(1);
-                }}
-                className="btn btn-secondary"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
-                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Plan</th>
-                  <th style={{ padding: '0.9rem 1.25rem' }}>Status</th>
-                  <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Expiration</th>
-                  <th style={{ padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedMembers.map((member) => {
-                  const fullName = `${member.first_name} ${member.last_name}`;
-                  const planName = getPlanName(member.membership_plan_id);
-
-                  return (
-                    <tr
-                      key={member.id}
-                      style={{
-                        borderBottom: '1px solid #f8fafc',
-                        transition: 'background-color 0.15s ease',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                    >
-                      {/* Member (Avatar + Name + Email) */}
-                      <td style={{ padding: '1rem 1.5rem' }}>
-                        <Link
-                          href={`/members/${member.id}`}
-                          style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', textDecoration: 'none' }}
-                        >
-                          <div
-                            style={{
-                              width: '38px',
-                              height: '38px',
-                              borderRadius: '50%',
-                              backgroundColor: '#e2e8f0',
-                              color: '#334155',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontWeight: 700,
-                              fontSize: '0.825rem',
-                              flexShrink: 0,
-                            }}
-                          >
-                            {member.first_name[0]}{member.last_name[0]}
-                          </div>
-                          <div>
-                            <div style={{ fontWeight: 600, color: '#0f172a' }}>
-                              {fullName}
-                            </div>
-                            <div style={{ fontSize: '0.785rem', color: '#64748b' }}>
-                              {member.email}
-                            </div>
-                          </div>
-                        </Link>
-                      </td>
-
-                      {/* Plan */}
-                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
-                        {planName}
-                      </td>
-
-                      {/* Status Badge */}
-                      <td style={{ padding: '1rem 1.25rem' }}>
-                        <span
-                          className={`badge ${
-                            member.status === 'pending'
-                              ? 'badge-pending'
-                              : member.status === 'active'
-                              ? 'badge-active'
-                              : member.status === 'expiring'
-                              ? 'badge-expiring'
-                              : 'badge-expired'
-                          }`}
-                          style={
-                            member.status === 'pending'
-                              ? {
-                                  display: 'inline-flex',
-                                  alignItems: 'center',
-                                  gap: '0.3rem',
-                                  backgroundColor: '#fffbeb',
-                                  color: '#b45309',
-                                  border: '1px solid #fde68a',
-                                  fontWeight: 600,
-                                }
-                              : undefined
-                          }
-                          title={member.status === 'pending' ? 'Awaiting payment record to be listed on payments page' : undefined}
-                        >
-                          {member.status === 'pending' ? (
-                            <>
-                              <Clock size={11} />
-                              <span>Pending</span>
-                            </>
-                          ) : member.status === 'active' ? (
-                            'Active'
-                          ) : member.status === 'expiring' ? (
-                            'Expiring Soon'
-                          ) : member.status === 'inactive' ? (
-                            'Inactive'
-                          ) : (
-                            'Expired'
-                          )}
-                        </span>
-                      </td>
-
-                      {/* Expiration Date */}
-                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem' }}>
-                        {formatDisplayDate(member.end_date)}
-                      </td>
-
-                      {/* Actions Menu Trigger */}
-                      <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          onClick={(e) => handleToggleMenu(member.id, e)}
-                          style={{
-                            padding: '0.45rem',
-                            color: activeMenuId === member.id ? '#0f172a' : '#64748b',
-                            backgroundColor: activeMenuId === member.id ? '#f1f5f9' : 'transparent',
-                            borderRadius: '7px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            border: 'none',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          onMouseEnter={(e) => {
-                            if (activeMenuId !== member.id) {
-                              e.currentTarget.style.backgroundColor = '#f1f5f9';
-                              e.currentTarget.style.color = '#0f172a';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (activeMenuId !== member.id) {
-                              e.currentTarget.style.backgroundColor = 'transparent';
-                              e.currentTarget.style.color = '#64748b';
-                            }
-                          }}
-                          aria-label={`Actions for ${fullName}`}
-                          aria-expanded={activeMenuId === member.id}
-                        >
-                          <MoreVertical size={16} />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* 4. Pagination Footer */}
+        {/* Pagination, above the table so it stays put whatever the rows' height */}
         {filteredMembers.length > 0 && (
           <div
             style={{
               padding: '1rem 1.5rem',
-              borderTop: '1px solid #f1f5f9',
+              borderBottom: '1px solid #f1f5f9',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
@@ -603,6 +397,222 @@ export const MemberList: React.FC = () => {
                 <ChevronRight size={14} />
               </button>
             </div>
+          </div>
+        )}
+
+        {filteredMembers.length === 0 ? (
+          /* Empty State matching reference bottom-right illustration */
+          <div style={{ padding: '4.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                backgroundColor: '#f1f5f9',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#64748b',
+                marginBottom: '1.25rem',
+              }}
+            >
+              <Dumbbell size={30} strokeWidth={1.75} />
+            </div>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#0f172a', marginBottom: '0.4rem' }}>
+              {members.length === 0 ? 'No members yet' : 'No members match your search'}
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#64748b', maxWidth: '360px', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+              {members.length === 0
+                ? 'Start by adding your first member to manage memberships and payments.'
+                : 'Try a different name or clear the filters to see everyone.'}
+            </p>
+            {members.length === 0 ? (
+              <button
+                onClick={() => {
+                  setEditingMember(null);
+                  setIsAddModalOpen(true);
+                }}
+                className="btn btn-primary"
+              >
+                <Plus size={16} />
+                <span>Add Member</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                  setPlanFilter('all');
+                  setCurrentPage(1);
+                }}
+                className="btn btn-secondary"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div ref={steadyTableRef} style={{ overflowX: 'auto' }}>
+            <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  <th style={{ padding: '0.9rem 1.5rem' }}>Member</th>
+                  <th className="hide-on-phone" style={{ width: '24%', padding: '0.9rem 1.25rem' }}>Plan</th>
+                  <th style={{ width: '15%', padding: '0.9rem 1.25rem' }}>Status</th>
+                  <th className="hide-on-phone" style={{ width: '15%', padding: '0.9rem 1.25rem' }}>Expiration</th>
+                  <th style={{ width: '110px', padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              {/* Keyed by page so the rows fade in when the page changes. */}
+              <tbody key={currentPage} className="page-rows">
+                {paginatedMembers.map((member) => {
+                  const fullName = `${member.first_name} ${member.last_name}`;
+                  const planName = getPlanName(member.membership_plan_id);
+
+                  return (
+                    <tr
+                      key={member.id}
+                      style={{
+                        borderBottom: '1px solid #f8fafc',
+                        transition: 'background-color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                    >
+                      {/* Member (Avatar + Name + Email) */}
+                      <td style={{ padding: '1rem 1.5rem' }}>
+                        <Link
+                          href={`/members/${member.id}`}
+                          style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', textDecoration: 'none' }}
+                        >
+                          {/* Hidden on phones to give the name and plan room. */}
+                          <div
+                            className="hide-on-phone"
+                            style={{
+                              width: '38px',
+                              height: '38px',
+                              borderRadius: '50%',
+                              backgroundColor: '#e2e8f0',
+                              color: '#334155',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '0.825rem',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {member.first_name[0]}{member.last_name[0]}
+                          </div>
+                          <div style={{ minWidth: 0, overflowWrap: 'break-word' }}>
+                            <div style={{ fontWeight: 600, color: '#0f172a' }}>
+                              {fullName}
+                            </div>
+                            <div style={{ fontSize: '0.785rem', color: '#64748b' }}>
+                              {member.email}
+                            </div>
+                            {/* The Plan column is hidden on phones. */}
+                            <div className="show-on-phone" style={{ fontSize: '0.785rem', color: '#334155', fontWeight: 500 }}>
+                              {planName}
+                            </div>
+                          </div>
+                        </Link>
+                      </td>
+
+                      {/* Plan */}
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
+                        {planName}
+                      </td>
+
+                      {/* Status Badge */}
+                      <td style={{ padding: '1rem 1.25rem' }}>
+                        <span
+                          className={`badge ${
+                            member.status === 'pending'
+                              ? 'badge-pending'
+                              : member.status === 'active'
+                              ? 'badge-active'
+                              : member.status === 'expiring'
+                              ? 'badge-expiring'
+                              : 'badge-expired'
+                          }`}
+                          style={
+                            member.status === 'pending'
+                              ? {
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  backgroundColor: '#fffbeb',
+                                  color: '#b45309',
+                                  border: '1px solid #fde68a',
+                                  fontWeight: 600,
+                                }
+                              : undefined
+                          }
+                          title={member.status === 'pending' ? 'Awaiting payment record to be listed on payments page' : undefined}
+                        >
+                          {member.status === 'pending' ? (
+                            <>
+                              <Clock size={11} />
+                              <span>Pending</span>
+                            </>
+                          ) : member.status === 'active' ? (
+                            'Active'
+                          ) : member.status === 'expiring' ? (
+                            'Expiring Soon'
+                          ) : member.status === 'inactive' ? (
+                            'Inactive'
+                          ) : (
+                            'Expired'
+                          )}
+                        </span>
+                      </td>
+
+                      {/* Expiration Date */}
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
+                        {formatDisplayDate(member.end_date)}
+                      </td>
+
+                      {/* Actions Menu Trigger */}
+                      <td style={{ padding: '1rem 1.5rem', textAlign: 'right' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleMenu(member.id, e)}
+                          style={{
+                            padding: '0.45rem',
+                            color: activeMenuId === member.id ? '#0f172a' : '#64748b',
+                            backgroundColor: activeMenuId === member.id ? '#f1f5f9' : 'transparent',
+                            borderRadius: '7px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            border: 'none',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (activeMenuId !== member.id) {
+                              e.currentTarget.style.backgroundColor = '#f1f5f9';
+                              e.currentTarget.style.color = '#0f172a';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (activeMenuId !== member.id) {
+                              e.currentTarget.style.backgroundColor = 'transparent';
+                              e.currentTarget.style.color = '#64748b';
+                            }
+                          }}
+                          aria-label={`Actions for ${fullName}`}
+                          aria-expanded={activeMenuId === member.id}
+                        >
+                          <MoreVertical size={16} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

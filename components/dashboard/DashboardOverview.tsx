@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { DBService } from '@/lib/data/db-service';
 import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
-import { formatTimeAgo } from '@/lib/ui/date';
+import { formatTimeAgo, formatDisplayDate } from '@/lib/ui/date';
 import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
 import { calculateRevenueForecast } from '@/lib/ai/forecasting';
 import { DashboardKPIs, MonthlyTrendData, Member, UserProfile, Payment, Expense } from '@/types/database';
@@ -178,7 +178,10 @@ export const DashboardOverview: React.FC = () => {
   const adminFirstName = DBService.getFirstName(profile?.full_name);
   const currentHour = new Date().getHours();
   const greeting = currentHour < 12 ? 'Good morning' : currentHour < 18 ? 'Good afternoon' : 'Good evening';
-  const expiringMembers = members.filter((m) => m.status === 'expiring');
+  // Soonest first, so the top of the list is who to remind first.
+  const expiringMembers = members
+    .filter((m) => m.status === 'expiring')
+    .sort((a, b) => (a.end_date || '').localeCompare(b.end_date || ''));
   const recentPayments = payments
     .filter((p) => p.payment_status === 'completed')
     .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
@@ -506,7 +509,7 @@ export const DashboardOverview: React.FC = () => {
                         <div style={{ fontWeight: 600, color: '#1d1d1f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {m.first_name} {m.last_name}
                         </div>
-                        <div style={{ color: '#86868b', fontSize: '0.75rem' }}>Expires {m.end_date}</div>
+                        <div style={{ color: '#86868b', fontSize: '0.75rem' }}>Expires {formatDisplayDate(m.end_date || '')}</div>
                       </div>
                       <button
                         onClick={() => {
@@ -932,9 +935,15 @@ export const DashboardOverview: React.FC = () => {
                     </div>
                     <div style={{ padding: '0.85rem 1rem', borderRadius: '12px', backgroundColor: '#fafafa', border: '1px solid #f1f5f9' }}>
                       <span style={{ fontSize: '0.725rem', color: '#64748b', fontWeight: 600, display: 'block', textTransform: 'uppercase', letterSpacing: '0.03em' }}>vs Last Month</span>
-                      <strong style={{ fontSize: '1.15rem', color: expenseTrend?.positive ? '#059669' : '#ef4444' }}>
-                        {expenseTrend ? expenseTrend.value : '0%'}
-                      </strong>
+                      {/* A change that rounds to 0% is no change: grey, like the card above. */}
+                      {(() => {
+                        const isFlat = !expenseTrend || /^[+-]?0%$/.test(expenseTrend.value);
+                        return (
+                          <strong style={{ fontSize: '1.15rem', color: isFlat ? '#64748b' : expenseTrend.positive ? '#059669' : '#ef4444' }}>
+                            {isFlat ? '0%' : expenseTrend.value}
+                          </strong>
+                        );
+                      })()}
                     </div>
                   </div>
 
@@ -1296,7 +1305,7 @@ export const DashboardOverview: React.FC = () => {
                             <div>
                               <strong style={{ color: '#0f172a', fontSize: '0.9rem' }}>{m.first_name} {m.last_name}</strong>
                               <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
-                                Plan: <strong>{m.plan?.name || 'Standard Pass'}</strong> • Expires: <span style={{ color: '#b45309', fontWeight: 600 }}>{m.end_date}</span>
+                                Plan: <strong>{m.plan?.name || 'Standard Pass'}</strong> • Expires: <span style={{ color: '#b45309', fontWeight: 600 }}>{formatDisplayDate(m.end_date || '')}</span>
                               </div>
                             </div>
 

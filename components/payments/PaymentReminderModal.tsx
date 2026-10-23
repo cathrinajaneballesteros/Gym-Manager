@@ -6,7 +6,7 @@ import { Modal } from '@/components/ui/Modal';
 import { DBService } from '@/lib/data/db-service';
 import { Member, Payment } from '@/types/database';
 import { getPaymentMemberName } from '@/lib/ui/format';
-import { buildReminderSms } from '@/lib/ui/reminder-text';
+import { buildReminderSms, hasMembershipEnded } from '@/lib/ui/reminder-text';
 import { formatDisplayDate, getTodayKey } from '@/lib/ui/date';
 import { showAlert, showError } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
@@ -177,7 +177,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
 
       showAlert({
         icon: failureCount > 0 ? 'warning' : 'success',
-        title: failureCount > 0 ? 'Reminder Partially Sent' : 'Payment Reminder Sent!',
+        title: failureCount > 0 ? 'Reminder Partially Sent' : 'Reminder Sent!',
         html: `
           <div style="text-align: left; font-size: 0.875rem; color: #334155; line-height: 1.5;">
             <p style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">${failureCount > 0 ? 'Some channels failed:' : 'Reminder sent:'}</p>
@@ -203,7 +203,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Send Payment Reminder" maxWidth="560px">
+    <Modal isOpen={isOpen} onClose={onClose} title="Send Reminder" maxWidth="560px">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {/* Recipient Overview Header */}
         <div
@@ -233,13 +233,13 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
 
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', fontWeight: 600 }}>
-              Amount Due
+              {hasMembershipEnded(dueDate) ? 'Renewal Price' : 'Amount Due'}
             </div>
             <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#d97706' }}>
               {currency}{Number(amount || 0).toLocaleString()}
             </div>
             <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-              Due on {formatDisplayDate(dueDate)}
+              {hasMembershipEnded(dueDate) ? 'Ended on' : 'Due on'} {formatDisplayDate(dueDate)}
             </div>
           </div>
         </div>

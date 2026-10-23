@@ -155,7 +155,8 @@ export const PlansView: React.FC = () => {
       <ScrollReveal delay={40}>
         {plans.length > 0 ? (
           <div className="grid grid-cols-3 gap-4">
-            {plans.map((plan) => (
+            {/* Cheapest first, so the tiers read from basic to premium. */}
+            {[...plans].sort((a, b) => Number(a.price) - Number(b.price)).map((plan) => (
               <div
                 key={plan.id}
                 className="card"

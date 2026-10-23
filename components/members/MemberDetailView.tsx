@@ -178,7 +178,6 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
                   {member.phone}
                 </span>
               )}
-              {(member.email || member.phone) && <span>•</span>}
               <span>Member since {formatDisplayDate(member.created_at)}</span>
             </div>
           </div>
@@ -232,14 +231,14 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
         </div>
       </div>
 
-      {/* 3. Navigation Tabs (scroll sideways on phones instead of widening the page) */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem', overflowX: 'auto', flexWrap: 'nowrap' }}>
+      {/* 3. Navigation Tabs (shorter names on phones so all five fit without scrolling) */}
+      <div className="profile-tabs" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem', overflowX: 'auto', flexWrap: 'nowrap' }}>
         {([
-          { key: 'overview', label: 'Overview' },
-          { key: 'payments', label: 'Payment History' },
-          { key: 'attendance', label: 'Attendance' },
-          { key: 'history', label: 'Membership History' },
-          { key: 'notes', label: 'Notes' },
+          { key: 'overview', label: 'Overview', short: 'Overview' },
+          { key: 'payments', label: 'Payment History', short: 'Payments' },
+          { key: 'attendance', label: 'Attendance', short: 'Attendance' },
+          { key: 'history', label: 'Membership History', short: 'History' },
+          { key: 'notes', label: 'Notes', short: 'Notes' },
         ] as const).map((tab) => (
           <button
             key={tab.key}
@@ -255,7 +254,8 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
               flexShrink: 0,
             }}
           >
-            {tab.label}
+            <span className="tab-label-long">{tab.label}</span>
+            <span className="tab-label-short">{tab.short}</span>
           </button>
         ))}
       </div>
@@ -450,13 +450,13 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
             Payment History ({payments.length})
           </h2>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
+            <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.85rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase' }}>
                   <th style={{ padding: '0.75rem' }}>Date</th>
                   <th style={{ padding: '0.75rem' }}>Amount</th>
                   <th style={{ padding: '0.75rem' }}>Method</th>
-                  <th style={{ padding: '0.75rem' }}>Ref #</th>
+                  <th className="hide-on-phone" style={{ padding: '0.75rem' }}>Ref #</th>
                   <th style={{ padding: '0.75rem', textAlign: 'right' }}>Status</th>
                 </tr>
               </thead>
@@ -466,7 +466,7 @@ export const MemberDetailView: React.FC<MemberDetailViewProps> = ({ memberId }) 
                     <td style={{ padding: '0.75rem', color: '#334155' }}>{formatDisplayDate(p.payment_date)}</td>
                     <td style={{ padding: '0.75rem', fontWeight: 600, color: '#0f172a' }}>{currency}{Number(p.amount).toLocaleString()}</td>
                     <td style={{ padding: '0.75rem', color: '#64748b' }}>{p.payment_method}</td>
-                    <td style={{ padding: '0.75rem', color: '#94a3b8', fontSize: '0.75rem' }}>{p.reference_number || '—'}</td>
+                    <td className="hide-on-phone" style={{ padding: '0.75rem', color: '#94a3b8', fontSize: '0.75rem' }}>{p.reference_number || '—'}</td>
                     <td style={{ padding: '0.75rem', textAlign: 'right' }}>
                       <span
                         className={`badge ${

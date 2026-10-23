@@ -17,7 +17,6 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState('');
   const [gymName, setGymName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -41,8 +40,17 @@ export default function LoginPage() {
         setMode('signup');
       }
 
+      // A sign-out that brought them here has finished; nothing is waiting for the flag any more.
+      try {
+        sessionStorage.removeItem('sgfm_signing_out');
+      } catch {
+        // Storage blocked: nothing to clean up.
+      }
+
       // Sent back here by /auth/callback when an email link was opened on another device.
-      if (params.get('notice') === 'email_confirmed') {
+      if (params.get('notice') === 'session_expired') {
+        setNotice('Your session expired. Please sign in again.');
+      } else if (params.get('notice') === 'email_confirmed') {
         setNotice('Your email is confirmed. Please sign in.');
       } else if (params.get('notice') === 'reset_other_device') {
         setError('Open the password reset link in the same browser you requested it from, or request a new one.');
@@ -619,35 +627,6 @@ export default function LoginPage() {
               </button>
             </div>
           </div>
-
-          {/* Remember Me */}
-          {mode === 'signin' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
-              <input
-                type="checkbox"
-                id="rememberMe"
-                checked={rememberMe}
-                onChange={(e) => setRememberMe(e.target.checked)}
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  accentColor: '#059669',
-                  cursor: 'pointer',
-                }}
-              />
-              <label
-                htmlFor="rememberMe"
-                style={{
-                  fontSize: '0.825rem',
-                  color: '#636366',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                }}
-              >
-                Remember this device
-              </label>
-            </div>
-          )}
 
           {/* Submit Button */}
           <button

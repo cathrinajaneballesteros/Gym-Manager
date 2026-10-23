@@ -304,19 +304,17 @@ export const ReportsView: React.FC = () => {
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            {/* Date Filter Pill */}
+          <div className="reports-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+            {/* The period this report covers. Plain text, not a button: the tabs below choose the period. */}
             <div
+              className="reports-range"
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.45rem',
-                backgroundColor: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '0.5rem 0.85rem',
+                gap: '0.4rem',
+                padding: '0.5rem 0.25rem',
                 fontSize: '0.825rem',
-                color: '#475569',
+                color: '#64748b',
                 fontWeight: 500,
               }}
             >
@@ -349,7 +347,7 @@ export const ReportsView: React.FC = () => {
 
       {/* 2. Apple macOS/iOS Segmented Navigation Controls */}
       <ScrollReveal delay={40}>
-        <div style={{ display: 'inline-flex', backgroundColor: 'rgba(118, 118, 128, 0.12)', padding: '3px', borderRadius: '10px', gap: '2px', width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
+        <div className="segmented-tabs" style={{ display: 'inline-flex', backgroundColor: 'rgba(118, 118, 128, 0.12)', padding: '3px', borderRadius: '10px', gap: '2px', width: 'fit-content', maxWidth: '100%', overflowX: 'auto' }}>
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -445,7 +443,7 @@ export const ReportsView: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(paymentsByPlan).map(([planName, data]) => (
+                      {Object.entries(paymentsByPlan).sort((a, b) => b[1].total - a[1].total).map(([planName, data]) => (
                         <tr key={planName}>
                           <td style={TD}><strong>{planName}</strong></td>
                           <td style={TD}>{data.count}</td>
@@ -596,7 +594,7 @@ export const ReportsView: React.FC = () => {
             </div>
 
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+              <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase' }}>
                     <th style={{ padding: '0.9rem 1.5rem' }}>Category</th>
@@ -641,14 +639,15 @@ export const ReportsView: React.FC = () => {
               </p>
             </div>
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr>
                     <th style={TH}>Month</th>
                     <th style={{ ...TH, textAlign: 'right' }}>Revenue</th>
                     <th style={{ ...TH, textAlign: 'right' }}>Expenses</th>
                     <th style={{ ...TH, textAlign: 'right' }}>Net Profit</th>
-                    <th style={{ ...TH, textAlign: 'right' }}>Margin</th>
+                    {/* Margin is Net Profit ÷ Revenue; dropped on phones so the five columns fit. */}
+                    <th className="hide-on-phone" style={{ ...TH, textAlign: 'right' }}>Margin</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -661,7 +660,7 @@ export const ReportsView: React.FC = () => {
                         <td style={{ ...TD, textAlign: 'right', fontWeight: 600, color: pt.profit >= 0 ? '#0f172a' : '#ef4444' }}>
                           {pt.profit >= 0 ? '+' : '-'}{currency}{Math.abs(pt.profit).toLocaleString()}
                         </td>
-                        <td style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{formatMargin(pt.profit, pt.revenue)}</td>
+                        <td className="hide-on-phone" style={{ ...TD, textAlign: 'right', color: '#64748b' }}>{formatMargin(pt.profit, pt.revenue)}</td>
                       </tr>
                     );
                   })}
@@ -680,7 +679,7 @@ export const ReportsView: React.FC = () => {
                         <td style={{ ...TF, textAlign: 'right', color: totalProfit >= 0 ? '#0f172a' : '#ef4444' }}>
                           {formatSigned(totalProfit, currency)}
                         </td>
-                        <td style={{ ...TF, textAlign: 'right', color: '#64748b' }}>{formatMargin(totalProfit, totalRevenue)}</td>
+                        <td className="hide-on-phone" style={{ ...TF, textAlign: 'right', color: '#64748b' }}>{formatMargin(totalProfit, totalRevenue)}</td>
                       </tr>
                     );
                   })()}
@@ -726,7 +725,7 @@ export const ReportsView: React.FC = () => {
                 <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Month-by-Month ({now.getFullYear()})</h2>
               </div>
               <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr>
                       <th style={TH}>Month</th>

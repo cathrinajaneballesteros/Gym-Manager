@@ -18,6 +18,7 @@ import { showToast } from '@/lib/ui/swal';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { getTodayKey, toDateKey } from '@/lib/ui/date';
 import { downloadCSV } from '@/lib/ui/csv';
+import { useSteadyHeight } from '@/lib/ui/use-steady-height';
 import { DBService } from '@/lib/data/db-service';
 
 const subscribeAudit = (callback: () => void) => {
@@ -120,6 +121,8 @@ export const AuditLogView: React.FC = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  // The table keeps its tallest page's height, so a short last page doesn't make the card jump.
+  const steadyTableRef = useSteadyHeight([searchQuery, actionFilter, entityFilter, fromDate, toDate].join('|'), currentPage);
   const pageSize = 12;
 
   const [selectedEntry, setSelectedEntry] = useState<AuditLogEntry | null>(null);
@@ -403,85 +406,12 @@ export const AuditLogView: React.FC = () => {
             <h2 style={{ fontSize: '1rem', fontWeight: 600, color: '#0f172a' }}>Activity History</h2>
           </div>
 
-          {filteredEntries.length === 0 ? (
-            <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
-              No audit events recorded yet matching the criteria.
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table className="phone-tight-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                    <th style={{ padding: '0.9rem 1.5rem' }}>Time</th>
-                    <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem' }}>Actor</th>
-                    <th style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>Action</th>
-                    <th className="hide-on-phone" style={{ padding: '0.9rem 1.25rem', textAlign: 'center' }}>Entity</th>
-                    <th style={{ padding: '0.9rem 1.5rem' }}>Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginated.map((entry) => {
-                    const meta = ACTION_META[entry.action];
-                    const changed = entry.metadata?.changed;
-                    return (
-                      <tr
-                        key={entry.id}
-                        onClick={() => setSelectedEntry(entry)}
-                        style={{ borderBottom: '1px solid #f8fafc', transition: 'background-color 0.15s ease', cursor: 'pointer' }}
-                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
-                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
-                        title="Click to view complete event details"
-                      >
-                        <td className="phone-wrap" style={{ padding: '1rem 1.5rem', color: '#64748b', whiteSpace: 'nowrap' }}>
-                          {formatDateTime(entry.created_at)}
-                        </td>
-
-                        <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontSize: '0.825rem' }}>
-                          {entry.actor_email || 'Unknown'}
-                        </td>
-
-                        <td style={{ padding: '1rem 1.25rem', textAlign: 'center' }}>
-                          <span
-                            className="phone-wrap"
-                            style={{
-                              padding: '0.25rem 0.65rem',
-                              borderRadius: '6px',
-                              backgroundColor: meta?.background || '#f1f5f9',
-                              color: meta?.color || '#334155',
-                              fontSize: '0.785rem',
-                              fontWeight: 600,
-                              border: `1px solid ${meta?.border || '#e2e8f0'}`,
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            {meta?.label || entry.action}
-                          </span>
-                        </td>
-
-                        <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.825rem', textAlign: 'center' }}>
-                          {ENTITY_LABEL[entry.entity_type] || entry.entity_type}
-                        </td>
-
-                        <td className="phone-wrap" style={{ padding: '1rem 1.5rem' }}>
-                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{displayLabel(entry.entity_label) || '—'}</div>
-                          {typeof changed === 'string' && changed !== 'none' && (
-                            <div style={{ fontSize: '0.785rem', color: '#64748b' }}>Changed: {changed}</div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Pagination Footer */}
+          {/* Pagination, above the table so it stays put whatever the rows' height */}
           {filteredEntries.length > 0 && (
             <div
               style={{
                 padding: '1rem 1.5rem',
-                borderTop: '1px solid #f1f5f9',
+                borderBottom: '1px solid #f1f5f9',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
@@ -548,6 +478,80 @@ export const AuditLogView: React.FC = () => {
                   <ChevronRight size={14} />
                 </button>
               </div>
+            </div>
+          )}
+
+          {filteredEntries.length === 0 ? (
+            <div style={{ padding: '4rem 2rem', textAlign: 'center', color: '#94a3b8', fontSize: '0.875rem' }}>
+              No audit events recorded yet matching the criteria.
+            </div>
+          ) : (
+            <div ref={steadyTableRef} style={{ overflowX: 'auto' }}>
+              <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    <th style={{ width: '18%', padding: '0.9rem 1.5rem' }}>Time</th>
+                    <th className="hide-on-phone" style={{ width: '20%', padding: '0.9rem 1.25rem' }}>Actor</th>
+                    <th style={{ width: '16%', padding: '0.9rem 1.25rem', textAlign: 'center' }}>Action</th>
+                    <th className="hide-on-phone" style={{ width: '13%', padding: '0.9rem 1.25rem', textAlign: 'center' }}>Entity</th>
+                    <th style={{ padding: '0.9rem 1.5rem' }}>Details</th>
+                  </tr>
+                </thead>
+                {/* Keyed by page so the rows fade in when the page changes. */}
+                <tbody key={currentPage} className="page-rows">
+                  {paginated.map((entry) => {
+                    const meta = ACTION_META[entry.action];
+                    const changed = entry.metadata?.changed;
+                    return (
+                      <tr
+                        key={entry.id}
+                        onClick={() => setSelectedEntry(entry)}
+                        style={{ borderBottom: '1px solid #f8fafc', transition: 'background-color 0.15s ease', cursor: 'pointer' }}
+                        onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#f8fafc')}
+                        onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                        title="Click to view complete event details"
+                      >
+                        <td className="phone-wrap" style={{ padding: '1rem 1.5rem', color: '#64748b', whiteSpace: 'nowrap' }}>
+                          {formatDateTime(entry.created_at)}
+                        </td>
+
+                        <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontSize: '0.825rem' }}>
+                          {entry.actor_email || 'Unknown'}
+                        </td>
+
+                        <td style={{ padding: '1rem 1.25rem', textAlign: 'center' }}>
+                          <span
+                            className="phone-wrap"
+                            style={{
+                              padding: '0.25rem 0.65rem',
+                              borderRadius: '6px',
+                              backgroundColor: meta?.background || '#f1f5f9',
+                              color: meta?.color || '#334155',
+                              fontSize: '0.785rem',
+                              fontWeight: 600,
+                              border: `1px solid ${meta?.border || '#e2e8f0'}`,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {meta?.label || entry.action}
+                          </span>
+                        </td>
+
+                        <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#64748b', fontSize: '0.825rem', textAlign: 'center' }}>
+                          {ENTITY_LABEL[entry.entity_type] || entry.entity_type}
+                        </td>
+
+                        <td className="phone-wrap" style={{ padding: '1rem 1.5rem' }}>
+                          <div style={{ fontWeight: 600, color: '#0f172a' }}>{displayLabel(entry.entity_label) || '—'}</div>
+                          {typeof changed === 'string' && changed !== 'none' && (
+                            <div style={{ fontSize: '0.785rem', color: '#64748b' }}>Changed: {changed}</div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
