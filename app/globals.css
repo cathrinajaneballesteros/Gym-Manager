@@ -454,6 +454,18 @@ input[type='number'] {
     padding-left: 0.5rem !important;
     padding-right: 0.5rem !important;
   }
+  /* Tab switchers (Reports, AI Analytics) wrap onto a second row instead of hiding tabs off the edge. */
+  .segmented-tabs {
+    display: flex !important;
+    flex-wrap: wrap;
+    width: 100% !important;
+    overflow-x: visible !important;
+  }
+  .segmented-tabs > button {
+    flex: 1 1 auto;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
   .phone-wrap {
     white-space: normal !important;
     overflow-wrap: anywhere;
