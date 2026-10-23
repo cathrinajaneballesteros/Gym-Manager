@@ -43,7 +43,7 @@ export const OpeningHoursEditor: React.FC<OpeningHoursEditorProps> = ({ value, o
               aria-label={`${label} closing time`}
               style={{ width: '100%', opacity: day.closed ? 0.4 : 1 }}
             />
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#64748b', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <label className="opening-hours-closed" style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.8rem', color: '#64748b', cursor: 'pointer', whiteSpace: 'nowrap' }}>
               <input type="checkbox" checked={day.closed} onChange={(e) => setDay(key, { closed: e.target.checked })} />
               Closed
             </label>
@@ -59,13 +59,25 @@ export const OpeningHoursEditor: React.FC<OpeningHoursEditorProps> = ({ value, o
       </button>
       <style jsx>{`
         @media (max-width: 520px) {
-          /* Day name on its own line, then open / close / Closed for that day underneath. */
+          /* Day name and Closed on one line, then the open and close times sharing the full width underneath,
+             so each time box has room for "06:00 AM". */
           .opening-hours-row {
-            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto !important;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
             row-gap: 0.3rem !important;
           }
           .opening-hours-day {
-            grid-column: 1 / -1;
+            grid-column: 1;
+            grid-row: 1;
+          }
+          .opening-hours-closed {
+            grid-column: 2;
+            grid-row: 1;
+            justify-self: end;
+          }
+          /* Less side padding so "06:00 AM" and the clock button both fit. */
+          .opening-hours-row input[type='time'] {
+            padding-left: 0.6rem !important;
+            padding-right: 0.45rem !important;
           }
         }
       `}</style>
