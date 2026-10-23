@@ -1,14 +1,14 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, PiggyBank, CheckCircle2 } from 'lucide-react';
+import { Sparkles, PiggyBank, CheckCircle2, Bell } from 'lucide-react';
 import { calculateRevenueForecast } from '@/lib/ai/forecasting';
 import { predictMemberChurn } from '@/lib/ai/churn-detector';
 import { detectExpenseLeaks } from '@/lib/ai/leak-detector';
 import { RevenueForecastResult, ChurnPredictionResult, ChurnPredictionMember, ExpenseLeakResult } from '@/types/ai';
 import { DBService } from '@/lib/data/db-service';
 import { useGymDataRefresh } from '@/lib/ui/use-gym-data-refresh';
-import { UserProfile } from '@/types/database';
+import { Member, UserProfile } from '@/types/database';
 import { showAlert, showToast, showError } from '@/lib/ui/swal';
 import { escapeHtml } from '@/lib/ui/escape';
 import { formatCompactAmount } from '@/lib/ui/format';
@@ -22,6 +22,7 @@ import {
   Tooltip,
 } from 'recharts';
 import { ScrollReveal } from '@/components/ui/ScrollReveal';
+import { PaymentReminderModal } from '@/components/payments/PaymentReminderModal';
 
 export const AnalyticsView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'forecast' | 'churn' | 'leaks'>('forecast');
@@ -29,7 +30,7 @@ export const AnalyticsView: React.FC = () => {
   const [forecast, setForecast] = useState<RevenueForecastResult | null>(null);
   const [churn, setChurn] = useState<ChurnPredictionResult | null>(null);
   const [leaks, setLeaks] = useState<ExpenseLeakResult | null>(null);
-  const [contactedMemberId, setContactedMemberId] = useState<string | null>(null);
+  const [reminderMember, setReminderMember] = useState<Member | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isCostSavingAiLoading, setIsCostSavingAiLoading] = useState(false);
 
@@ -145,13 +146,12 @@ export const AnalyticsView: React.FC = () => {
             .writeText(data.message)
             .then(() => {
               showToast('Copied to clipboard!');
-              setContactedMemberId(member.memberId);
             })
             .catch(copyFailed);
         }
       });
     } catch {
-      handleContactMember(member);
+      showError('AI Draft Unavailable', 'Could not write a message right now. Please try again, or use Remind to send the standard reminder.');
     }
   };
 
@@ -225,22 +225,6 @@ export const AnalyticsView: React.FC = () => {
     historical: pt.isForecast ? null : pt.projectedRevenue,
     forecast: pt.isForecast || i === lastHistoricalIndex ? pt.projectedRevenue : null,
   }));
-
-  const handleContactMember = async (member: ChurnPredictionMember) => {
-    const gymName = profile?.gym_name || 'our gym';
-    const message =
-      member.daysUntilExpiration < 0
-        ? `Hi ${member.memberName}, we miss you at ${gymName}! Your membership ended on ${member.expirationDate}. Come back and renew anytime.`
-        : `Hi ${member.memberName}, this is ${gymName}. Your membership ends on ${member.expirationDate}. Renew early so you don't miss a session!`;
-    try {
-      await navigator.clipboard.writeText(message);
-      setContactedMemberId(member.memberId);
-      showToast('Message copied to clipboard!');
-      setTimeout(() => setContactedMemberId(null), 3000);
-    } catch {
-      showError('Copy Failed', 'Could not copy the message. Please check your browser permissions.');
-    }
-  };
 
   const handleViewForecastDetails = () => {
     if (!forecast.hasSufficientData) {
@@ -571,11 +555,13 @@ export const AnalyticsView: React.FC = () => {
                             <span className="phone-icon-label">AI Draft</span>
                           </button>
                           <button
-                            onClick={() => handleContactMember(m)}
+                            onClick={() => setReminderMember(DBService.getMemberById(m.memberId) ?? null)}
                             className="btn btn-secondary btn-sm"
-                            style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem' }}
+                            style={{ fontSize: '0.75rem', padding: '0.3rem 0.65rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                            title="Send an SMS or email reminder"
                           >
-                            {contactedMemberId === m.memberId ? 'Copied ✓' : 'Copy message'}
+                            <Bell size={12} />
+                            <span className="phone-icon-label">Remind</span>
                           </button>
                         </div>
                       </td>
@@ -823,6 +809,12 @@ export const AnalyticsView: React.FC = () => {
           </div>
         </ScrollReveal>
       )}
+
+      <PaymentReminderModal
+        isOpen={Boolean(reminderMember)}
+        onClose={() => setReminderMember(null)}
+        member={reminderMember}
+      />
 
       <style jsx>{`
         @media (max-width: 900px) {
