@@ -305,18 +305,15 @@ export const ReportsView: React.FC = () => {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
-            {/* Date Filter Pill */}
+            {/* The period this report covers. Plain text, not a button: the tabs below choose the period. */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.45rem',
-                backgroundColor: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '0.5rem 0.85rem',
+                gap: '0.4rem',
+                padding: '0.5rem 0.25rem',
                 fontSize: '0.825rem',
-                color: '#475569',
+                color: '#64748b',
                 fontWeight: 500,
               }}
             >
