@@ -25,6 +25,9 @@ export const Header: React.FC = () => {
   }, []);
 
   const displayName = DBService.displayName(profile);
+  // Read on every render; the profile-updated event re-renders the header when the owner renames the gym or changes its logo.
+  const gymLogo = DBService.getGym()?.logo_url;
+  const gymName = DBService.getGym()?.name || profile.gym_name || 'Smart Gym';
   const initials = DBService.getInitials(displayName);
 
   // Account menu under the avatar: Settings and Sign out.
@@ -69,11 +72,29 @@ export const Header: React.FC = () => {
         zIndex: 30,
       }}
     >
-      {/* Left side kept empty so the avatar stays on the right. Phones open the menu from More in the tab bar. */}
-      <div />
+      {/* Left: the gym's logo and name on phones and tablets, where the sidebar (which shows them on desktop) is hidden.
+          The menu itself is under More in the tab bar. */}
+      <div className="header-brand" style={{ alignItems: 'center', gap: '0.6rem', minWidth: 0 }}>
+        {/* eslint-disable-next-line @next/next/no-img-element -- same small logo as the sidebar; may be an uploaded file */}
+        <img
+          src={gymLogo || '/logo.svg'}
+          alt=""
+          width={28}
+          height={28}
+          style={{
+            borderRadius: '7px',
+            objectFit: gymLogo ? 'cover' : 'contain',
+            backgroundColor: gymLogo ? '#ffffff' : undefined,
+            flexShrink: 0,
+          }}
+        />
+        <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1d1d1f', letterSpacing: '-0.015em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {gymName}
+        </span>
+      </div>
 
       {/* Right: Profile Avatar with the account menu */}
-      <div ref={menuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+      <div ref={menuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: '0.85rem', marginLeft: 'auto' }}>
         <button
           type="button"
           onClick={() => setMenuOpen((open) => !open)}

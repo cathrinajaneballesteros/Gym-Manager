@@ -651,6 +651,16 @@ input[type='number'] {
 }
 
 /* App header: frosted on desktop, solid on phones where a live blur makes scrolling lag. */
+/* The gym's logo and name in the top bar, only where the sidebar is hidden (same 900px breakpoint as the app shell). */
+.header-brand {
+  display: none;
+}
+@media (max-width: 900px) {
+  .header-brand {
+    display: flex;
+  }
+}
+
 .app-header {
   background-color: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(25px);
