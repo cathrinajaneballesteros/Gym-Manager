@@ -177,7 +177,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
 
       showAlert({
         icon: failureCount > 0 ? 'warning' : 'success',
-        title: failureCount > 0 ? 'Reminder Partially Sent' : 'Payment Reminder Sent!',
+        title: failureCount > 0 ? 'Reminder Partially Sent' : 'Reminder Sent!',
         html: `
           <div style="text-align: left; font-size: 0.875rem; color: #334155; line-height: 1.5;">
             <p style="margin-bottom: 0.5rem; font-weight: 600; color: #0f172a;">${failureCount > 0 ? 'Some channels failed:' : 'Reminder sent:'}</p>
@@ -203,7 +203,7 @@ export const PaymentReminderModal: React.FC<PaymentReminderModalProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Send Payment Reminder" maxWidth="560px">
+    <Modal isOpen={isOpen} onClose={onClose} title="Send Reminder" maxWidth="560px">
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
         {/* Recipient Overview Header */}
         <div
