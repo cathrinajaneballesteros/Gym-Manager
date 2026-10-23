@@ -304,9 +304,10 @@ export const ReportsView: React.FC = () => {
             </p>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+          <div className="reports-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
             {/* The period this report covers. Plain text, not a button: the tabs below choose the period. */}
             <div
+              className="reports-range"
               style={{
                 display: 'flex',
                 alignItems: 'center',

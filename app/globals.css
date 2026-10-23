@@ -468,6 +468,14 @@ input[type='number'] {
   main .btn {
     min-height: 44px;
   }
+  /* Reports header: the period on its own line, then the two export buttons side by side. */
+  .reports-range {
+    flex-basis: 100%;
+  }
+  .reports-actions > button {
+    flex: 1 1 0;
+    justify-content: center;
+  }
   .tab-label-long {
     display: none;
   }
