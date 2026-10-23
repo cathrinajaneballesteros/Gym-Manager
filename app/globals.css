@@ -844,6 +844,28 @@ input[type='number'] {
   color: #1e293b !important;
 }
 
+/* Table rows ease in when switching pages (see the paginated lists). */
+.page-rows {
+  animation: pageRowsIn 0.2s ease-out;
+}
+
+@keyframes pageRowsIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-rows {
+    animation: none;
+  }
+}
+
 @keyframes modalSlideUp {
   0% {
     opacity: 0;

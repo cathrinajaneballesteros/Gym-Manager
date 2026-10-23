@@ -385,7 +385,8 @@ export const MemberList: React.FC = () => {
                   <th style={{ width: '110px', padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              {/* Keyed by page so the rows fade in when the page changes. */}
+              <tbody key={currentPage} className="page-rows">
                 {paginatedMembers.map((member) => {
                   const fullName = `${member.first_name} ${member.last_name}`;
                   const planName = getPlanName(member.membership_plan_id);

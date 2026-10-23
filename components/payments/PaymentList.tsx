@@ -522,7 +522,8 @@ export const PaymentList: React.FC = () => {
                   <th style={{ width: '190px', padding: '0.9rem 1.5rem 0.9rem 0.75rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              {/* Keyed by page so the rows fade in when the page changes. */}
+              <tbody key={currentPage} className="page-rows">
                 {paginated.map((p) => {
                   // The Plan column already says "Walk-in", so the name doesn't repeat it here.
                   const memberName = p.is_walk_in && p.member_name ? p.member_name : getPaymentMemberName(p);

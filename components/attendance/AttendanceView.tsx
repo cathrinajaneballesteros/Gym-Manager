@@ -448,7 +448,8 @@ export const AttendanceView: React.FC = () => {
                       <th style={{ ...thStyle, width: '110px', textAlign: 'right' }}></th>
                     </tr>
                   </thead>
-                  <tbody>
+                  {/* Keyed by page so the rows fade in when the page changes. */}
+                  <tbody key={currentPage} className="page-rows">
                     {paginated.map((a) => {
                       const m = memberMap.get(a.member_id);
                       return (

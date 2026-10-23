@@ -419,7 +419,8 @@ export const AuditLogView: React.FC = () => {
                     <th style={{ padding: '0.9rem 1.5rem' }}>Details</th>
                   </tr>
                 </thead>
-                <tbody>
+                {/* Keyed by page so the rows fade in when the page changes. */}
+                <tbody key={currentPage} className="page-rows">
                   {paginated.map((entry) => {
                     const meta = ACTION_META[entry.action];
                     const changed = entry.metadata?.changed;

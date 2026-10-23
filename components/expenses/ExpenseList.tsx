@@ -602,7 +602,8 @@ export const ExpenseList: React.FC = () => {
                   <th style={{ width: '130px', padding: '0.9rem 1.5rem', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              {/* Keyed by page so the rows fade in when the page changes. */}
+              <tbody key={currentPage} className="page-rows">
                 {paginated.map((exp) => (
                   <tr
                     key={exp.id}
