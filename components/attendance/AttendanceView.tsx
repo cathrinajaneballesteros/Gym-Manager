@@ -28,6 +28,7 @@ import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { downloadCSV } from '@/lib/ui/csv';
 import { daysAgoKey, formatDisplayDate, getTodayKey, toDateKey } from '@/lib/ui/date';
+import { useSteadyHeight } from '@/lib/ui/use-steady-height';
 
 const INACTIVE_DAYS = 14;
 const PAGE_SIZE = 12;
@@ -80,6 +81,8 @@ export const AttendanceView: React.FC = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  // The table keeps its tallest page's height, so a short last page doesn't make the card jump.
+  const steadyTableRef = useSteadyHeight([searchQuery, fromDate, toDate].join('|'), currentPage);
   const [reminderMember, setReminderMember] = useState<Member | null>(null);
   const [isWalkInOpen, setIsWalkInOpen] = useState(false);
   const inactiveRef = useRef<HTMLDivElement>(null);
@@ -509,7 +512,7 @@ export const AttendanceView: React.FC = () => {
                 )}
               </div>
 
-              <div style={{ overflowX: 'auto' }}>
+              <div ref={steadyTableRef} style={{ overflowX: 'auto' }}>
                 <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                   <thead>
                     <tr style={headRowStyle}>

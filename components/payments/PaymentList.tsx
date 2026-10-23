@@ -23,6 +23,7 @@ import { formatDisplayDate } from '@/lib/ui/date';
 import { getPaymentMemberName } from '@/lib/ui/format';
 import { Bell, CheckCircle2, Clock, AlertTriangle, Edit, UserPlus, Trash2, UserRound, MoreVertical } from 'lucide-react';
 import { getPageWindow } from '@/lib/ui/pagination';
+import { useSteadyHeight } from '@/lib/ui/use-steady-height';
 
 export const PaymentList: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
@@ -33,6 +34,8 @@ export const PaymentList: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [receiptFilter, setReceiptFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  // The table keeps its tallest page's height, so a short last page doesn't make the card jump.
+  const steadyTableRef = useSteadyHeight([searchQuery, memberFilter, statusFilter, receiptFilter].join('|'), currentPage);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
   // Walk-ins have no member, so they use their own form (new: null with the modal open; edit: the payment).
@@ -596,7 +599,7 @@ export const PaymentList: React.FC = () => {
             )}
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div ref={steadyTableRef} style={{ overflowX: 'auto' }}>
             <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>

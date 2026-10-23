@@ -25,6 +25,7 @@ import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { getRecentMonthKeys, getTodayKey, formatDisplayDate } from '@/lib/ui/date';
 import { downloadCSV } from '@/lib/ui/csv';
 import { getPageWindow } from '@/lib/ui/pagination';
+import { useSteadyHeight } from '@/lib/ui/use-steady-height';
 
 export const ExpenseList: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -35,6 +36,8 @@ export const ExpenseList: React.FC = () => {
   const [timeframeFilter, setTimeframeFilter] = useState('all');
   const [activeTab, setActiveTab] = useState<'records' | 'historical'>('records');
   const [currentPage, setCurrentPage] = useState(1);
+  // The table keeps its tallest page's height, so a short last page doesn't make the card jump.
+  const steadyTableRef = useSteadyHeight([searchQuery, categoryFilter, methodFilter, timeframeFilter].join('|'), currentPage);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const pageSize = 8;
@@ -665,7 +668,7 @@ export const ExpenseList: React.FC = () => {
             No expenses found matching the criteria.
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div ref={steadyTableRef} style={{ overflowX: 'auto' }}>
             <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>

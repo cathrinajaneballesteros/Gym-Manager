@@ -30,6 +30,7 @@ import { showConfirm, showError, showToast } from '@/lib/ui/swal';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { formatDisplayDate } from '@/lib/ui/date';
 import { checkInWithPrompt } from '@/lib/ui/check-in';
+import { useSteadyHeight } from '@/lib/ui/use-steady-height';
 
 // Statuses the filter can start on from a link (e.g. the dashboard's /members?status=expiring).
 const STATUS_FILTERS = ['pending', 'active', 'expiring', 'expired'];
@@ -46,6 +47,8 @@ export const MemberList: React.FC = () => {
   const [planFilter, setPlanFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'end_date' | 'created_at'>('end_date');
   const [currentPage, setCurrentPage] = useState(1);
+  // The table keeps its tallest page's height, so a short last page doesn't make the card jump.
+  const steadyTableRef = useSteadyHeight([searchQuery, statusFilter, planFilter].join('|'), currentPage);
   const pageSize = 10;
 
   // Modals & Menu
@@ -449,7 +452,7 @@ export const MemberList: React.FC = () => {
             )}
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div ref={steadyTableRef} style={{ overflowX: 'auto' }}>
             <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>

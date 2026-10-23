@@ -18,6 +18,7 @@ import { showToast } from '@/lib/ui/swal';
 import { getPageWindow } from '@/lib/ui/pagination';
 import { getTodayKey, toDateKey } from '@/lib/ui/date';
 import { downloadCSV } from '@/lib/ui/csv';
+import { useSteadyHeight } from '@/lib/ui/use-steady-height';
 import { DBService } from '@/lib/data/db-service';
 
 const subscribeAudit = (callback: () => void) => {
@@ -120,6 +121,8 @@ export const AuditLogView: React.FC = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  // The table keeps its tallest page's height, so a short last page doesn't make the card jump.
+  const steadyTableRef = useSteadyHeight([searchQuery, actionFilter, entityFilter, fromDate, toDate].join('|'), currentPage);
   const pageSize = 12;
 
   const [selectedEntry, setSelectedEntry] = useState<AuditLogEntry | null>(null);
@@ -483,7 +486,7 @@ export const AuditLogView: React.FC = () => {
               No audit events recorded yet matching the criteria.
             </div>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
+            <div ref={steadyTableRef} style={{ overflowX: 'auto' }}>
               <table className="phone-tight-table steady-table" style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid #f1f5f9', color: '#64748b', fontSize: '0.785rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
