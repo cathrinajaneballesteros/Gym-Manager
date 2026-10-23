@@ -40,6 +40,8 @@ export const PaymentList: React.FC = () => {
   const [editingWalkIn, setEditingWalkIn] = useState<Payment | null>(null);
   const [checkingPayment, setCheckingPayment] = useState<Payment | null>(null);
   const [remindingPayment, setRemindingPayment] = useState<Payment | null>(null);
+  // Set when recording a new member's first payment from their "Not paid yet" row.
+  const [payingMemberId, setPayingMemberId] = useState<string | null>(null);
   const pageSize = 8;
   const isOwner = DBService.isOwner();
 
@@ -153,6 +155,17 @@ export const PaymentList: React.FC = () => {
   // After a delete the last page can disappear; go back to the last page that still exists.
   if (currentPage > totalPages) setCurrentPage(totalPages);
   const paginated = filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // New members with no payment yet have no row of their own, so list them at the top of the first page.
+  // They follow the search and the member filter, and count as Pending for the status filter.
+  const awaitingMembers =
+    currentPage === 1 && (statusFilter === 'all' || statusFilter === 'pending') && receiptFilter === 'all'
+      ? pendingMembers.filter(
+          (m) =>
+            (memberFilter === 'all' || memberFilter === m.id) &&
+            `${m.first_name} ${m.last_name}`.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : [];
 
   const handleMarkAsPaid = async (p: Payment) => {
     const memberName = getPaymentMemberName(p);
@@ -514,7 +527,7 @@ export const PaymentList: React.FC = () => {
           </div>
         )}
 
-        {filteredPayments.length === 0 ? (
+        {filteredPayments.length === 0 && awaitingMembers.length === 0 ? (
           <div style={{ padding: '4.5rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div
               style={{
@@ -599,6 +612,85 @@ export const PaymentList: React.FC = () => {
               </thead>
               {/* Keyed by page so the rows fade in when the page changes. */}
               <tbody key={currentPage} className="page-rows">
+                {awaitingMembers.map((m) => {
+                  const plan = DBService.getPlans().find((pl) => pl.id === m.membership_plan_id);
+                  return (
+                    <tr key={`awaiting-${m.id}`} style={{ borderBottom: '1px solid #f8fafc', backgroundColor: '#fffbeb' }}>
+                      <td style={{ padding: '1rem 1.5rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                          <div
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '50%',
+                              backgroundColor: '#fde68a',
+                              color: '#92400e',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontWeight: 700,
+                              fontSize: '0.8rem',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {m.first_name[0]}{m.last_name[0]}
+                          </div>
+                          <div style={{ minWidth: 0, overflowWrap: 'break-word' }}>
+                            <div style={{ fontWeight: 600, color: '#0f172a' }}>
+                              {m.first_name} {m.last_name}
+                            </div>
+                            <div style={{ fontSize: '0.785rem', color: '#92400e' }}>
+                              New member · joined {formatDisplayDate(m.start_date)}
+                            </div>
+                            <div className="show-on-phone" style={{ fontSize: '0.785rem', color: '#334155', fontWeight: 500 }}>
+                              {plan?.name || 'No plan'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#334155', fontWeight: 500 }}>
+                        {plan?.name || 'No plan'}
+                      </td>
+                      <td style={{ padding: '1rem 1.25rem', fontWeight: 700, color: '#94a3b8', whiteSpace: 'nowrap' }}>
+                        {plan ? `${currency}${Number(plan.price).toLocaleString()}` : '—'}
+                      </td>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#94a3b8' }}>—</td>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem' }}>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '0.2rem 0.55rem',
+                            borderRadius: '9999px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            backgroundColor: '#fef2f2',
+                            color: '#b91c1c',
+                            border: '1px solid #fecaca',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Unpaid
+                        </span>
+                      </td>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#94a3b8' }}>—</td>
+                      <td className="hide-on-phone" style={{ padding: '1rem 1.25rem', color: '#94a3b8', fontSize: '0.85rem' }}>—</td>
+                      <td style={{ padding: '1rem 1.5rem 1rem 0.75rem', textAlign: 'right' }}>
+                        <button
+                          onClick={() => {
+                            setEditingPayment(null);
+                            setPayingMemberId(m.id);
+                            setIsModalOpen(true);
+                          }}
+                          title={`Record ${m.first_name}'s first payment`}
+                          style={{ ...actionButtonStyle, border: '1px solid #10b981', backgroundColor: '#ecfdf5', color: '#047857' }}
+                        >
+                          <Plus size={13} />
+                          <span className="phone-icon-label">Record Payment</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
                 {paginated.map((p) => {
                   // The Plan column already says "Walk-in", so the name doesn't repeat it here.
                   const memberName = p.is_walk_in && p.member_name ? p.member_name : getPaymentMemberName(p);
@@ -831,11 +923,14 @@ export const PaymentList: React.FC = () => {
         onClose={() => {
           setIsModalOpen(false);
           setEditingPayment(null);
+          setPayingMemberId(null);
         }}
         initialPayment={editingPayment}
+        preselectedMemberId={payingMemberId || undefined}
         onSuccess={() => {
           setIsModalOpen(false);
           setEditingPayment(null);
+          setPayingMemberId(null);
           refreshData();
         }}
       />
